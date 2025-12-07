@@ -6,9 +6,12 @@
     <title>Articles</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --border-color: #eee; }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --border-color: #333; } }
+        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --border-color: #eee; --accent-color: #000000; }
+        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --border-color: #333; --accent-color: #ffffff; } }
         
+        /* 隱藏默認鼠標 */
+        body, html, a, button { cursor: none !important; }
+
         body {
             margin: 0; padding: 0; background: var(--bg-color); color: var(--text-color);
             font-family: 'Noto Serif TC', serif;
@@ -16,44 +19,94 @@
             padding-top: 100px;
         }
 
+        /* --- 自定義鼠標 --- */
+        #custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 12px; height: 12px;
+            background-color: var(--text-color);
+            transform: rotate(45deg);
+            pointer-events: none; z-index: 99999;
+            transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
+            mix-blend-mode: difference;
+        }
+        #custom-cursor.hollow {
+            background-color: transparent; border: 1.5px solid var(--text-color);
+            transform: rotate(45deg) scale(1.2);
+        }
+        #custom-cursor.clicking {
+            transform: rotate(45deg) scale(0.6); background-color: var(--accent-color);
+        }
+
         .back-arrow {
-            position: fixed; top: 30px; left: 30px; cursor: pointer; opacity: 0.6; transition: 0.3s;
+            position: fixed; top: 30px; left: 30px; 
+            opacity: 0.6; transition: 0.3s; z-index: 10;
         }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
 
         .list-container { max-width: 700px; margin: 0 auto; padding: 0 20px; }
+        
+        /* 文章列表項 */
         .article-entry {
             display: block; text-decoration: none; color: var(--text-color);
             padding: 30px 0; border-bottom: 1px solid var(--border-color);
             transition: transform 0.3s;
         }
         .article-entry:hover { transform: translateX(10px); }
+        
         .entry-title { font-size: 1.4rem; margin-bottom: 8px; }
         .entry-date { font-size: 0.8rem; opacity: 0.6; font-family: monospace; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeOut { to { opacity: 0; transform: translateY(20px); } }
+
+        @media (max-width: 768px) {
+            body, html, a { cursor: auto !important; }
+            #custom-cursor { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div class="back-arrow" onclick="goBack()">
+    <div id="custom-cursor"></div>
+
+    <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
 
     <div class="list-container">
         <!-- 鏈接指向文件夾 -->
-        <a href="article/post-1/" class="article-entry">
+        <a href="article/post-1/" class="article-entry interactable">
             <div class="entry-title">幾何美學的構建</div>
             <div class="entry-date">2023.11.02</div>
         </a>
-        <a href="article/post-2/" class="article-entry">
+        <a href="article/post-2/" class="article-entry interactable">
             <div class="entry-title">CSS Skew 的反向邏輯</div>
             <div class="entry-date">2023.10.15</div>
+        </a>
+         <a href="article/post-3/" class="article-entry interactable">
+            <div class="entry-title">垂直排版的藝術</div>
+            <div class="entry-date">2023.09.28</div>
         </a>
     </div>
 
     <script>
+        // --- 鼠標邏輯 ---
+        const cursor = document.getElementById('custom-cursor');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+
+        // 自動綁定 interactable 類
+        document.querySelectorAll('.interactable').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+        });
+
         function goBack() {
             document.body.style.animation = 'fadeOut 0.5s ease forwards';
             setTimeout(() => { window.location.href = 'home.html'; }, 500);
