@@ -6,21 +6,45 @@
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; } }
+        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; }
+        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; } }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        /* 隱藏默認鼠標 */
+        body, html, a, button { cursor: none !important; }
+
         body {
             background: var(--bg-color); color: var(--text-color);
             font-family: 'Noto Serif TC', serif;
-            height: 100vh; overflow: hidden; /* 禁止默認滾動，由容器接管 */
+            height: 100vh; overflow: hidden;
             opacity: 0; animation: fadeIn 0.8s ease forwards;
+        }
+
+        /* --- 自定義鼠標樣式 (與首頁統一) --- */
+        #custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 12px; height: 12px;
+            background-color: var(--text-color);
+            transform: rotate(45deg); /* 實心菱形 */
+            pointer-events: none; z-index: 99999;
+            transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
+            mix-blend-mode: difference;
+        }
+        /* 空心狀態 */
+        #custom-cursor.hollow {
+            background-color: transparent; border: 1.5px solid var(--text-color);
+            transform: rotate(45deg) scale(1.2);
+        }
+        /* 快門點擊狀態 */
+        #custom-cursor.clicking {
+            transform: rotate(45deg) scale(0.6); background-color: var(--accent-color);
         }
 
         /* 統一返回按鈕 */
         .back-arrow {
             position: fixed; top: 30px; left: 30px; z-index: 100;
-            width: 40px; height: 40px; cursor: pointer;
+            width: 40px; height: 40px; 
             opacity: 0.6; transition: opacity 0.3s;
             display: flex; align-items: center; justify-content: center;
         }
@@ -33,7 +57,6 @@
             overflow-y: scroll; scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
         }
-        /* 隱藏滾動條 */
         .snap-container::-webkit-scrollbar { display: none; }
 
         /* 單個 Moment 屏 */
@@ -52,7 +75,6 @@
             object-fit: cover; opacity: 0.3; filter: grayscale(100%);
             z-index: 1; transition: opacity 1s, filter 1s;
         }
-        /* 圖片呼吸 */
         .moment-section:hover .img-bg { opacity: 0.5; filter: grayscale(0%); }
         
         .text-overlay {
@@ -67,17 +89,15 @@
         /* 2. 詩歌模式 (豎排) */
         .poem-mode {
             background: var(--bg-color);
-            writing-mode: vertical-rl; /* 豎排核心 */
+            writing-mode: vertical-rl;
             text-orientation: upright;
         }
         .poem-content {
             font-size: 1.4rem; letter-spacing: 0.3em; line-height: 3;
-            height: 60vh; /* 限制高度讓文字換行 */
+            height: 60vh;
             display: flex; flex-wrap: wrap; align-content: center;
         }
-        .poem-author {
-            margin-top: 40px; font-size: 0.9rem; opacity: 0.6;
-        }
+        .poem-author { margin-top: 40px; font-size: 0.9rem; opacity: 0.6; }
 
         /* 底部提示 */
         .scroll-hint {
@@ -89,18 +109,25 @@
         @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
         @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
+        /* 手機適配：恢復默認鼠標 */
+        @media (max-width: 768px) {
+            body, html, a, button { cursor: auto !important; }
+            #custom-cursor { display: none; }
+        }
     </style>
 </head>
 <body>
-    <!-- 返回箭頭 -->
-    <div class="back-arrow" onclick="goBack()">
+    <!-- 自定義鼠標 -->
+    <div id="custom-cursor"></div>
+
+    <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
 
     <div class="snap-container">
         
-        <!-- 第一屏：圖片+文字 -->
-        <section class="moment-section img-mode">
+        <!-- 第一屏 -->
+        <section class="moment-section img-mode interactable-area">
             <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80" class="img-bg" loading="lazy">
             <div class="text-overlay">
                 <p class="moment-text">風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。</p>
@@ -108,8 +135,8 @@
             <div class="scroll-hint">SCROLL</div>
         </section>
 
-        <!-- 第二屏：詩歌 (豎排) -->
-        <section class="moment-section poem-mode">
+        <!-- 第二屏 -->
+        <section class="moment-section poem-mode interactable-area">
             <div class="poem-content">
                 <p>如霧起時</p>
                 <p>敲打著窗櫺的</p>
@@ -119,19 +146,39 @@
             <div class="poem-author">—— Joyance</div>
         </section>
 
-        <!-- 第三屏：純文字/短句 -->
-        <section class="moment-section">
+        <!-- 第三屏 -->
+        <section class="moment-section interactable-area">
             <div class="text-overlay">
                 <p class="moment-text" style="font-size: 1.5rem;">"所有的相遇，都是久別重逢。"</p>
                 <p style="font-size: 0.9rem; margin-top: 20px; opacity: 0.6;">2023.12.07</p>
             </div>
         </section>
-
-        <!-- 方便後期添加：只需複製一個 section 標籤即可 -->
-
     </div>
 
     <script>
+        // --- 鼠標邏輯 ---
+        const cursor = document.getElementById('custom-cursor');
+        
+        // 1. 跟隨
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+
+        // 2. 點擊快門效果
+        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+
+        // 3. Hover 空心效果
+        // 選取所有帶有 interactable 類的元素，以及整個內容區塊(interactable-area)如果需要的話
+        // 這裡我們只對「返回按鈕」和「文本區域」做空心反應，圖片背景本身通常不做反應
+        const hoverTargets = document.querySelectorAll('.interactable, .moment-text, .poem-content');
+        
+        hoverTargets.forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+        });
+
         function goBack() {
             document.body.style.animation = 'fadeOut 0.5s ease forwards';
             setTimeout(() => { window.location.href = 'home.html'; }, 500);
