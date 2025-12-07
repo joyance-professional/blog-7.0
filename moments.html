@@ -5,14 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <!-- 提前加載數據文件 -->
+    <script src="./moments-data.js" defer></script>
+
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; } }
+        :root {
+            --bg-color: #ffffff; --text-color: #1a1a1a;
+            /* 定義漸變陰影 */
+            --toc-gradient-bg: linear-gradient(to top, 
+                var(--bg-color) 5%, 
+                rgba(255, 255, 255, 0) 100%
+            );
+        }
+        @media (prefers-color-scheme: dark) { 
+            :root { 
+                --bg-color: #000000; --text-color: #e5e5e5;
+                --toc-gradient-bg: linear-gradient(to top, 
+                    var(--bg-color) 5%, 
+                    rgba(0, 0, 0, 0) 100%
+                );
+            } 
+        }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        /* 隱藏默認鼠標 */
-        body, html, a, button { cursor: none !important; }
+        body, html, a, button, img { cursor: none !important; }
 
         body {
             background: var(--bg-color); color: var(--text-color);
@@ -21,168 +37,206 @@
             opacity: 0; animation: fadeIn 0.8s ease forwards;
         }
 
-        /* --- 自定義鼠標樣式 (與首頁統一) --- */
+        /* 自定義鼠標 */
         #custom-cursor {
-            position: fixed; top: 0; left: 0;
-            width: 12px; height: 12px;
-            background-color: var(--text-color);
-            transform: rotate(45deg); /* 實心菱形 */
+            position: fixed; top: 0; left: 0; width: 12px; height: 12px;
+            background-color: var(--text-color); transform: rotate(45deg);
             pointer-events: none; z-index: 99999;
-            transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
-            mix-blend-mode: difference;
+            transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference;
         }
-        /* 空心狀態 */
-        #custom-cursor.hollow {
-            background-color: transparent; border: 1.5px solid var(--text-color);
-            transform: rotate(45deg) scale(1.2);
-        }
-        /* 快門點擊狀態 */
-        #custom-cursor.clicking {
-            transform: rotate(45deg) scale(0.6); background-color: var(--accent-color);
-        }
+        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
+        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--text-color); }
 
-        /* 統一返回按鈕 */
         .back-arrow {
             position: fixed; top: 30px; left: 30px; z-index: 100;
-            width: 40px; height: 40px; 
-            opacity: 0.6; transition: opacity 0.3s;
+            width: 40px; height: 40px; opacity: 0.6; transition: 0.3s;
             display: flex; align-items: center; justify-content: center;
         }
         .back-arrow:hover { opacity: 1; }
-        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
+        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
 
-        /* 核心滾動容器 */
-        .snap-container {
-            height: 100vh; width: 100vw;
-            overflow-y: scroll; scroll-snap-type: y mandatory;
-            scroll-behavior: smooth;
-        }
+        .snap-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
         .snap-container::-webkit-scrollbar { display: none; }
 
-        /* 單個 Moment 屏 */
-        .moment-section {
-            height: 100vh; width: 100vw;
-            scroll-snap-align: start;
-            position: relative;
-            display: flex; justify-content: center; align-items: center;
-            overflow: hidden;
-        }
+        .moment-section { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        /* 1. 圖片+文字模式 */
-        .img-mode { flex-direction: column; }
-        .img-bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; opacity: 0.3; filter: grayscale(100%);
-            z-index: 1; transition: opacity 1s, filter 1s;
+        /* --- 樣式: 圖片背景 --- */
+        .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; z-index: 1; }
+        .img-bg.loaded { opacity: 1; }
+        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; pointer-events: none; }
+        .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; }
+        .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); transition: transform 0.3s; }
+        .moment-text:hover { transform: scale(1.02); } 
+        .moment-text:active { transform: scale(0.98); }
+
+        /* --- 樣式: 詩歌 (中間開始, 向左流動) --- */
+        .poem-mode { 
+            background: var(--bg-color); color: var(--text-color); 
+            writing-mode: vertical-rl; text-orientation: upright;
+            overflow-x: auto; /* 允許橫向滾動 */
+            justify-content: center; /* 讓內容塊在可視區居中開始 */
+            align-items: center;
         }
-        .moment-section:hover .img-bg { opacity: 0.5; filter: grayscale(0%); }
+        .poem-mode::-webkit-scrollbar { height: 4px; }
+        .poem-mode::-webkit-scrollbar-thumb { background: rgba(125,125,125,0.3); border-radius: 2px; }
         
-        .text-overlay {
-            z-index: 2; position: relative; padding: 40px; max-width: 600px;
-            text-align: center;
-        }
-        .moment-text {
-            font-size: 1.2rem; line-height: 1.8; margin-bottom: 20px;
-            text-shadow: 0 2px 10px var(--bg-color);
-        }
-
-        /* 2. 詩歌模式 (豎排) */
-        .poem-mode {
-            background: var(--bg-color);
-            writing-mode: vertical-rl;
-            text-orientation: upright;
-        }
         .poem-content {
             font-size: 1.4rem; letter-spacing: 0.3em; line-height: 3;
-            height: 60vh;
-            display: flex; flex-wrap: wrap; align-content: center;
+            height: 80vh; /* 內容高度 */
+            display: inline-flex; /* 核心：讓其寬度由內容決定，從而可以被父容器居中 */
+            flex-direction: column; flex-wrap: wrap; 
+            gap: 0 60px; /* 列間距 */
+            padding: 0 5vw; /* 左右內邊距 */
+            /* 關鍵：給予足夠的右側空間讓其“向左流動” */
+            padding-right: 40vw; 
         }
-        .poem-author { margin-top: 40px; font-size: 0.9rem; opacity: 0.6; }
 
-        /* 底部提示 */
-        .scroll-hint {
-            position: absolute; bottom: 20px; width: 100%; text-align: center;
-            opacity: 0.3; font-size: 0.8rem; z-index: 10; animation: float 2s infinite;
+        /* --- 目錄 (TOC) - 漸變陰影背景 --- */
+        .toc-toggle {
+            position: fixed; bottom: 30px; left: 30px; z-index: 100;
+            width: 40px; height: 40px; border: 1px solid var(--text-color); border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            opacity: 0.5; transition: 0.3s; mix-blend-mode: difference;
         }
+        .toc-toggle:hover { opacity: 1; transform: scale(1.1); }
+
+        .toc-modal {
+            position: fixed; bottom: 0; left: 0; /* 改為從底部開始 */
+            padding: 80px 30px 30px 30px; /* 頂部留出空間給漸變 */
+            background: var(--toc-gradient-bg); /* 使用漸變背景 */
+            display: flex; flex-direction: column; gap: 10px;
+            max-height: 70vh; overflow-y: auto;
+            opacity: 0; pointer-events: none; transform: translateY(100%); /* 從下方滑入 */
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            z-index: 99; width: 280px;
+        }
+        .toc-modal.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        
+        .toc-item { display: flex; align-items: center; gap: 10px; padding: 5px; opacity: 0.7; transition: 0.2s; }
+        .toc-item:hover { opacity: 1; background: rgba(125,125,125,0.1); }
+        .toc-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; background: #ccc; }
+        .toc-title { font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .copy-tip { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 200; }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
-        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+        @keyframes fadeOut { to { opacity: 0; } }
 
-        /* 手機適配：恢復默認鼠標 */
         @media (max-width: 768px) {
-            body, html, a, button { cursor: auto !important; }
+            body, html, a, button, img { cursor: auto !important; }
             #custom-cursor { display: none; }
+            .toc-modal { left: 50%; transform: translateX(-50%) translateY(100%); width: 90%; }
+            .toc-modal.active { transform: translateX(-50%) translateY(0); }
+            .toc-toggle { left: auto; right: 30px; }
         }
     </style>
 </head>
 <body>
-    <!-- 自定義鼠標 -->
     <div id="custom-cursor"></div>
-
     <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
+    <div class="toc-toggle interactable" onclick="toggleToc()">≡</div>
+    <div class="toc-modal" id="toc-list"><!-- JS自動生成 --></div>
+    <div class="copy-tip" id="copy-tip">Copied</div>
+    <div class="snap-container" id="main-scroll"><!-- JS自動生成 --></div>
 
-    <div class="snap-container">
+    <script defer>
+    // =======================================================================
+    // --- 核心腳本區：無需修改 ---
+    // =======================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // 確保 momentsData 已被加載
+        if (typeof momentsData === 'undefined') {
+            console.error('Moment data is not loaded!');
+            return;
+        }
+
+        const scrollContainer = document.getElementById('main-scroll');
+        const tocList = document.getElementById('toc-list');
         
-        <!-- 第一屏 -->
-        <section class="moment-section img-mode interactable-area">
-            <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80" class="img-bg" loading="lazy">
-            <div class="text-overlay">
-                <p class="moment-text">風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。</p>
-            </div>
-            <div class="scroll-hint">SCROLL</div>
-        </section>
+        // 1. 渲染所有 Moments 和 TOC
+        momentsData.forEach(moment => {
+            const section = document.createElement('section');
+            section.className = 'moment-section';
+            section.id = moment.id;
 
-        <!-- 第二屏 -->
-        <section class="moment-section poem-mode interactable-area">
-            <div class="poem-content">
-                <p>如霧起時</p>
-                <p>敲打著窗櫺的</p>
-                <p>不是風</p>
-                <p>是經年的沈默</p>
-            </div>
-            <div class="poem-author">—— Joyance</div>
-        </section>
+            if (moment.type === 'image') {
+                section.innerHTML = `
+                    <img data-src="${moment.content.imageSrc}" class="img-bg lazy-img">
+                    <div class="bg-overlay"></div>
+                    <div class="text-overlay">
+                        <p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p>
+                        ${moment.content.meta ? `<p style="font-size:0.9rem;margin-top:20px;opacity:0.8;text-shadow:0 1px 5px rgba(0,0,0,0.5);">${moment.content.meta}</p>` : ''}
+                    </div>
+                `;
+            } else if (moment.type === 'poem') {
+                section.classList.add('poem-mode');
+                const poemHTML = moment.content.lines.map(line => `<p>${line}</p>`).join('');
+                section.innerHTML = `<div class="poem-content interactable-text" onclick="copyText(this)">${poemHTML}</div>`;
+            }
+            scrollContainer.appendChild(section);
 
-        <!-- 第三屏 -->
-        <section class="moment-section interactable-area">
-            <div class="text-overlay">
-                <p class="moment-text" style="font-size: 1.5rem;">"所有的相遇，都是久別重逢。"</p>
-                <p style="font-size: 0.9rem; margin-top: 20px; opacity: 0.6;">2023.12.07</p>
-            </div>
-        </section>
-    </div>
-
-    <script>
-        // --- 鼠標邏輯 ---
-        const cursor = document.getElementById('custom-cursor');
-        
-        // 1. 跟隨
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
+            const tocItem = document.createElement('div');
+            tocItem.className = 'toc-item interactable';
+            const thumbHTML = moment.thumb === 'poem'
+                ? `<div class="toc-thumb" style="display:flex;align-items:center;justify-content:center;background:#333;color:#fff;font-size:12px;">詩</div>`
+                : `<img src="${moment.thumb}" class="toc-thumb">`;
+            tocItem.innerHTML = `${thumbHTML}<span class="toc-title">${moment.title}</span>`;
+            tocItem.onclick = () => {
+                document.getElementById(moment.id).scrollIntoView({ behavior: 'smooth' });
+                if (window.innerWidth <= 768) toggleToc(); // 手機上點擊後關閉
+            };
+            tocList.appendChild(tocItem);
         });
 
-        // 2. 點擊快門效果
-        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
-
-        // 3. Hover 空心效果
-        // 選取所有帶有 interactable 類的元素，以及整個內容區塊(interactable-area)如果需要的話
-        // 這裡我們只對「返回按鈕」和「文本區域」做空心反應，圖片背景本身通常不做反應
-        const hoverTargets = document.querySelectorAll('.interactable, .moment-text, .poem-content');
+        // 2. 啟動圖片懶加載
+        const imgObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.onload = () => img.classList.add('loaded');
+                    observer.unobserve(img);
+                }
+            });
+        }, { root: null, rootMargin: '0px', threshold: 0.1 });
         
-        hoverTargets.forEach(el => {
+        document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
+
+        // 3. 電腦版默認展開 TOC
+        if (window.innerWidth > 768) {
+            toggleToc();
+        }
+
+        // 4. 綁定所有鼠標事件
+        bindCursorEvents();
+    });
+
+    // --- 輔助函數 ---
+    function toggleToc() { document.getElementById('toc-list').classList.toggle('active'); }
+    async function copyText(el) {
+        const text = el.innerText;
+        try { await navigator.clipboard.writeText(text); const tip = document.getElementById('copy-tip'); tip.style.opacity = '1'; setTimeout(() => tip.style.opacity = '0', 1000); } catch (err) {}
+    }
+    function goBack() { document.body.style.animation = 'fadeOut 0.5s ease forwards'; setTimeout(() => { window.location.href = 'home.html'; }, 500); }
+    
+    const cursor = document.getElementById('custom-cursor');
+    document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
+    document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+    
+    function bindCursorEvents() {
+        document.querySelectorAll('.interactable, .interactable-text, .toc-item').forEach(el => {
             el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
             el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
         });
+    }
 
-        function goBack() {
-            document.body.style.animation = 'fadeOut 0.5s ease forwards';
-            setTimeout(() => { window.location.href = 'home.html'; }, 500);
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.toc-modal') && !e.target.closest('.toc-toggle')) {
+            document.getElementById('toc-list').classList.remove('active');
         }
+    });
     </script>
 </body>
 </html>
