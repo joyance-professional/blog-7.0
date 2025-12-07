@@ -113,7 +113,7 @@
             position: absolute;
             background: var(--bg-color);
             border: 1.5px solid var(--accent-color);
-            transform: skewX(var(-15deg)); /* 形成 \ 形狀 */
+            transform: skewX(var(--skew-angle) * -1); /* 形成 \ 形狀 */
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
