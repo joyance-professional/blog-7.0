@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article Reader</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; }
+        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; } }
+
+        /* 隱藏默認鼠標 */
+        body, html, a, button { cursor: none !important; }
+
+        body {
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Noto Serif TC', serif;
+            margin: 0; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; animation: fadeIn 1s ease forwards;
+        }
+
+        /* --- 自定義鼠標 (與首頁一致) --- */
+        #custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 12px; height: 12px;
+            background-color: var(--text-color);
+            transform: rotate(45deg);
+            pointer-events: none; z-index: 99999;
+            transition: transform 0.1s, width 0.2s, height 0.2s;
+            mix-blend-mode: difference;
+        }
+        #custom-cursor.hollow {
+            background-color: transparent; border: 1.5px solid var(--text-color);
+            transform: rotate(45deg) scale(1.2);
+        }
+        #custom-cursor.clicking {
+            transform: rotate(45deg) scale(0.6); background-color: var(--accent-color);
+        }
+
+        /* 返回箭頭 */
+        .back-arrow {
+            position: fixed; top: 30px; left: 30px; 
+            opacity: 0.5; z-index: 100; transition: opacity 0.3s;
+        }
+        .back-arrow:hover { opacity: 1; }
+        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
+
+        /* 內容容器 */
+        .reader-container {
+            width: 80%; max-width: 700px; height: 60%;
+            position: relative;
+            display: flex; justify-content: center; align-items: center;
+            text-align: justify;
+        }
+
+        /* 段落樣式 */
+        .text-block {
+            font-size: 1.3rem; line-height: 2;
+            position: absolute;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s;
+            opacity: 0; pointer-events: none; transform: scale(0.95);
+            /* 重要：讓JS知道這是可交互的 */
+        }
+
+        /* 激活狀態 (當前頁) */
+        .text-block.active {
+            opacity: 1; pointer-events: auto; transform: scale(1);
+        }
+
+        /* 呼吸效果：移上去變大 */
+        /* 注意：我們用 transform: scale 實現放大，所以需要與點擊動畫配合 */
+        .text-block.active:hover {
+            transform: scale(1.05); /* 鼠標放上去，放大 */
+        }
+
+        /* 複製點擊瞬間的動畫：收縮 */
+        .text-block.active.copy-anim {
+            transform: scale(0.9) !important; /* 點擊瞬間縮小 */
+            transition: transform 0.1s ease-out;
+        }
+
+        /* 底部導航 */
+        .pagination {
+            position: fixed; bottom: 50px; display: flex; gap: 40px; align-items: center;
+            font-family: sans-serif; font-size: 0.9rem; user-select: none;
+        }
+        .nav-btn { opacity: 0.3; padding: 10px; transition: opacity 0.3s; }
+        .nav-btn:hover { opacity: 1; }
+        .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div id="custom-cursor"></div>
+
+    <div class="back-arrow interactable" onclick="goBack()">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </div>
+
+    <div class="reader-container" id="content-area">
+        <!-- JS 動態插入內容 -->
+    </div>
+
+    <div class="pagination">
+        <div class="nav-btn interactable" onclick="changePage(-1)">PREV</div>
+        <div class="page-indicator" id="page-num">1 / 4</div>
+        <div class="nav-btn interactable" onclick="changePage(1)">NEXT</div>
+    </div>
+
+    <script>
+        // --- 0. 鼠標系統 ---
+        const cursor = document.getElementById('custom-cursor');
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY + 'px';
+        });
+        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+
+        function updateInteractables() {
+            const interactables = document.querySelectorAll('.interactable, .text-block.active');
+            interactables.forEach(el => {
+                el.onmouseenter = () => cursor.classList.add('hollow');
+                el.onmouseleave = () => cursor.classList.remove('hollow');
+            });
+        }
+
+        // --- 1. 文章內容 ---
+        const articleData = [
+            "幾何美學的構建。在數字的荒原裡，我們試圖用線條和角度構建一座燈塔。(標題頁)",
+            "點擊這段文字，它將會被複製到你的剪貼板。設計不應該喧賓奪主，而應該退居幕後，讓內容成為主角。",
+            "當鼠標懸停在這些段落上時，你會看到明顯的放大呼吸效果。移開後，它又會安靜地縮回原位。",
+            "這是最後一頁。我們會逝去，但文字會留下來。翻頁閱讀讓思緒有了停頓的間隙，不再是無止盡的滑動。"
+        ];
+
+        let currentPage = 0;
+        const container = document.getElementById('content-area');
+        const pageNum = document.getElementById('page-num');
+
+        // 初始化
+        function init() {
+            articleData.forEach((text, index) => {
+                const p = document.createElement('p');
+                p.className = `text-block ${index === 0 ? 'active' : ''}`;
+                p.innerText = text;
+                
+                // 點擊複製邏輯
+                p.onclick = () => copyText(p, text);
+                
+                container.appendChild(p);
+            });
+            updateIndicator();
+            updateInteractables(); // 綁定第一頁的鼠標事件
+        }
+
+        // 翻頁邏輯
+        function changePage(dir) {
+            const next = currentPage + dir;
+            if (next >= 0 && next < articleData.length) {
+                const blocks = document.querySelectorAll('.text-block');
+                
+                // 切換頁面
+                blocks[currentPage].classList.remove('active');
+                currentPage = next;
+                blocks[currentPage].classList.add('active');
+                
+                updateIndicator();
+                
+                // 重要：更新鼠標監聽，確保新頁面的文本能觸發空心鼠標
+                setTimeout(updateInteractables, 50); 
+            }
+        }
+
+        function updateIndicator() {
+            pageNum.innerText = `${currentPage + 1} / ${articleData.length}`;
+        }
+
+        // 複製與動畫核心邏輯
+        async function copyText(element, text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                // 添加動畫類 (縮小)
+                element.classList.add('copy-anim');
+                
+                // 短暫延遲後移除 (恢復放大狀態，因為鼠標還在上面)
+                setTimeout(() => {
+                    element.classList.remove('copy-anim');
+                }, 150); // 150ms 極速反饋
+
+            } catch (err) {}
+        }
+
+        // 返回邏輯
+        function goBack() {
+            document.body.style.animation = 'fadeOut 0.5s ease forwards';
+            setTimeout(() => { window.location.href = '../../articles.html'; }, 500);
+        }
+
+        // 鍵盤支持
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') changePage(1);
+            if (e.key === 'ArrowLeft') changePage(-1);
+        });
+
+        init();
+    </script>
+</body>
+</html>
