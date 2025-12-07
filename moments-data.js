@@ -6,11 +6,11 @@ const momentsData = [
     {
         id: "moment-1",
         type: "image", 
-        title: "風暴與花",
+        title: "小城",
         // PC目錄不顯示縮略圖，但手機轉盤可能會用到標題
         content: {
-            imageSrc: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80",
-            text: "風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。"
+            imageSrc: "medias/IMG_3719.png",
+            text: "磚塊"
         }
     },
     {
