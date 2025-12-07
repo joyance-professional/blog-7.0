@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
-    <!-- Load the data first -->
     <script src="./moments-data.js" defer></script>
 
     <style>
@@ -24,80 +23,73 @@
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html, a, button, img { cursor: none !important; user-select: none; -webkit-user-select: none; }
+        body { background: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; height: 100vh; overflow: hidden; opacity: 0; animation: fadeIn 0.8s ease forwards; }
 
-        body {
-            background: var(--bg-color); color: var(--text-color);
-            font-family: 'Noto Serif TC', serif;
-            height: 100vh; overflow: hidden;
-            opacity: 0; animation: fadeIn 0.8s ease forwards;
-        }
-
-        /* --- Custom Cursor --- */
+        /* --- UI Elements --- */
         #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
-        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--text-color); }
-
-        /* --- Top Navigation --- */
         .back-arrow { position: fixed; top: 30px; left: 30px; z-index: 200; width: 40px; height: 40px; opacity: 0.6; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
 
-        /* --- Main Scroll Container --- */
+        /* --- Main Layout --- */
         .snap-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
         .snap-container::-webkit-scrollbar { display: none; }
         .moment-section { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        /* --- 1. Image Mode --- */
+        /* --- Moment Types --- */
         .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; z-index: 1; }
         .img-bg.loaded { opacity: 1; }
-        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; pointer-events: none; }
+        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; }
         .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; }
         .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); }
 
-        /* --- 2. Gallery Mode (Redesigned) --- */
         .gallery-mode { background: var(--bg-color); color: var(--text-color); flex-direction: column; }
         .gallery-text { margin-bottom: 2rem; max-width: 500px; text-align: center; }
         .gallery-scroll { display: flex; gap: 30px; width: 90%; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px 5%; overscroll-behavior-x: contain; }
         .gallery-scroll::-webkit-scrollbar { display: none; }
-        .gallery-item { flex: 0 0 auto; width: 50vh; /* Taller images */ height: 70vh; scroll-snap-align: center; border-radius: 4px; overflow: hidden; position: relative; transition: transform 0.3s; }
+        .gallery-item { flex: 0 0 auto; width: 50vh; height: 70vh; scroll-snap-align: center; border-radius: 4px; overflow: hidden; position: relative; transition: transform 0.3s; }
         .gallery-item:hover { transform: scale(1.02); }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* --- 3. Poem Mode (Redesigned) --- */
-        .poem-mode { background: var(--bg-color); color: var(--text-color); writing-mode: vertical-rl; text-orientation: upright; }
-        .poem-container { position: absolute; right: 50%; /* Start from center */ transform: translateX(50%); height: 80vh; display: flex; flex-direction: column; flex-wrap: wrap; /* Key for horizontal columns */ align-content: flex-start; gap: 0 60px; }
+        .poem-mode { background: var(--bg-color); color: var(--text-color); }
+        .poem-scroll-wrapper { width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; }
+        .poem-scroll-wrapper::-webkit-scrollbar { height: 4px; }
+        .poem-scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(125,125,125,0.3); border-radius: 2px; }
+        .poem-container { position: relative; display: flex; writing-mode: vertical-rl; text-orientation: upright; height: 100%; align-items: center; padding-left: 50vw; /* Crucial for centering */ }
+        .poem-content { display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 0 60px; height: 80vh; }
         .poem-line { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 2; white-space: nowrap; }
 
-        /* --- PC Table of Contents (Redesigned) --- */
-        .pc-toc-toggle { position: fixed; top: 30px; right: 30px; z-index: 200; width: 40px; height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; opacity: 0.6; transition: 0.3s; }
+        /* --- PC Table of Contents --- */
+        .pc-toc-toggle { display: none; position: fixed; top: 30px; right: 30px; z-index: 200; width: 40px; height: 40px; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; opacity: 0.6; transition: 0.3s; }
         .pc-toc-toggle:hover { opacity: 1; }
         .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
-        .pc-toc-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
-        .pc-toc-toggle.active span:nth-child(2) { opacity: 0; }
-        .pc-toc-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
-        .pc-toc-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 80px; background: var(--toc-bg-pc); z-index: 150; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; writing-mode: vertical-rl; text-orientation: upright; transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .pc-toc-panel { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 80px; background: var(--toc-bg-pc); z-index: 150; flex-direction: column; justify-content: center; align-items: center; gap: 30px; writing-mode: vertical-rl; text-orientation: upright; transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .pc-toc-panel.hidden { transform: translateX(100%); }
         .pc-toc-item { font-size: 0.9rem; color: var(--text-color); opacity: 0.5; cursor: none; transition: 0.3s; letter-spacing: 0.2em; }
         .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; letter-spacing: 0.3em; }
 
-        /* --- Mobile Wheel (Redesigned) --- */
+        /* --- Mobile Wheel --- */
         .mobile-wheel { display: none; position: fixed; bottom: -125px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; border-radius: 50%; z-index: 150; touch-action: none; }
         .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.05s linear; }
         .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.6; }
         .wheel-indicator { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--accent-color); z-index: 151; }
 
-        /* --- General UI --- */
+        /* --- UI Messages --- */
         .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300; }
-        .end-hint { position: fixed; bottom: 100px; width: 100%; text-align: center; font-size: 0.8rem; opacity: 0; transition: 0.5s; pointer-events: none; z-index: 10; animation: bounceUp 2s infinite; }
+        .end-hint { position: fixed; bottom: 40px; width: 100%; text-align: center; font-size: 0.8rem; opacity: 0; transition: 0.5s; pointer-events: none; z-index: 10; animation: bounceUp 2.5s infinite; }
         .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 999; opacity: 0; pointer-events: none; transition: 0.3s; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
         .lightbox img { width: 100%; height: 100%; object-fit: contain; }
 
         /* --- Layout Control --- */
-        @media (min-width: 769px) { .moment-section { padding-right: 80px; } }
+        @media (min-width: 769px) {
+            .moment-section { padding-right: 80px; }
+            .pc-toc-toggle, .pc-toc-panel { display: flex; }
+        }
         @media (max-width: 768px) {
             body, html, a, button, img { cursor: auto !important; }
-            #custom-cursor, .pc-toc-panel, .pc-toc-toggle { display: none !important; }
+            #custom-cursor { display: none; }
             .mobile-wheel { display: block; }
             .gallery-item { width: 65vw; height: 80vw; }
         }
@@ -112,12 +104,12 @@
     <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
-    <div class="pc-toc-toggle active interactable" onclick="togglePcToc()"><span></span><span></span><span></span></div>
+    <div class="pc-toc-toggle interactable" onclick="togglePcToc()"><span></span><span></span><span></span></div>
     <div class="pc-toc-panel" id="pc-toc-list"></div>
     <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
     <div class="wheel-indicator"></div>
     <div class="toast-msg" id="toast-msg"></div>
-    <div class="end-hint" id="end-hint">再次滑動回到首頁</div>
+    <div class="end-hint" id="end-hint"></div>
     <div class="snap-container" id="main-scroll"></div>
     <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lb-img" src=""></div>
 
@@ -128,29 +120,26 @@
         const scrollContainer = document.getElementById('main-scroll');
         const pcTocList = document.getElementById('pc-toc-list');
         const wheelContainer = document.getElementById('wheel-container');
-        let currentLbGallery = [];
 
-        // --- 1. Render Content & Nav ---
         momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
             section.id = `sec-${index}`;
-            // ... (Content rendering logic remains largely the same)
+
             if (moment.type === 'image') {
                 section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                const imgsHtml = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox(this, '${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                const imgsHtml = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
                 section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgsHtml}</div>`;
                 section.dataset.galleryId = moment.id;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
                 const poemHTML = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
-                section.innerHTML = `<div class="poem-container interactable-text" onclick="copyText(this)">${poemHTML}<div class="poem-line" style="font-size:0.9rem;margin-top:20px;">—— ${moment.content.author}</div></div>`;
+                section.innerHTML = `<div class="poem-scroll-wrapper"><div class="poem-container interactable-text" onclick="copyText(this)"><div class="poem-content">${poemHTML}<div class="poem-line" style="font-size:0.9rem;margin-top:20px;">—— ${moment.content.author}</div></div></div></div>`;
             }
             scrollContainer.appendChild(section);
 
-            // PC TOC Item
             const tocItem = document.createElement('div');
             tocItem.className = 'pc-toc-item interactable';
             tocItem.innerText = moment.title;
@@ -158,55 +147,86 @@
             pcTocList.appendChild(tocItem);
         });
 
-        // --- 2. Mobile Wheel Setup ---
-        const radius = 125; // Wheel radius
+        // --- Center first line of poems ---
+        document.querySelectorAll('.poem-scroll-wrapper').forEach(wrapper => {
+            const firstLine = wrapper.querySelector('.poem-line');
+            if(firstLine) {
+                const offset = (firstLine.clientWidth / 2);
+                wrapper.scrollLeft = wrapper.querySelector('.poem-container').offsetLeft - (wrapper.clientWidth / 2) + offset;
+            }
+        });
+
+        // --- Mobile Wheel Setup ---
+        const radius = 125;
         momentsData.forEach((moment, index) => {
-            const angleRad = (index / momentsData.length) * 2 * Math.PI - Math.PI / 2; // Start from top
+            const angleRad = (index / momentsData.length) * 2 * Math.PI - Math.PI / 2;
             const x = radius * Math.cos(angleRad);
             const y = radius * Math.sin(angleRad);
-            
             const item = document.createElement('div');
             item.className = 'wheel-item';
             item.innerText = moment.title;
-            // Position and rotate the item container, then rotate the text back to point to the center
             item.style.transform = `translate(${x}px, ${y}px) rotate(${angleRad * 180 / Math.PI + 90}deg)`;
             wheelContainer.appendChild(item);
         });
 
-        // --- 3. Lazy Load ---
         const imgObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    entry.target.src = entry.target.dataset.src;
-                    entry.target.onload = () => entry.target.classList.add('loaded');
-                    imgObserver.unobserve(entry.target);
+                    const img = entry.target;
+                    img.src = img.dataset.src;
+                    img.onload = () => img.classList.add('loaded');
+                    imgObserver.unobserve(img);
                 }
             });
         }, { threshold: 0.1 });
         document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
 
-        // --- 4. Event Listeners ---
-        let isAtEnd = false, endHintShown = false, currentRotation = 0, lastVibratedAngle = 0;
+        // --- Event Listeners ---
+        let isAtEnd = false, isHomePromptActive = false;
+        const endHint = document.getElementById('end-hint');
+
         scrollContainer.addEventListener('scroll', () => {
             const scrollY = scrollContainer.scrollTop;
             const height = window.innerHeight;
             const index = Math.round(scrollY / height);
-
             document.querySelectorAll('.pc-toc-item').forEach((item, i) => item.classList.toggle('active', i === index));
-            
-            isAtEnd = (scrollY + height >= scrollContainer.scrollHeight - 10);
-            if (isAtEnd && !endHintShown) { document.getElementById('end-hint').style.opacity = '1'; endHintShown = true; }
-            if (!isAtEnd) { document.getElementById('end-hint').style.opacity = '0'; endHintShown = false; }
-        });
+            isAtEnd = (scrollY + height >= scrollContainer.scrollHeight - 5);
 
-        // Last page scroll logic
-        scrollContainer.addEventListener('wheel', e => { if (isAtEnd && e.deltaY > 5) goHome(); });
+            if (!isAtEnd && isHomePromptActive) {
+                isHomePromptActive = false;
+                endHint.style.opacity = '0';
+            }
+        });
+        
+        const handleEndScroll = (deltaY) => {
+            if (isAtEnd && deltaY > 10) { // Scroll Down
+                if (!isHomePromptActive) {
+                    isHomePromptActive = true;
+                    endHint.innerText = "向上滑動以返回 / Swipe up to return";
+                    endHint.style.opacity = '1';
+                }
+            }
+            if (isHomePromptActive && deltaY < -10) { // Scroll Up
+                goHome();
+            }
+        };
+
+        let lastWheelY = 0;
+        scrollContainer.addEventListener('wheel', e => {
+            if (isAtEnd || isHomePromptActive) e.preventDefault();
+            handleEndScroll(e.deltaY);
+            lastWheelY = e.deltaY;
+        }, { passive: false });
+        
         let touchStartY = 0;
         scrollContainer.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
-        scrollContainer.addEventListener('touchend', e => { if (isAtEnd && touchStartY - e.changedTouches[0].clientY > 50) goHome(); });
+        scrollContainer.addEventListener('touchend', e => {
+            const deltaY = touchStartY - e.changedTouches[0].clientY;
+            handleEndScroll(-deltaY); // Invert delta for touch
+        });
 
         // Mobile wheel interaction
-        let startAngle = 0, initialTouchAngle = 0;
+        let startAngle = 0, initialTouchAngle = 0, currentRotation = 0, lastVibratedAngle = 0;
         const wheel = document.getElementById('mobile-wheel');
         wheel.addEventListener('touchstart', e => {
             const rect = wheel.getBoundingClientRect();
@@ -223,7 +243,6 @@
             const centerY = rect.top + rect.height / 2;
             const currentTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
             const angleDiff = currentTouchAngle - initialTouchAngle;
-            
             currentRotation = startAngle + angleDiff * (180 / Math.PI);
             wheelContainer.style.transform = `rotate(${currentRotation}deg)`;
 
@@ -240,7 +259,10 @@
         });
         
         bindCursorEvents();
-        if (window.innerWidth > 768) togglePcToc(); // Default open on PC
+        if (window.innerWidth > 769) {
+            document.querySelector('.pc-toc-panel').classList.add('active');
+            document.querySelector('.pc-toc-toggle').classList.add('active');
+        }
     });
 
     // --- Helper Functions ---
@@ -250,7 +272,6 @@
     async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); showToast('Copied'); } catch(e){} }
     function showToast(msg) { const t = document.getElementById('toast-msg'); t.innerText = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 1000); }
     
-    // Lightbox Logic (simplified)
     const lightbox = document.getElementById('lightbox');
     const lbImg = document.getElementById('lb-img');
     function openLightbox(el, momentId, index) {
@@ -262,7 +283,6 @@
     }
     function closeLightbox() { lightbox.classList.remove('active'); }
 
-    // Cursor Logic
     const cursor = document.getElementById('custom-cursor');
     document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
