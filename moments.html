@@ -42,19 +42,19 @@
         .back-arrow:hover { opacity: 1; transform: scale(1.1); }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        /* --- Layout: Native Scroll Snap for Resistance --- */
+        /* --- Layout --- */
         .snap-container { 
             height: 100vh; width: 100vw; 
             overflow-y: scroll; 
-            scroll-snap-type: y mandatory; /* 核心：強制吸附，產生阻力感 */
+            scroll-snap-type: y mandatory;
             scroll-behavior: smooth;
         }
         .snap-container::-webkit-scrollbar { display: none; } 
 
         .moment-section { 
             height: 100vh; width: 100vw; 
-            scroll-snap-align: start; /* 每次滾動必停在起點 */
-            scroll-snap-stop: always; /* 防止滾輪一次滑過多頁，增加重量感 */
+            scroll-snap-align: start;
+            scroll-snap-stop: always;
             position: relative; 
             display: flex; justify-content: center; align-items: center; 
             overflow: hidden; 
@@ -89,28 +89,27 @@
         /* --- Poem Type (Fixed Layout) --- */
         .poem-mode { background: var(--bg-color); }
         .poem-wrapper {
-            width: 100%; height: 100%;
-            display: flex; 
-            justify-content: center; /* 水平居中 */
-            align-items: center;     /* 垂直居中 */
-            overflow-x: auto; /* 【修正】允許內容過長時水平滾動 */
-            scrollbar-width: none; /* 【修正】隱藏滾動條 (Firefox) */
+            width: 100%;
+            max-width: 90vw; /* 限制最大寬度 */
+            height: 80vh;    /* 限制最大高度 */
+            overflow-x: auto; /* 允許左右滑動 */
+            overflow-y: hidden;
+            scrollbar-width: none;
         }
-        .poem-wrapper::-webkit-scrollbar { display: none; } /* 【修正】隱藏滾動條 (Chrome, Safari) */
-        
+        .poem-wrapper::-webkit-scrollbar { display: none; }
         .poem-content {
-            display: flex;
+            height: 100%;
             writing-mode: vertical-rl; /* 豎排，從右向左 */
             text-orientation: upright;
-            gap: 3rem; /* 行距 */
-            max-height: 80vh;
-            padding: 0 5vw; /* 增加一些邊距避免貼邊 */
+            font-size: 1.4rem; 
+            letter-spacing: 0.3em; 
+            line-height: 1.8;
+            /* 【核心修正】使用 CSS Columns 實現向左換行 */
+            column-gap: 3rem;
+            column-width: 1.8em; /* 每列的寬度，約等於一個字寬 */
+            text-align: justify; /* 兩端對齊 */
         }
-        .poem-line { 
-            font-size: 1.4rem; letter-spacing: 0.3em; line-height: 1.5; 
-            white-space: nowrap; /* 強制不換行，保持單列 */
-        }
-        .poem-author { font-size: 0.9rem; margin-top: 30px; opacity: 0.6; writing-mode: vertical-rl; }
+        .poem-author { font-size: 0.9rem; margin-top: 30px; opacity: 0.6; }
 
         /* --- PC TOC (Slim) --- */
         .pc-toc-panel { 
@@ -130,46 +129,27 @@
         .mobile-wheel { 
             display: none; position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%); 
             width: 240px; height: 240px; border-radius: 50%; z-index: 150; 
-            touch-action: none; /* 關鍵：允許JS接管觸控 */
-            background: rgba(125,125,125,0.05);
+            touch-action: none;
         }
         .wheel-container { 
             width: 100%; height: 100%; position: relative; 
-            transform: rotate(0deg); /* 初始角度 */
+            transform: rotate(0deg); 
             will-change: transform; 
         }
-        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.75rem; opacity: 0.5; pointer-events: none; }
+        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: center; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.75rem; opacity: 0.5; pointer-events: none; }
         .wheel-indicator { display: none; position: fixed; bottom: 115px; left: 50%; transform: translateX(-50%); width: 2px; height: 12px; background: var(--text-color); z-index: 151; }
 
-        /* --- End Hint & Toast --- */
-        .end-hint { 
-            position: fixed; bottom: 40px; width: 100%; text-align: center; 
-            font-size: 0.85rem; letter-spacing: 2px; opacity: 0; 
-            transform: translateY(20px); transition: 0.4s var(--ease-elastic); 
-            pointer-events: none; z-index: 300; 
-        }
+        /* --- etc. --- */
+        .end-hint { position: fixed; bottom: 40px; width: 100%; text-align: center; font-size: 0.85rem; letter-spacing: 2px; opacity: 0; transform: translateY(20px); transition: 0.4s var(--ease-elastic); pointer-events: none; z-index: 300; }
         .end-hint.visible { opacity: 1; transform: translateY(0); }
         .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300; }
-
-        /* Lightbox */
         .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 999; opacity: 0; pointer-events: none; transition: 0.4s; display: flex; justify-content: center; align-items: center; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; transform: scale(0.9); transition: 0.4s; }
-        .lightbox.active img { transform: scale(1); }
+        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
 
         /* --- Responsive --- */
-        @media (min-width: 769px) {
-            .pc-toc-panel { display: flex; }
-            .mobile-wheel, .wheel-indicator { display: none !important; }
-        }
-        @media (max-width: 768px) {
-            body, html { cursor: auto !important; }
-            #custom-cursor { display: none; }
-            .mobile-wheel, .wheel-indicator { display: block; }
-            .gallery-item { width: 75vw; }
-            .poem-content { gap: 1.5rem; max-height: 70vh; }
-            .poem-line { font-size: 1.1rem; }
-        }
+        @media (min-width: 769px) { .pc-toc-panel { display: flex; } .mobile-wheel, .wheel-indicator { display: none !important; } }
+        @media (max-width: 768px) { body, html { cursor: auto !important; } #custom-cursor { display: none; } .mobile-wheel, .wheel-indicator { display: block; } .gallery-item { width: 75vw; } .poem-content { font-size: 1.1rem; column-gap: 2rem; } }
     </style>
 </head>
 <body>
@@ -177,17 +157,12 @@
     <div class="back-arrow interactable" onclick="triggerHomeExit()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
-
     <div class="pc-toc-panel" id="pc-toc-list"></div>
-
     <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
     <div class="wheel-indicator"></div>
-
     <div class="toast-msg" id="toast-msg">已複製</div>
     <div class="end-hint" id="end-hint">鬆開手指以返回首頁</div>
-
     <div class="snap-container" id="main-scroll"></div>
-
     <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lb-img" src=""></div>
 
     <script defer>
@@ -206,37 +181,27 @@
             section.className = 'moment-section';
             section.id = `sec-${index}`;
 
-            let inner = '';
             if (moment.type === 'image') {
-                section.innerHTML = `
-                    <img data-src="${moment.content.imageSrc}" class="img-bg lazy-img">
-                    <div class="bg-overlay"></div>
-                    <div class="text-overlay">
-                        <p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p>
-                    </div>`;
+                section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                const imgs = moment.content.images.map((src, i) => 
-                    `<div class="gallery-item interactable" onclick="event.stopPropagation(); openLightbox('${moment.id}', ${i})">
-                        <img data-src="${src}" class="lazy-img">
-                     </div>`
-                ).join('');
-                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div>
-                         <div class="gallery-scroll" id="gal-scroll-${index}">${imgs}</div>`;
+                const imgs = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="event.stopPropagation(); openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgs}</div>`;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
-                const lines = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
+                // 【修正】將詩句和作者組合起來，用<br>換行，放入單一容器以實現CSS Column排版
+                const poemText = moment.content.lines.join('<br>');
                 section.innerHTML = `
                     <div class="poem-wrapper interactable-text" onclick="copyText(this)">
                         <div class="poem-content">
-                            ${lines}
-                            <div class="poem-author">—— ${moment.content.author}</div>
+                            ${poemText}
+                            <br><br>
+                            <span class="poem-author">—— ${moment.content.author}</span>
                         </div>
                     </div>`;
             }
             scrollContainer.appendChild(section);
 
-            // TOC
             const toc = document.createElement('div');
             toc.className = 'pc-toc-item interactable';
             toc.innerText = moment.title;
@@ -244,16 +209,11 @@
             pcTocList.appendChild(toc);
         });
 
-        // --- 2. PC Gallery Scroll Logic (Transform V-Wheel to H-Scroll) ---
+        // --- 2. PC Gallery Scroll Logic ---
         if (isPC) {
             document.querySelectorAll('.gallery-scroll').forEach(gal => {
-                // 【修正】當滑鼠在畫廊上時，阻止頁面垂直滾動，讓滾輪事件專用於畫廊
-                gal.addEventListener('mouseenter', () => {
-                    scrollContainer.style.overflowY = 'hidden';
-                });
-                gal.addEventListener('mouseleave', () => {
-                    scrollContainer.style.overflowY = 'scroll';
-                });
+                gal.addEventListener('mouseenter', () => { scrollContainer.style.overflowY = 'hidden'; });
+                gal.addEventListener('mouseleave', () => { scrollContainer.style.overflowY = 'scroll'; });
                 gal.addEventListener('wheel', (e) => {
                     if (gal.scrollWidth > gal.clientWidth) {
                         e.preventDefault();
@@ -264,142 +224,115 @@
         }
 
         // --- 3. Wheel & Scroll Sync ---
+        let isWheelDragging = false;
         const updateActiveState = () => {
-            const scrollY = scrollContainer.scrollTop;
-            const h = window.innerHeight;
-            const idx = Math.round(scrollY / h);
+            const idx = Math.round(scrollContainer.scrollTop / window.innerHeight);
+            document.querySelectorAll('.moment-section').forEach((s, i) => s.classList.toggle('active', i === idx));
+            document.querySelectorAll('.pc-toc-item').forEach((t, i) => t.classList.toggle('active', i === idx));
             
-            document.querySelectorAll('.moment-section').forEach((s, i) => {
-                s.classList.toggle('active', i === idx);
-            });
-            document.querySelectorAll('.pc-toc-item').forEach((t, i) => {
-                t.classList.toggle('active', i === idx);
-            });
-            
-            // Sync Mobile Wheel display (only if not being dragged)
             if (!isWheelDragging) {
-                 const deg = -(idx / totalSlides) * 360; 
-                 wheelContainer.style.transform = `rotate(${deg}deg)`;
+                const deg = -(idx / totalSlides) * 360;
+                wheelContainer.style.transform = `rotate(${deg}deg)`;
             }
         };
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // --- 4. Mobile Wheel Interaction (Draggable) [REVISED LOGIC] ---
+        // --- 4. Mobile Wheel Interaction [REWRITTEN LOGIC] ---
         const wheelObj = document.getElementById('mobile-wheel');
-        let wStartAngle = 0, wLastAngle = 0, wCurrentRot = 0;
-        let isWheelDragging = false;
-        const maxAngle = -((totalSlides - 1) / totalSlides) * 360; // 最大旋轉角度
+        let startAngle = 0, startRotation = 0;
+        const maxAngle = -((totalSlides - 1) / totalSlides) * 360; // 負數，代表最大旋轉角度
 
-        wheelObj.addEventListener('touchstart', (e) => {
-            isWheelDragging = true;
-            wheelContainer.style.transition = 'none'; // 拖動時移除動畫
+        const getAngle = (e) => {
             const rect = wheelObj.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
             const cy = rect.top + rect.height / 2;
-            wStartAngle = wLastAngle = Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
-            
-            const style = window.getComputedStyle(wheelContainer);
-            const matrix = new DOMMatrix(style.transform);
-            wCurrentRot = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+            return Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
+        };
+
+        wheelObj.addEventListener('touchstart', (e) => {
+            isWheelDragging = true;
+            wheelContainer.style.transition = 'none';
+            startAngle = getAngle(e);
+            const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
+            startRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
         }, { passive: false });
 
         wheelObj.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (!isWheelDragging) return;
 
-            const rect = wheelObj.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            const curAngle = Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
-            
-            let delta = curAngle - wLastAngle;
-            // 處理角度跳躍 (從 179 -> -179)
-            if (delta > 180) delta -= 360;
-            if (delta < -180) delta += 360;
+            const currentAngle = getAngle(e);
+            let angleDelta = currentAngle - startAngle;
 
-            // 【修正】只允許順時針 (正向delta) 轉動
-            if (delta > 0) {
-                let newRot = wCurrentRot + delta;
-                // 【修正】限制旋轉範圍在 [maxAngle, 0] 之間
-                newRot = Math.max(maxAngle, Math.min(0, newRot));
-                wheelContainer.style.transform = `rotate(${newRot}deg)`;
-                wCurrentRot = newRot;
-            }
-            wLastAngle = curAngle;
+            // 處理角度從 180 到 -180 的跳躍
+            if (angleDelta > 180) angleDelta -= 360;
+            if (angleDelta < -180) angleDelta += 360;
+            
+            let newRotation = startRotation + angleDelta;
+            
+            // 【核心修正】將旋轉角度嚴格限制在 [maxAngle, 0] 之間
+            newRotation = Math.max(maxAngle, Math.min(0, newRotation));
+
+            wheelContainer.style.transform = `rotate(${newRotation}deg)`;
         }, { passive: false });
 
-        wheelObj.addEventListener('touchend', (e) => {
+        wheelObj.addEventListener('touchend', () => {
             if (!isWheelDragging) return;
             isWheelDragging = false;
-            wheelContainer.style.transition = 'transform 0.4s var(--ease-elastic)'; // 恢復動畫
+            wheelContainer.style.transition = 'transform 0.4s var(--ease-elastic)';
 
-            const style = window.getComputedStyle(wheelContainer);
-            const matrix = new DOMMatrix(style.transform);
-            let angle = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
+            const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
+            const currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
             
-            let idx = Math.round((-angle / 360) * totalSlides);
-            idx = Math.max(0, Math.min(totalSlides - 1, idx)); // 確保索引在範圍內
+            let idx = Math.round((-currentRotation / 360) * totalSlides);
+            idx = Math.max(0, Math.min(totalSlides - 1, idx));
 
-            // 【修正】自動吸附到最近的位置
             const snapAngle = -(idx / totalSlides) * 360;
             wheelContainer.style.transform = `rotate(${snapAngle}deg)`;
             
-            // 滾動到對應頁面
             document.getElementById(`sec-${idx}`).scrollIntoView({ behavior: 'smooth' });
         });
         
         // Wheel Item Generation
-        const radius = 120; // 滾輪半徑
+        const radius = 120;
         momentsData.forEach((m, i) => {
             const angleDeg = (i / totalSlides) * 360;
             const angleRad = angleDeg * Math.PI / 180;
-            // 計算 x, y (CSS transform center is top-left, so we adjust)
             const x = radius * Math.sin(angleRad);
             const y = -radius * Math.cos(angleRad);
             const el = document.createElement('div');
             el.className = 'wheel-item';
             el.innerText = m.title;
-            // The item itself needs to be placed at center, then translated out
-            el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${angleDeg}deg)`;
+            el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${angleDeg + 90}deg)`;
             wheelContainer.appendChild(el);
         });
 
-        // --- 5. "Pull to Home" Logic (End of Page) ---
+        // --- 5. "Pull to Home" Logic ---
         let tStartY = 0;
-        let isPulling = false;
         const hint = document.getElementById('end-hint');
-
-        scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; isPulling = false; }, {passive: true});
-        
+        scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, {passive: true});
         scrollContainer.addEventListener('touchmove', e => {
             const currentY = e.touches[0].clientY;
             const isBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 5;
-            
-            if (isBottom && currentY < tStartY) { // isBottom and pulling up
+            if (isBottom && currentY < tStartY) {
                 const delta = tStartY - currentY;
-                isPulling = true;
                 hint.classList.add('visible');
                 hint.innerText = delta > 100 ? "鬆開手指確認返回" : "繼續上滑以返回首頁";
                 scrollContainer.style.transform = `translateY(${-Math.min(delta / 4, 50)}px)`;
             }
         }, {passive: true});
-
         scrollContainer.addEventListener('touchend', e => {
-            scrollContainer.style.transform = ''; // Reset layout
-            if (isPulling) {
-                const delta = tStartY - e.changedTouches[0].clientY;
-                if (delta > 100) {
-                    triggerHomeExit();
-                } else {
-                    hint.classList.remove('visible');
-                }
+            const delta = tStartY - e.changedTouches[0].clientY;
+            if (hint.classList.contains('visible') && delta > 100) {
+                triggerHomeExit();
             }
-            isPulling = false;
+            scrollContainer.style.transform = '';
+            hint.classList.remove('visible');
         });
 
         // --- 6. Lazy Load & Cursor ---
-        const observer = new IntersectionObserver(entries => {
+        const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if(e.isIntersecting) {
                     const img = e.target;
@@ -410,28 +343,25 @@
             });
         }, {rootMargin: "50px"});
         document.querySelectorAll('.lazy-img').forEach(img => observer.observe(img));
-
-        bindCursor();
+        if (isPC) bindCursor();
     });
 
     // --- Helpers ---
     function triggerHomeExit() {
         document.getElementById('end-hint').innerText = "正在返回...";
         document.body.classList.add('exiting');
-        setTimeout(() => { /* window.location.href = 'home.html'; */ console.log("Navigating to home.html"); }, 800);
+        // 【修正】恢復頁面跳轉
+        setTimeout(() => window.location.href = 'home.html', 800);
     }
 
-    async function copyText(el) {
-        // 【修正】處理 <br> 標籤並移除其他HTML標籤
-        const textToCopy = el.innerHTML.replace(/<br\s*[\/]?>/gi, "\n").replace(/<[^>]*>/g, "").trim();
+    async function copyText(el) { 
+        const textToCopy = el.innerText.trim();
         try { 
             await navigator.clipboard.writeText(textToCopy); 
             const t = document.getElementById('toast-msg'); 
             t.style.opacity = 1; 
             setTimeout(() => t.style.opacity = 0, 1200); 
-        } catch(e){
-            console.error("Copy failed", e);
-        } 
+        } catch(e){ console.error("Copy failed", e); } 
     }
 
     window.openLightbox = (mid, idx) => {
@@ -445,7 +375,6 @@
 
     function bindCursor() {
         const cursor = document.getElementById('custom-cursor');
-        if (!cursor) return;
         document.addEventListener('mousemove', e => { cursor.style.left = e.clientX+'px'; cursor.style.top = e.clientY+'px'; });
         document.querySelectorAll('.interactable, .interactable-text, .gallery-item').forEach(el => {
             el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
