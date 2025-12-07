@@ -6,116 +6,152 @@
     <title>Article</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; } }
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #000000; /* 強調色/鼠標顏色，淺色模式為黑 */
+        }
 
-        /* 隱藏默認鼠標 */
-        body, html, a, button { cursor: none !important; }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --accent-color: #ffffff; /* 深色模式為白 */
+            }
+        }
+
+        body.js-loading { opacity: 0; }
 
         body {
-            background-color: var(--bg-color); color: var(--text-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
             font-family: 'Noto Serif TC', serif;
-            margin: 0; height: 100vh; width: 100vw; overflow: hidden;
-            display: flex; flex-direction: column;
-            opacity: 0; animation: fadeIn 0.8s ease forwards;
+            margin: 0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: opacity 0.8s ease;
+        }
+        
+        /* --- 核心修改點 1: 徹底替換鼠標 --- */
+        /* 使用通用選擇器 * 來確保所有元素的鼠標都被隱藏 */
+        * { cursor: none !important; }
+        /* 為可交互元素在移動設備上恢復預設鼠標 */
+        @media (hover: none) or (max-width: 768px) {
+            * { cursor: auto !important; }
         }
 
-        /* 自定義鼠標 */
+        /* --- 核心修改點 2: 固定鼠標顏色 --- */
         #custom-cursor {
             position: fixed; top: 0; left: 0; width: 12px; height: 12px;
-            background-color: var(--text-color); transform: rotate(45deg);
-            pointer-events: none; z-index: 99999;
-            transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference;
+            background-color: var(--accent-color); /* 使用強調色 */
+            transform: rotate(45deg);
+            pointer-events: none;
+            z-index: 99999;
+            transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s, border 0.2s;
+            /* 移除 mix-blend-mode */
         }
-        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
-        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--text-color); }
+        #custom-cursor.hollow {
+            background: transparent;
+            border: 1.5px solid var(--accent-color);
+            transform: rotate(45deg) scale(1.2);
+        }
+        #custom-cursor.clicking {
+            transform: rotate(45deg) scale(0.8);
+            background: var(--accent-color);
+        }
 
         .back-arrow {
             position: fixed; top: 30px; left: 30px; opacity: 0.5; z-index: 100; transition: 0.3s;
+            border: none; background: none; padding: 0;
         }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        /* --- 閱讀容器 --- */
         .reader-viewport {
-            flex: 1; /* 佔據除導航外的所有空間 */
+            flex: 1;
             width: 100%; max-width: 800px;
-            margin: 0 auto;
+            margin: 80px auto;
             position: relative;
-            margin-top: 80px; /* 留出頂部空間 */
-            margin-bottom: 80px; /* 留出底部空間 */
         }
 
-        /* 每一頁的容器 */
         .page-slide {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             padding: 0 40px;
-            opacity: 0; pointer-events: none; transform: translateX(20px);
+            opacity: 0; pointer-events: none;
+            transform: translateX(20px);
             transition: opacity 0.4s ease, transform 0.4s ease;
-            display: flex; flex-direction: column; 
-            justify-content: flex-start; /* 內容頂部對齊 */
-            gap: 25px; /* 段落間距 */
+            display: flex; flex-direction: column;
+            justify-content: flex-start;
+            gap: 25px;
         }
-        
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
 
-        /* 段落樣式 */
+        /* --- 核心修改點 3 & 4: 自適應縮放與新的交互動畫 --- */
         p {
-            font-size: 1.15rem; line-height: 1.9; text-align: justify;
-            transition: transform 0.2s ease; /* 微呼吸 */
-            transform-origin: left center;
+            /* 使用 clamp() 實現字體平滑縮放 */
+            font-size: clamp(1.05rem, 1.8vmin, 1.2rem);
+            line-height: 1.9;
+            text-align: center;
+            transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* 添加平滑過渡 */
+            transform-origin: center;
         }
-        p:hover { transform: scale(1.01); } /* 極微小的放大 */
-        p:active { transform: scale(0.99); } /* 點擊收縮 */
+        
+        /* 鼠標懸停時放大 */
+        p:hover {
+            transform: scale(1.02);
+        }
 
-        /* 標題頁特殊樣式 */
+        /* 點擊時縮小 */
+        p:active {
+            transform: scale(0.98);
+        }
+
         .title-slide { justify-content: center; text-align: center; }
         .title-slide h1 { font-size: 2.2rem; font-weight: 500; margin-bottom: 20px; }
         .title-slide .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; }
 
-        /* 底部導航 */
         .pagination {
             position: fixed; bottom: 30px; width: 100%;
             display: flex; justify-content: center; align-items: center; gap: 40px;
             font-family: sans-serif; font-size: 0.9rem; user-select: none;
         }
-        .nav-btn { opacity: 0.3; padding: 10px; transition: 0.3s; }
-        .nav-btn:hover { opacity: 1; }
+        
+        .nav-btn {
+            opacity: 0.3; padding: 10px; transition: 0.3s;
+            border: none; background: none; color: inherit; font-family: inherit; font-size: inherit;
+        }
+        .nav-btn:hover, .nav-btn:focus { opacity: 1; outline: none; }
+        .nav-btn:disabled { opacity: 0.1; }
+
         .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; }
 
-        /* 手機適配 */
         @media (max-width: 768px) {
-            body, html, a { cursor: auto !important; }
             #custom-cursor { display: none; }
-            .reader-viewport { margin-top: 60px; margin-bottom: 100px; }
+            .reader-viewport { margin: 60px auto 100px; }
             .page-slide { padding: 0 25px; gap: 20px; }
-            p { font-size: 1.05rem; }
             .pagination { bottom: 20px; }
         }
-
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes fadeOut { to { opacity: 0; } }
     </style>
 </head>
-<body>
+<body class="js-loading">
     <div id="custom-cursor"></div>
 
-    <div class="back-arrow interactable" onclick="goBack()">
+    <button class="back-arrow interactable" onclick="goBack()" aria-label="返回文章列表">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-    </div>
+    </button>
 
-    <!-- 這裡不直接放內容，而是作為 JS 計算的容器 -->
-    <div class="reader-viewport" id="viewport"></div>
+    <main class="reader-viewport" id="viewport" aria-live="polite" aria-atomic="true"></main>
 
-    <div class="pagination">
-        <div class="nav-btn interactable" onclick="changePage(-1)">PREV</div>
-        <div class="page-indicator" id="page-num">1 / 1</div>
-        <div class="nav-btn interactable" onclick="changePage(1)">NEXT</div>
-    </div>
+    <nav class="pagination" role="navigation" aria-label="文章分頁">
+        <button class="nav-btn interactable" id="prev-btn" aria-controls="viewport">PREV</button>
+        <div class="page-indicator" id="page-num" aria-live="polite">1 / 1</div>
+        <button class="nav-btn interactable" id="next-btn" aria-controls="viewport">NEXT</button>
+    </nav>
 
     <script>
-        // === 文章源數據 (在此處填寫，JS 會自動分頁) ===
-        // title: 標題對象, paragraphs: 段落數組
         const articleContent = {
             title: "幾何美學的構建",
             date: "2023.11.02",
@@ -129,147 +165,167 @@
             ]
         };
 
-        let currentPage = 0;
-        let totalPages = 0;
+        // DOM 元素引用
         const viewport = document.getElementById('viewport');
         const pageNum = document.getElementById('page-num');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const cursor = document.getElementById('custom-cursor');
 
-        // --- 核心：動態分頁算法 ---
+        // 狀態變數
+        let currentPage = 0;
+        let totalPages = 0;
+        let pages = [];
+
         function layoutArticle() {
-            viewport.innerHTML = ''; // 清空
+            viewport.innerHTML = '';
+            pages = [];
             currentPage = 0;
 
             const viewportHeight = viewport.clientHeight;
-            let pageDiv = createPageDiv(0); // 創建第一頁
-            viewport.appendChild(pageDiv);
-            
-            // 1. 插入標題 (標題單獨佔一頁，或佔第一頁頂部)
-            // 這裡我們讓標題佔第一頁，內容從第二頁開始，或者標題+第一段
-            // 為了優雅，我們採用：第一頁是標題頁
-            const titleHTML = document.createElement('div');
-            titleHTML.className = 'title-slide';
-            titleHTML.innerHTML = `<h1>${articleContent.title}</h1><div class="meta">${articleContent.date}</div>`;
-            pageDiv.appendChild(titleHTML);
-            
-            // 創建第二頁用於放正文
-            let currentContentPage = createPageDiv(1); // 實際上是 index 1
-            viewport.appendChild(currentContentPage);
-            let activePage = currentContentPage;
-            let pageIndex = 1;
+            if (viewportHeight <= 0) return;
 
-            // 臨時元素用於測量高度
+            const titlePage = createPageDiv(0, true);
+            titlePage.innerHTML = `<h1>${articleContent.title}</h1><div class="meta">${articleContent.date}</div>`;
+            pages.push(titlePage);
+
+            let contentPageIndex = 1;
+            let currentPageDiv = createPageDiv(contentPageIndex);
+            pages.push(currentPageDiv);
+            
+            const pageStyle = getComputedStyle(currentPageDiv);
+            const paragraphGap = parseFloat(pageStyle.gap) || 25;
+
+            const fragment = document.createDocumentFragment();
             const tempDiv = document.createElement('div');
             tempDiv.style.visibility = 'hidden';
             tempDiv.style.position = 'absolute';
-            tempDiv.style.width = viewport.clientWidth - 80 + 'px'; // 減去 padding
-            document.body.appendChild(tempDiv);
+            tempDiv.style.width = `${viewport.clientWidth - (parseFloat(pageStyle.paddingLeft) + parseFloat(pageStyle.paddingRight))}px`;
+            fragment.appendChild(tempDiv);
+            
+            let currentHeight = 0;
 
-            // 2. 循環處理段落
             articleContent.paragraphs.forEach(text => {
-                // 創建 P 標籤
                 const p = document.createElement('p');
                 p.className = 'interactable-text';
                 p.innerText = text;
-                p.onclick = () => copyText(p);
+                p.onclick = () => copyText(p); // 點擊事件觸發複製
 
-                // 測量這個 P 的高度
                 tempDiv.innerHTML = '';
-                const cloneP = p.cloneNode(true);
-                tempDiv.appendChild(cloneP);
-                const pHeight = tempDiv.clientHeight + 25; // 25是 gap
+                tempDiv.appendChild(p.cloneNode(true));
+                const pHeight = tempDiv.clientHeight;
 
-                // 獲取當前頁面已用高度
-                // 注意：這裡簡單估算，遍歷 children 累加
-                let currentUsedHeight = 0;
-                Array.from(activePage.children).forEach(child => {
-                    currentUsedHeight += child.clientHeight + 25;
-                });
-
-                // 判斷是否溢出
-                if (currentUsedHeight + pHeight > viewportHeight) {
-                    // 溢出，創建新頁
-                    pageIndex++;
-                    activePage = createPageDiv(pageIndex);
-                    viewport.appendChild(activePage);
-                    activePage.appendChild(p);
-                } else {
-                    // 沒溢出，加入當前頁
-                    activePage.appendChild(p);
+                if (currentHeight > 0 && currentHeight + pHeight + paragraphGap > viewportHeight) {
+                    contentPageIndex++;
+                    currentPageDiv = createPageDiv(contentPageIndex);
+                    pages.push(currentPageDiv);
+                    currentHeight = 0;
                 }
+                
+                currentPageDiv.appendChild(p);
+                currentHeight += pHeight + paragraphGap;
             });
+            
+            pages.forEach(page => viewport.appendChild(page));
 
-            document.body.removeChild(tempDiv); // 清理測量工具
-            
-            totalPages = pageIndex + 1;
-            
-            // 顯示第一頁
-            document.querySelectorAll('.page-slide')[0].classList.add('active');
-            updateIndicator();
+            totalPages = pages.length;
+            updatePage();
             bindCursorEvents();
         }
 
-        function createPageDiv(index) {
+        function createPageDiv(index, isTitle = false) {
             const div = document.createElement('div');
             div.className = 'page-slide';
+            if (isTitle) div.classList.add('title-slide');
             div.dataset.index = index;
-            if (index === 0) div.classList.add('title-slide'); // 標記標題頁樣式
             return div;
         }
 
-        // --- 交互邏輯 ---
         function changePage(dir) {
-            const next = currentPage + dir;
-            if (next >= 0 && next < totalPages) {
-                const pages = document.querySelectorAll('.page-slide');
-                pages[currentPage].classList.remove('active');
-                currentPage = next;
-                pages[currentPage].classList.add('active');
-                updateIndicator();
+            const newPage = currentPage + dir;
+            if (newPage >= 0 && newPage < totalPages) {
+                currentPage = newPage;
+                updatePage();
             }
         }
 
-        function updateIndicator() {
+        function updatePage() {
+            pages.forEach((page, index) => {
+                page.classList.toggle('active', index === currentPage);
+            });
             pageNum.innerText = `${currentPage + 1} / ${totalPages}`;
+            prevBtn.disabled = (currentPage === 0);
+            nextBtn.disabled = (currentPage === totalPages - 1);
         }
 
+        // 簡化後的複製函數，只負責核心功能
         async function copyText(el) {
             try {
                 await navigator.clipboard.writeText(el.innerText);
-                // 這裡無需提示，僅依靠 CSS 的 active 縮放效果
-            } catch(e) {}
+                // 視覺反饋完全由 CSS 的 :active 偽類處理，無需 JS 操作
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
         }
 
-        // --- 初始化與監聽 ---
-        window.addEventListener('resize', () => {
-            // 簡單防抖：窗口大小改變時重新排版
-            clearTimeout(window.resizeTimer);
-            window.resizeTimer = setTimeout(layoutArticle, 200);
-        });
+        function goBack() {
+            document.body.style.opacity = '0';
+            setTimeout(() => {
+                alert("返回上一頁");
+            }, 500);
+        }
 
-        // 鼠標
-        const cursor = document.getElementById('custom-cursor');
-        document.addEventListener('mousemove', e => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
-        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+        function initNavigation() {
+            prevBtn.addEventListener('click', () => changePage(-1));
+            nextBtn.addEventListener('click', () => changePage(1));
+            
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    prevBtn.click();
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    nextBtn.click();
+                }
+            });
+        }
+        
+        function initCursor() {
+            if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return;
+            
+            document.addEventListener('mousemove', e => {
+                cursor.style.left = `${e.clientX}px`;
+                cursor.style.top = `${e.clientY}px`;
+            });
+            document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+            document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+            
+            bindCursorEvents();
+        }
 
         function bindCursorEvents() {
+             if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return;
+
             document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                 el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
                 el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
             });
         }
 
-        function goBack() {
-            document.body.style.animation = 'fadeOut 0.5s ease forwards';
-            setTimeout(() => { window.location.href = '../../articles.html'; }, 500);
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            layoutArticle();
 
-        // 啟動排版
-        layoutArticle();
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(layoutArticle, 250);
+            });
 
+            initNavigation();
+            initCursor();
+            
+            document.body.classList.remove('js-loading');
+        });
     </script>
 </body>
 </html>
