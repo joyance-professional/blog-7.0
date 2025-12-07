@@ -67,33 +67,38 @@
 
         .reader-viewport {
             flex: 1;
-            width: 100%; max-width: 800px;
+            width: 100%; /* 手機版全寬 */
+            max-width: 800px; /* 桌面版最大寬度 */
             margin: 80px auto;
             position: relative;
-            touch-action: pan-y; /* 允許垂直滾動，但在我們的例子中主要是為了水平滑動 */
+            overflow: hidden; /* 關鍵：讓頁面滑動時內容不溢出 */
+            touch-action: pan-y; /* 允許垂直滾動，但主要用於控制滑動 */
         }
 
         .page-slide {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            padding: 0 40px;
+            padding: 0 40px; /* 預設內邊距 */
             opacity: 0; pointer-events: none;
-            /* 預設移出位置，為滑動和切換提供基礎 */
             transform: translateX(30px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
+            transition: opacity 0.4s ease, transform 0.4s ease; /* 狀態切換時的過渡 */
             display: flex; flex-direction: column;
-            /* --- 核心修改點 3: 內容垂直置中 --- */
-            justify-content: center;
+            justify-content: center; /* 內容垂直居中 */
             gap: 25px;
+            box-sizing: border-box; /* 確保 padding 不影響 width/height */
         }
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
 
+        /* --- 手機版滑動時，暫停 CSS transition --- */
+        .page-slide.is-swiping {
+            transition: none;
+        }
+
         p {
-            /* --- 核心修改點 1 & 2: 恢復左右對齊 & 加大字體 --- */
-            font-size: clamp(1.1rem, 2.2vmin, 1.35rem); /* 加大了字體範圍 */
+            font-size: clamp(1.1rem, 2.2vmin, 1.35rem);
             line-height: 1.9;
-            text-align: justify; /* 恢復左右對齊 */
+            text-align: justify;
             transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            transform-origin: left center; /* 動畫基點配合對齊方式 */
+            transform-origin: left center;
         }
         
         p:hover { transform: scale(1.02); }
@@ -107,6 +112,7 @@
             position: fixed; bottom: 30px; width: 100%;
             display: flex; justify-content: center; align-items: center; gap: 40px;
             font-family: sans-serif; font-size: 0.9rem; user-select: none;
+            z-index: 10; /* 確保導航在滑動時總是在頂層 */
         }
         
         .nav-btn {
@@ -121,7 +127,7 @@
         @media (max-width: 768px) {
             #custom-cursor { display: none; }
             .reader-viewport { margin: 60px auto 100px; }
-            .page-slide { padding: 0 25px; gap: 20px; }
+            .page-slide { padding: 0 25px; gap: 20px; } /* 手機版內邊距 */
             .pagination { bottom: 20px; }
         }
     </style>
@@ -166,6 +172,8 @@
         let pages = [];
         let touchStartX = 0;
         let touchMoveX = 0;
+        let isSwiping = false; // 新增：標記是否正在滑動
+        const SWIPE_BUFFER = 100; // 左右滑動的緩衝區 px
 
         function layoutArticle() {
             viewport.innerHTML = '';
@@ -188,8 +196,10 @@
             const tempDiv = document.createElement('div');
             tempDiv.style.visibility = 'hidden';
             tempDiv.style.position = 'absolute';
+            // 確保 tempDiv 的寬度考慮了 viewport 的 padding
             tempDiv.style.width = `${viewport.clientWidth - (parseFloat(pageStyle.paddingLeft) + parseFloat(pageStyle.paddingRight))}px`;
             fragment.appendChild(tempDiv);
+            
             let currentHeight = 0;
 
             articleContent.paragraphs.forEach(text => {
@@ -235,9 +245,8 @@
 
         function updatePage() {
             pages.forEach((page, index) => {
-                // 清除所有手動拖曳的樣式，讓 CSS class 來控制
-                page.style.transform = '';
-                page.style.transition = '';
+                page.style.transition = 'transform 0.4s ease, opacity 0.4s ease'; // 恢復過渡
+                page.style.transform = ''; // 清除手動拖曳的 transform
                 page.classList.toggle('active', index === currentPage);
             });
             pageNum.innerText = `${currentPage + 1} / ${totalPages}`;
@@ -264,59 +273,98 @@
             });
         }
         
-        // --- 核心修改點 4: 初始化滑動導航 ---
         function initSwipeNavigation() {
+            // 僅在觸摸設備或小螢幕上啟用
             if (!window.matchMedia("(hover: none) or (max-width: 768px)").matches) return;
 
             viewport.addEventListener('touchstart', handleTouchStart, { passive: true });
             viewport.addEventListener('touchmove', handleTouchMove, { passive: true });
             viewport.addEventListener('touchend', handleTouchEnd, { passive: true });
+            // 阻止一些默認觸摸行為，例如頁面滾動，除非是在特定元素上
+            document.addEventListener('touchmove', (e) => {
+                if (isSwiping) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
         }
 
         function handleTouchStart(e) {
+            // 僅處理單點觸摸
+            if (e.touches.length !== 1) return;
+            
             touchStartX = e.touches[0].clientX;
             touchMoveX = touchStartX;
+            isSwiping = false; // 重置滑動狀態
+            pages.forEach(page => page.classList.add('is-swiping')); // 移除 CSS transition
         }
 
         function handleTouchMove(e) {
-            touchMoveX = e.touches[0].clientX;
-            const deltaX = touchMoveX - touchStartX;
+            if (e.touches.length !== 1) return;
+            
+            const currentX = e.touches[0].clientX;
+            const deltaX = currentX - touchStartX;
+            touchMoveX = currentX; // 記錄最後一次移動的位置
+            
             const activePage = pages[currentPage];
-            if (activePage) {
-                activePage.style.transition = 'none'; // 拖曳時移除過渡效果
-                // 限制拖曳範圍，提供阻尼感
-                const limitedDeltaX = Math.max(-100, Math.min(100, deltaX));
-                activePage.style.transform = `translateX(${limitedDeltaX}px)`;
+            if (!activePage) return;
+
+            // --- 核心修改點 1: 精確限制滑動範圍 ---
+            let constrainedDeltaX = deltaX;
+            
+            // 如果是第一頁，向右滑動受限
+            if (currentPage === 0 && deltaX > 0) {
+                constrainedDeltaX = Math.min(deltaX, SWIPE_BUFFER);
+            } 
+            // 如果是最後一頁，向左滑動受限
+            else if (currentPage === totalPages - 1 && deltaX < 0) {
+                constrainedDeltaX = Math.max(deltaX, -SWIPE_BUFFER);
             }
+            // 中間頁面不受邊界限制，但整體移動不能超出 viewport 範圍
+            else {
+                 constrainedDeltaX = Math.max(-SWIPE_BUFFER, Math.min(SWIPE_BUFFER, deltaX));
+            }
+
+            activePage.style.transform = `translateX(${constrainedDeltaX}px)`;
+            isSwiping = true; // 開始滑動
         }
 
         function handleTouchEnd() {
+            const activePage = pages[currentPage];
+            if (!activePage) return;
+
             const deltaX = touchMoveX - touchStartX;
             const swipeThreshold = 50; // 滑動超過 50px 才算翻頁
 
-            if (deltaX < -swipeThreshold) {
+            if (deltaX < -swipeThreshold && currentPage < totalPages - 1) {
                 changePage(1); // 向左滑，下一頁
-            } else if (deltaX > swipeThreshold) {
+            } else if (deltaX > swipeThreshold && currentPage > 0) {
                 changePage(-1); // 向右滑，上一頁
             } else {
-                // 滑動距離不夠，彈回原位
+                // 滑動距離不足或超出邊界，彈回原位
                 updatePage();
             }
+            
+            // 滑動結束後，重新啟用 CSS transition
+            pages.forEach(page => page.classList.remove('is-swiping'));
+            isSwiping = false; // 滑動結束
         }
 
         function initCursor() {
             if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return;
+            
             document.addEventListener('mousemove', e => {
                 cursor.style.left = `${e.clientX}px`;
                 cursor.style.top = `${e.clientY}px`;
             });
             document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
             document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+            
             bindCursorEvents();
         }
 
         function bindCursorEvents() {
              if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return;
+
             document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                 el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
                 el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
@@ -325,14 +373,17 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             layoutArticle();
+
             let resizeTimer;
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(layoutArticle, 250);
             });
+
             initNavigation();
             initSwipeNavigation(); // 啟用滑動導航
             initCursor();
+            
             document.body.classList.remove('js-loading');
         });
     </script>
