@@ -12,6 +12,8 @@
             --bg-color: #ffffff; --text-color: #1a1a1a;
             --toc-bg-pc: rgba(255, 255, 255, 0.0);
             --ease-elastic: cubic-bezier(0.25, 1, 0.5, 1);
+            /* 【NEW】新增一個極度平滑的動畫曲線，用於滾輪 */
+            --ease-out-smooth: cubic-bezier(0.23, 1, 0.32, 1);
         }
         @media (prefers-color-scheme: dark) { 
             :root { --bg-color: #000000; --text-color: #e5e5e5; --toc-bg-pc: rgba(0,0,0,0); } 
@@ -50,42 +52,25 @@
         .moment-section.active .text-overlay { transform: translateY(0); opacity: 1; }
         .moment-text { font-size: 1.15rem; line-height: 1.8; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
-        /* --- Gallery Type --- */
+        /* --- 【Gallery Type REFINED】 --- */
         .gallery-mode { background: var(--bg-color); flex-direction: column; }
         .gallery-text { margin-bottom: 4vh; max-width: 500px; text-align: center; z-index: 4; }
-        .gallery-scroll { display: flex; gap: 40px; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 10; scrollbar-width: none; }
-        .gallery-scroll::-webkit-scrollbar { display: none; }
+        .gallery-scroll { display: flex; gap: 40px; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 10; }
+        /* 在手機上隱藏滾動條 */
+        @media (max-width: 768px) {
+            .gallery-scroll { scrollbar-width: none; }
+            .gallery-scroll::-webkit-scrollbar { display: none; }
+        }
         .gallery-item { flex: 0 0 auto; height: 100%; width: auto; scroll-snap-align: center; transition: transform 0.3s; }
         .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; }
         .gallery-item:hover { transform: scale(1.01); }
 
-        /* --- 【Poem Type REWORKED】 --- */
+        /* --- Poem Type --- */
         .poem-mode { background: var(--bg-color); }
-        .poem-wrapper {
-            width: 100%;
-            height: 80vh;
-            display: flex; /* Vertically center the content block */
-            align-items: center;
-            justify-content: center;
-            overflow-x: auto; /* Allow left-right scroll */
-            scrollbar-width: none;
-        }
+        .poem-wrapper { width: 100%; height: 80vh; display: flex; align-items: center; justify-content: center; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; }
         .poem-wrapper::-webkit-scrollbar { display: none; }
-        .poem-content {
-            display: flex; /* Lay out lines horizontally */
-            flex-direction: row;
-            gap: 3rem; /* Space between vertical lines */
-            height: 100%;
-            padding: 0 5vw;
-        }
-        .poem-line, .poem-author {
-            writing-mode: vertical-rl; /* Text is vertical */
-            text-orientation: upright;
-            white-space: nowrap; /* Prevent a single line from wrapping */
-            font-size: 1.4rem; 
-            letter-spacing: 0.3em; 
-            line-height: 1.8;
-        }
+        .poem-content { display: flex; flex-direction: row; gap: 3rem; height: 100%; padding: 0 5vw; }
+        .poem-line, .poem-author { writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; font-size: 1.4rem; letter-spacing: 0.3em; line-height: 1.8; }
         .poem-author { font-size: 1rem; opacity: 0.7; }
 
         /* --- PC TOC --- */
@@ -100,22 +85,12 @@
         .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: center; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.75rem; opacity: 0.5; pointer-events: none; }
         .wheel-indicator { display: none; position: fixed; bottom: 115px; left: 50%; transform: translateX(-50%); width: 2px; height: 12px; background: var(--text-color); z-index: 151; }
 
-        /* --- 【Exit Animation & Hint REWORKED】 --- */
-        .exit-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0);
-            pointer-events: none;
-            transition: background 0.5s ease;
-            z-index: 1000;
-        }
+        /* --- Exit Animation & Hint --- */
+        .exit-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0); pointer-events: none; transition: background 0.5s ease; z-index: 1000; }
         .exit-overlay.visible { background: rgba(0,0,0,0.7); }
         .end-hint { position: fixed; bottom: 40px; width: 100%; text-align: center; font-size: 0.85rem; letter-spacing: 2px; opacity: 0; transform: translateY(20px); transition: 0.4s var(--ease-elastic); pointer-events: none; z-index: 1001; }
         .end-hint.visible { opacity: 1; transform: translateY(0); }
-        .end-hint.highlight {
-            color: #fff;
-            transform: scale(1.15); /* Enlarge */
-            text-shadow: 0 0 10px rgba(255,255,255,0.7); /* Glow effect */
-        }
+        .end-hint.highlight { color: #fff; transform: scale(1.15); text-shadow: 0 0 10px rgba(255,255,255,0.7); }
         .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 1100; }
         .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 999; opacity: 0; pointer-events: none; transition: 0.4s; display: flex; justify-content: center; align-items: center; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
@@ -150,24 +125,21 @@
         const totalSlides = momentsData.length;
         const isPC = window.innerWidth > 768;
 
-        // --- 1. Content Builder ---
         momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
             section.id = `sec-${index}`;
-
             if (moment.type === 'image') {
                 section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                const imgs = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="event.stopPropagation(); openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                const imgs = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
                 section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgs}</div>`;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
-                // 【REWORKED】Wrap each line and author in a <p> tag for flexbox layout
                 const lines = moment.content.lines.map(line => `<p class="poem-line">${line}</p>`).join('');
                 const author = `<p class="poem-author">—— ${moment.content.author}</p>`;
-                section.innerHTML = `<div class="poem-wrapper" onclick="copyText(this)"><div class="poem-content">${lines}${author}</div></div>`;
+                section.innerHTML = `<div class="poem-wrapper"><div class="poem-content">${lines}${author}</div></div>`;
             }
             scrollContainer.appendChild(section);
 
@@ -178,21 +150,8 @@
             pcTocList.appendChild(toc);
         });
 
-        // --- 2. 【PC Gallery Scroll FIX】 ---
-        if (isPC) {
-            document.querySelectorAll('.gallery-scroll').forEach(gal => {
-                // To solve scroll conflict, temporarily disable main page vertical scroll when mouse is over the gallery
-                gal.addEventListener('mouseenter', () => { scrollContainer.style.overflowY = 'hidden'; });
-                gal.addEventListener('mouseleave', () => { scrollContainer.style.overflowY = 'scroll'; });
-                gal.addEventListener('wheel', (e) => {
-                    // Manually scroll the gallery based on mouse wheel's deltaY
-                    if (gal.scrollWidth > gal.clientWidth) {
-                        e.preventDefault();
-                        gal.scrollLeft += e.deltaY;
-                    }
-                }, { passive: false });
-            });
-        }
+        // --- 2. PC Gallery logic removed for simplicity ---
+        // Native scrollbar is now used on PC.
 
         // --- 3. Scroll Sync & State Update ---
         let isWheelDragging = false;
@@ -200,7 +159,6 @@
             const idx = Math.round(scrollContainer.scrollTop / window.innerHeight);
             document.querySelectorAll('.moment-section').forEach((s, i) => s.classList.toggle('active', i === idx));
             document.querySelectorAll('.pc-toc-item').forEach((t, i) => t.classList.toggle('active', i === idx));
-            
             if (!isWheelDragging) {
                 const deg = -(idx / totalSlides) * 360;
                 wheelContainer.style.transform = `rotate(${deg}deg)`;
@@ -209,18 +167,16 @@
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // --- 4. Mobile Wheel Interaction (Robust Logic) ---
+        // --- 4. Mobile Wheel Interaction ---
         const wheelObj = document.getElementById('mobile-wheel');
         let startAngle = 0, startRotation = 0;
-        const maxAngle = -((totalSlides - 1) / totalSlides) * 360; 
-
+        const maxAngle = -((totalSlides - 1) / totalSlides) * 360;
         const getAngle = (e) => {
             const rect = wheelObj.getBoundingClientRect();
             const cx = rect.left + rect.width / 2;
             const cy = rect.top + rect.height / 2;
             return Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
         };
-
         wheelObj.addEventListener('touchstart', (e) => {
             isWheelDragging = true;
             wheelContainer.style.transition = 'none';
@@ -228,39 +184,29 @@
             const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
             startRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
         }, { passive: false });
-
         wheelObj.addEventListener('touchmove', (e) => {
             e.preventDefault();
             if (!isWheelDragging) return;
-            const currentAngle = getAngle(e);
-            let angleDelta = currentAngle - startAngle;
-            
-            // Handle angle wrap-around
+            let angleDelta = getAngle(e) - startAngle;
             if (angleDelta > 180) angleDelta -= 360;
             if (angleDelta < -180) angleDelta += 360;
-            
             let newRotation = startRotation + angleDelta;
-            newRotation = Math.max(maxAngle, Math.min(0, newRotation)); // Clamp rotation
+            newRotation = Math.max(maxAngle, Math.min(0, newRotation));
             wheelContainer.style.transform = `rotate(${newRotation}deg)`;
         }, { passive: false });
-
         wheelObj.addEventListener('touchend', () => {
             if (!isWheelDragging) return;
             isWheelDragging = false;
-            wheelContainer.style.transition = 'transform 0.4s var(--ease-elastic)';
-
+            // 【REFINED】 Use the smooth animation curve and slightly longer duration
+            wheelContainer.style.transition = 'transform 0.5s var(--ease-out-smooth)';
             const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
             const currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
-            
             let idx = Math.round((-currentRotation / 360) * totalSlides);
             idx = Math.max(0, Math.min(totalSlides - 1, idx));
-
             const snapAngle = -(idx / totalSlides) * 360;
             wheelContainer.style.transform = `rotate(${snapAngle}deg)`;
             document.getElementById(`sec-${idx}`).scrollIntoView({ behavior: 'smooth' });
         });
-        
-        // Wheel Item Generation
         const radius = 120;
         momentsData.forEach((m, i) => {
             const angleDeg = (i / totalSlides) * 360;
@@ -270,7 +216,6 @@
             const el = document.createElement('div');
             el.className = 'wheel-item';
             el.innerText = m.title;
-            // Place item and rotate it to be radial
             el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${angleDeg}deg)`;
             wheelContainer.appendChild(el);
         });
@@ -278,39 +223,55 @@
         // --- 5. "Pull to Home" Logic ---
         let tStartY = 0;
         const hint = document.getElementById('end-hint');
-        scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, {passive: true});
+        scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, { passive: true });
         scrollContainer.addEventListener('touchmove', e => {
-            const currentY = e.touches[0].clientY;
             const isBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 5;
-            if (isBottom && currentY < tStartY) {
-                const delta = tStartY - currentY;
+            if (isBottom && e.touches[0].clientY < tStartY) {
+                const delta = tStartY - e.touches[0].clientY;
                 hint.classList.add('visible');
                 hint.innerText = delta > 100 ? "鬆開手指確認返回" : "繼續上滑以返回首頁";
                 scrollContainer.style.transform = `translateY(${-Math.min(delta / 4, 50)}px)`;
             }
-        }, {passive: true});
+        }, { passive: true });
         scrollContainer.addEventListener('touchend', e => {
             const delta = tStartY - e.changedTouches[0].clientY;
             if (hint.classList.contains('visible') && delta > 100) {
                 triggerHomeExit();
             } else {
-                 scrollContainer.style.transform = '';
-                 hint.classList.remove('visible');
+                scrollContainer.style.transform = '';
+                hint.classList.remove('visible');
             }
         });
 
-        // --- 6. Lazy Load & Cursor ---
-        const observer = new IntersectionObserver((entries) => {
+        // --- 6. Lazy Load & Observers ---
+        const lazyObserver = new IntersectionObserver((entries) => {
             entries.forEach(e => {
-                if(e.isIntersecting) {
+                if (e.isIntersecting) {
                     const img = e.target;
                     img.src = img.dataset.src;
                     img.onload = () => img.classList.add('loaded');
-                    observer.unobserve(img);
+                    lazyObserver.unobserve(img);
                 }
             });
-        }, {rootMargin: "50px"});
-        document.querySelectorAll('.lazy-img').forEach(img => observer.observe(img));
+        }, { rootMargin: "50px" });
+        document.querySelectorAll('.lazy-img').forEach(img => lazyObserver.observe(img));
+
+        // 【NEW】Observer to center the poem on first view
+        const poemWrapper = document.querySelector('.poem-wrapper');
+        if (poemWrapper) {
+            const poemObserver = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        // Scroll to the middle
+                        poemWrapper.scrollLeft = (poemWrapper.scrollWidth - poemWrapper.clientWidth) / 2;
+                        // Stop observing after centering once
+                        poemObserver.unobserve(poemWrapper);
+                    }
+                });
+            }, { threshold: 0.5 });
+            poemObserver.observe(poemWrapper);
+        }
+
         if (isPC) bindCursor();
     });
 
@@ -319,22 +280,19 @@
         const hint = document.getElementById('end-hint');
         const overlay = document.getElementById('exit-overlay');
         hint.innerText = "正在返回...";
-        hint.classList.add('highlight'); // Highlight text
-        overlay.classList.add('visible'); // Darken screen
+        hint.classList.add('highlight');
+        overlay.classList.add('visible');
         document.body.classList.add('exiting');
-        setTimeout(() => window.location.href = 'home.html', 1000); // Increased delay for animation
+        setTimeout(() => window.location.href = 'home.html', 1000);
     }
-
-    async function copyText(el) { 
-        const textToCopy = el.innerText.trim();
-        try { 
-            await navigator.clipboard.writeText(textToCopy); 
-            const t = document.getElementById('toast-msg'); 
-            t.style.opacity = 1; 
-            setTimeout(() => t.style.opacity = 0, 1200); 
-        } catch(e){ console.error("Copy failed", e); } 
+    async function copyText(el) {
+        try {
+            await navigator.clipboard.writeText(el.innerText.trim());
+            const t = document.getElementById('toast-msg');
+            t.style.opacity = 1;
+            setTimeout(() => t.style.opacity = 0, 1200);
+        } catch (e) { console.error("Copy failed", e); }
     }
-
     window.openLightbox = (mid, idx) => {
         const m = momentsData.find(x => x.id === mid);
         if (m) {
@@ -343,10 +301,9 @@
         }
     };
     window.closeLightbox = () => document.getElementById('lightbox').classList.remove('active');
-
     function bindCursor() {
         const cursor = document.getElementById('custom-cursor');
-        document.addEventListener('mousemove', e => { cursor.style.left = e.clientX+'px'; cursor.style.top = e.clientY+'px'; });
+        document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
         document.querySelectorAll('.interactable, .interactable-text, .gallery-item').forEach(el => {
             el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
             el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
