@@ -10,171 +10,166 @@
     <style>
         :root {
             --bg-color: #ffffff; --text-color: #1a1a1a;
-            --toc-bg-pc: rgba(255, 255, 255, 0.95);
+            --toc-bg-pc: rgba(255, 255, 255, 0.0); /* 透明背景，僅文字 */
             --accent-color: #000000;
+            --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* 高級緩動曲線 */
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
                 --bg-color: #000000; --text-color: #e5e5e5;
-                --toc-bg-pc: rgba(0, 0, 0, 0.9);
+                --toc-bg-pc: rgba(0, 0, 0, 0.0);
                 --accent-color: #ffffff;
             } 
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html, a, button, img { cursor: none !important; user-select: none; -webkit-user-select: none; }
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; height: 100vh; overflow: hidden; opacity: 0; animation: fadeIn 0.8s ease forwards; }
+        body { 
+            background: var(--bg-color); color: var(--text-color); 
+            font-family: 'Noto Serif TC', serif; 
+            height: 100vh; overflow: hidden; 
+            opacity: 0; animation: fadeIn 1s var(--ease-out) forwards; 
+        }
 
         /* --- UI Elements --- */
-        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference; }
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.15s var(--ease-out), width 0.2s, height 0.2s; mix-blend-mode: difference; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.5); }
-        .back-arrow { position: fixed; top: 30px; left: 30px; z-index: 200; width: 40px; height: 40px; opacity: 0.6; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
+        
+        .back-arrow { position: fixed; top: 30px; left: 30px; z-index: 200; width: 40px; height: 40px; opacity: 0.6; transition: opacity 0.3s; display: flex; align-items: center; justify-content: center; }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
 
         /* --- Main Layout --- */
+        /* scroll-snap-type 強制每次滾動一頁，保證路程一致 */
         .snap-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
-        .snap-container::-webkit-scrollbar { display: none; } /* Hide scrollbar */
-        .moment-section { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .snap-container::-webkit-scrollbar { display: none; } 
+        
+        .moment-section { 
+            height: 100vh; width: 100vw; 
+            scroll-snap-align: start; scroll-snap-stop: always; /* 確保不會飛過頭 */
+            position: relative; 
+            display: flex; justify-content: center; align-items: center; 
+            overflow: hidden; 
+        }
 
-        /* --- Moment Types --- */
-        .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; z-index: 1; }
+        /* --- Content Types --- */
+        .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.2s var(--ease-out); z-index: 1; }
         .img-bg.loaded { opacity: 1; }
-        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; }
-        .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; }
-        .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); }
+        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0), rgba(0,0,0,0.3)); z-index: 2; }
+        .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; transform: translateY(20px); opacity: 0; transition: all 1s var(--ease-out) 0.3s; }
+        .moment-section.active .text-overlay { transform: translateY(0); opacity: 1; }
+        .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
 
         .gallery-mode { background: var(--bg-color); color: var(--text-color); flex-direction: column; }
-        .gallery-text { margin-bottom: 2rem; max-width: 500px; text-align: center; z-index: 4; }
-        .gallery-scroll { display: flex; gap: 30px; width: 90%; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px 5%; overscroll-behavior-x: contain; z-index: 4; }
+        .gallery-text { margin-bottom: 3vh; max-width: 500px; text-align: center; z-index: 4; }
+        .gallery-scroll { display: flex; gap: 4vw; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 4; scrollbar-width: none; }
         .gallery-scroll::-webkit-scrollbar { display: none; }
-        .gallery-item { flex: 0 0 auto; width: 50vh; height: 70vh; scroll-snap-align: center; border-radius: 4px; overflow: hidden; position: relative; transition: transform 0.3s; }
+        .gallery-item { flex: 0 0 auto; width: auto; height: 100%; scroll-snap-align: center; border-radius: 4px; overflow: hidden; position: relative; transition: transform 0.4s var(--ease-out); cursor: none; }
         .gallery-item:hover { transform: scale(1.02); }
-        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+        .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; }
 
-        /* --- Poem Layout Adjusted --- */
+        /* --- Poem Layout (Perfect Centering) --- */
         .poem-mode { background: var(--bg-color); color: var(--text-color); }
-        .poem-scroll-wrapper { width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; }
-        .poem-scroll-wrapper::-webkit-scrollbar { height: 4px; }
-        .poem-scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(125,125,125,0.3); border-radius: 2px; }
-        
-        .poem-container { 
-            position: relative; 
-            display: flex; 
-            writing-mode: vertical-rl; /* Text vertical, flow right to left */
-            text-orientation: upright; 
-            height: 100%; 
-            align-items: center; 
-            /* Key fix: Padding-right in vertical-rl pushes the content start point from the right edge */
-            padding-right: 50vw; 
-            box-sizing: border-box;
-            min-width: 100vw;
+        .poem-wrapper-outer {
+            position: relative;
+            width: 100%; height: 100%;
+            overflow: hidden; /* Prevent scrollbars */
         }
-        
-        .poem-content { display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 0 60px; height: 80vh; margin-left: 5vw; /* Breathing room at the end */ }
-        .poem-line { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 2; white-space: nowrap; }
+        .poem-container {
+            position: absolute;
+            /* 關鍵：右側貼齊螢幕中心 (50%)，頂部貼齊螢幕中心 (50%) */
+            right: 50%; 
+            top: 50%;
+            transform: translateY(-50%); /* 僅垂直居中修正 */
+            
+            display: flex;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            height: auto;
+            max-height: 80vh;
+            gap: 40px; /* 行距 */
+        }
+        .poem-line { font-size: 1.3rem; letter-spacing: 0.25em; line-height: 1.5; white-space: nowrap; font-weight: 500; }
+        .poem-author { font-size: 0.9rem; margin-top: 30px; opacity: 0.6; writing-mode: vertical-rl; }
 
-        /* --- PC Table of Contents (Single Vertical Column) --- */
-        .pc-toc-toggle { display: none; position: fixed; top: 30px; right: 30px; z-index: 200; width: 40px; height: 40px; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; opacity: 0.6; transition: 0.3s; }
-        .pc-toc-toggle:hover { opacity: 1; }
-        .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
-        
+        /* --- PC Table of Contents (Slim Version) --- */
         .pc-toc-panel { 
-            display: none; 
+            display: none; /* Mobile hidden */
             position: fixed; top: 0; right: 0; bottom: 0; 
-            width: 200px; /* Fixed width for the sidebar */
+            width: 80px; /* Slim width */
             background: var(--toc-bg-pc); 
             z-index: 150; 
-            flex-direction: column; /* Vertical stack */
-            justify-content: flex-start; /* Start from top */
+            flex-direction: column; 
+            justify-content: center; 
             align-items: center;
-            padding-top: 100px;
-            padding-bottom: 50px;
-            gap: 40px; 
-            transform: translateX(100%); 
-            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); 
-            overflow-y: auto; /* Scrollable if too long */
-            overflow-x: hidden;
-            /* Scrollbar styling for TOC */
-            scrollbar-width: thin;
+            gap: 20px;
         }
-        .pc-toc-panel::-webkit-scrollbar { width: 4px; }
-        .pc-toc-panel::-webkit-scrollbar-thumb { background: var(--text-color); opacity: 0.2; }
-        
-        .pc-toc-panel.active-panel { transform: translateX(0); }
         .pc-toc-item { 
-            writing-mode: vertical-rl; text-orientation: upright; /* Vertical text for aesthetic */
-            font-size: 0.9rem; color: var(--text-color); opacity: 0.5; transition: 0.3s; letter-spacing: 0.2em; flex-shrink: 0; 
-            cursor: none;
+            writing-mode: vertical-rl; text-orientation: upright; 
+            font-size: 0.85rem; color: var(--text-color); opacity: 0.3; 
+            transition: all 0.4s var(--ease-out); 
+            letter-spacing: 0.2em; cursor: none; padding: 10px 0;
+            position: relative;
         }
         .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; letter-spacing: 0.3em; font-weight: bold; }
-
-        /* --- Mobile Wheel --- */
-        .mobile-wheel { display: none; position: fixed; bottom: -125px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; border-radius: 50%; z-index: 150; touch-action: none; }
-        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.1s ease-out; /* Smooth follow */ }
-        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.6; }
-        .wheel-indicator { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--accent-color); z-index: 151; }
-
-        /* --- UI Messages --- */
-        .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300; }
-        
-        /* Obvious End Hint */
-        .end-hint { 
-            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-            padding: 12px 24px;
-            background: var(--text-color); color: var(--bg-color);
-            border-radius: 30px;
-            font-size: 0.9rem; letter-spacing: 1px;
-            opacity: 0; transition: all 0.5s ease; 
-            pointer-events: none; z-index: 300; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            white-space: nowrap;
+        .pc-toc-item.active::after {
+            content: ''; position: absolute; right: -10px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 4px; background: var(--text-color); border-radius: 50%;
         }
-        .end-hint.visible { opacity: 1; animation: pulseJump 1.5s infinite; }
+
+        /* --- Mobile Wheel (Hidden on PC) --- */
+        .mobile-wheel { display: none; position: fixed; bottom: -125px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; border-radius: 50%; z-index: 150; touch-action: none; pointer-events: none; }
+        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.3s var(--ease-out); }
+        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.6; }
+        .wheel-indicator { display: none; position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--accent-color); z-index: 151; }
+
+        /* --- End Page Hint --- */
+        .end-hint { 
+            position: fixed; bottom: 50px; width: 100%; 
+            text-align: center; font-size: 0.9rem; letter-spacing: 2px;
+            opacity: 0; transform: translateY(20px);
+            transition: all 0.5s var(--ease-out); pointer-events: none; z-index: 300; 
+        }
+        .end-hint.visible { opacity: 1; transform: translateY(0); }
 
         /* Lightbox */
-        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 999; opacity: 0; pointer-events: none; transition: 0.3s; display: flex; justify-content: center; align-items: center; }
+        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.4s var(--ease-out); display: flex; justify-content: center; align-items: center; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; transform: scale(0.9); transition: transform 0.3s; }
+        .lightbox img { max-width: 95%; max-height: 95%; object-fit: contain; transform: scale(0.95); transition: transform 0.4s var(--ease-out); }
         .lightbox.active img { transform: scale(1); }
 
-        /* --- Layout Control --- */
+        /* --- Responsive & PC Logic --- */
         @media (min-width: 769px) {
-            .moment-section { padding-right: 0; }
-            .pc-toc-toggle { display: flex; }
-            .pc-toc-panel { display: flex; } /* Always render, hidden by transform */
+            .pc-toc-panel { display: flex; }
+            .mobile-wheel, .wheel-indicator { display: none !important; } /* Force hide wheel on PC */
         }
         @media (max-width: 768px) {
             body, html, a, button, img { cursor: auto !important; }
             #custom-cursor { display: none; }
-            .mobile-wheel { display: block; }
-            .gallery-item { width: 65vw; height: 80vw; }
-            .pc-toc-toggle, .pc-toc-panel { display: none !important; }
+            .mobile-wheel, .wheel-indicator { display: block; }
+            .gallery-item { width: 70vw; }
+            .gallery-scroll { padding: 0 15vw; }
+            .poem-container { right: 50%; top: 50%; max-height: 70vh; }
+            .poem-line { font-size: 1.1rem; }
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes fadeOut { to { opacity: 0; } }
-        @keyframes pulseJump { 
-            0%, 100% { transform: translateX(-50%) translateY(0); } 
-            50% { transform: translateX(-50%) translateY(-10px); } 
-        }
     </style>
 </head>
 <body>
     <div id="custom-cursor"></div>
     
-    <div class="back-arrow interactable" onclick="goBack()">
+    <div class="back-arrow interactable" onclick="goHome()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
 
-    <div class="pc-toc-toggle interactable" onclick="togglePcToc()"><span></span><span></span><span></span></div>
     <div class="pc-toc-panel" id="pc-toc-list"></div>
 
     <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
     <div class="wheel-indicator"></div>
 
-    <div class="toast-msg" id="toast-msg"></div>
-    <div class="end-hint" id="end-hint">再次滑動以返回首頁 / Swipe again to Home</div>
+    <div class="toast-msg" id="toast-msg" style="display:none;"></div> <div class="end-hint" id="end-hint">釋放以返回首頁</div>
 
     <div class="snap-container" id="main-scroll"></div>
 
@@ -190,15 +185,17 @@
         const pcTocList = document.getElementById('pc-toc-list');
         const wheelContainer = document.getElementById('wheel-container');
         const totalSlides = momentsData.length;
+        let isPC = window.innerWidth > 768;
 
-        // --- Build Content ---
+        // --- 1. Content Generation ---
         momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
             section.id = `sec-${index}`;
 
+            let innerHTML = '';
             if (moment.type === 'image') {
-                section.innerHTML = `
+                innerHTML = `
                     <img data-src="${moment.content.imageSrc}" class="img-bg lazy-img">
                     <div class="bg-overlay"></div>
                     <div class="text-overlay">
@@ -206,42 +203,37 @@
                     </div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                // Pass correct parameters to openLightbox: moment ID and index
                 const imgsHtml = moment.content.images.map((src, i) => 
                     `<div class="gallery-item interactable" onclick="event.stopPropagation(); openLightbox('${moment.id}', ${i})">
                         <img data-src="${src}" class="lazy-img">
                      </div>`
                 ).join('');
-                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgsHtml}</div>`;
-                section.dataset.galleryId = moment.id;
+                innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll" onwheel="event.stopPropagation()">${imgsHtml}</div>`;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
                 const poemHTML = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
-                // Structure ensures padding-right: 50vw centers the start
-                section.innerHTML = `
-                    <div class="poem-scroll-wrapper">
-                        <div class="poem-container interactable-text" onclick="copyText(this)">
-                            <div class="poem-content">
-                                ${poemHTML}
-                                <div class="poem-line" style="font-size:0.9rem; margin-top:20px; opacity:0.7;">—— ${moment.content.author}</div>
-                            </div>
+                innerHTML = `
+                    <div class="poem-wrapper-outer interactable-text" onclick="copyText(this)">
+                        <div class="poem-container">
+                            ${poemHTML}
+                            <div class="poem-author">—— ${moment.content.author}</div>
                         </div>
                     </div>`;
             }
+            section.innerHTML = innerHTML;
             scrollContainer.appendChild(section);
 
-            // Build TOC
+            // Slim PC TOC Item
             const tocItem = document.createElement('div');
             tocItem.className = 'pc-toc-item interactable';
             tocItem.innerText = moment.title;
             tocItem.onclick = () => {
                 section.scrollIntoView({ behavior: 'smooth' });
-                // If on mobile, might need to close panel? But panel is PC only.
             };
             pcTocList.appendChild(tocItem);
         });
 
-        // --- Mobile Wheel Setup ---
+        // --- 2. Mobile Wheel Setup ---
         const radius = 125;
         momentsData.forEach((moment, index) => {
             const angleRad = (index / totalSlides) * 2 * Math.PI - Math.PI / 2;
@@ -254,7 +246,110 @@
             wheelContainer.appendChild(item);
         });
 
-        // --- Lazy Loading ---
+        // --- 3. Scroll & Wheel Logic (Strict One-per-step on PC) ---
+        let isScrolling = false;
+        let scrollTimeout;
+
+        // PC Mouse Wheel Throttle - 確保電腦滾輪一次只動一格
+        scrollContainer.addEventListener('wheel', (e) => {
+            if (isPC) {
+                e.preventDefault(); // 完全接管滾輪
+                if (isScrolling) return;
+
+                const direction = e.deltaY > 0 ? 1 : -1;
+                const height = window.innerHeight;
+                const currentScroll = scrollContainer.scrollTop;
+                const currentIndex = Math.round(currentScroll / height);
+                let nextIndex = currentIndex + direction;
+
+                // 邊界檢查
+                if (nextIndex < 0) nextIndex = 0;
+                if (nextIndex >= totalSlides) {
+                    // PC端 最後一頁繼續滾動觸發回首頁
+                    if (direction > 0) handleEndTrigger();
+                    nextIndex = totalSlides - 1;
+                    return;
+                }
+
+                isScrolling = true;
+                document.getElementById(`sec-${nextIndex}`).scrollIntoView({ behavior: 'smooth' });
+
+                // 鎖定時間，防止飛速滾動
+                setTimeout(() => { isScrolling = false; }, 800); 
+            }
+        }, { passive: false });
+
+        // General Scroll Listener (Updates UI)
+        scrollContainer.addEventListener('scroll', () => {
+            const scrollY = scrollContainer.scrollTop;
+            const height = window.innerHeight;
+            const index = Math.round(scrollY / height);
+
+            // Active Class for Animations
+            document.querySelectorAll('.moment-section').forEach((sec, i) => {
+                if (i === index) sec.classList.add('active');
+                else sec.classList.remove('active');
+            });
+
+            // Update TOC
+            document.querySelectorAll('.pc-toc-item').forEach((item, i) => item.classList.toggle('active', i === index));
+
+            // Update Wheel
+            const anglePerSlide = 360 / totalSlides;
+            wheelContainer.style.transform = `rotate(${-index * anglePerSlide}deg)`;
+        });
+
+        // --- 4. Mobile End Page "Pull to Home" Logic ---
+        let touchStartY = 0;
+        let isPullingUp = false;
+        const endHint = document.getElementById('end-hint');
+
+        scrollContainer.addEventListener('touchstart', e => {
+            touchStartY = e.touches[0].clientY;
+            isPullingUp = false;
+        }, { passive: true });
+
+        scrollContainer.addEventListener('touchmove', e => {
+            const currentY = e.touches[0].clientY;
+            const deltaY = touchStartY - currentY; // Positive = Finger moving UP (content moves down)
+            
+            // Check if we are at the bottom
+            const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 2;
+
+            if (isAtBottom && deltaY > 0) {
+                // User is pulling up at the end
+                isPullingUp = true;
+                const pullDistance = Math.min(deltaY, 150); // Cap visual effect
+                endHint.style.transform = `translateY(-${pullDistance / 2}px)`;
+                endHint.style.opacity = Math.min(pullDistance / 80, 1);
+                endHint.classList.add('visible');
+            }
+        }, { passive: true });
+
+        scrollContainer.addEventListener('touchend', e => {
+            if (isPullingUp) {
+                const currentY = e.changedTouches[0].clientY;
+                const deltaY = touchStartY - currentY;
+                
+                if (deltaY > 80) { // Threshold to trigger
+                    goHome();
+                } else {
+                    // Reset hint
+                    endHint.style.transform = '';
+                    endHint.style.opacity = '';
+                    endHint.classList.remove('visible');
+                }
+                isPullingUp = false;
+            }
+        });
+
+        function handleEndTrigger() {
+            endHint.innerText = "正在返回首頁...";
+            endHint.classList.add('visible');
+            setTimeout(goHome, 500);
+        }
+
+        // --- 5. Lazy Load ---
         const imgObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -267,163 +362,30 @@
         }, { threshold: 0.1 });
         document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
 
-        // --- Scroll Handling & Wheel Sync ---
-        let isAtEnd = false;
-        let isHomePromptActive = false;
-        const endHint = document.getElementById('end-hint');
-
-        scrollContainer.addEventListener('scroll', () => {
-            const scrollY = scrollContainer.scrollTop;
-            const height = window.innerHeight;
-            const totalHeight = scrollContainer.scrollHeight;
-            
-            // Calculate current index float for smooth wheel
-            const exactIndex = scrollY / height;
-            const activeIndex = Math.round(exactIndex);
-
-            // Update TOC active state
-            document.querySelectorAll('.pc-toc-item').forEach((item, i) => item.classList.toggle('active', i === activeIndex));
-
-            // Sync Wheel Rotation Automatically
-            const anglePerSlide = 360 / totalSlides;
-            const currentRotation = -(exactIndex * anglePerSlide);
-            wheelContainer.style.transform = `rotate(${currentRotation}deg)`;
-
-            // Check End Condition
-            isAtEnd = (scrollY + height >= totalHeight - 5); // 5px buffer
-            
-            // Hide prompt if user scrolls back up
-            if (!isAtEnd && isHomePromptActive) {
-                isHomePromptActive = false;
-                endHint.classList.remove('visible');
-            }
-        });
-        
-        // --- End Navigation Logic (Swipe Up / Scroll Down at End) ---
-        const handleNavigationAttempt = (direction) => {
-            // direction: 1 for Next/Down, -1 for Prev/Up
-            if (isAtEnd && direction === 1) {
-                if (!isHomePromptActive) {
-                    // First attempt: Show Hint
-                    isHomePromptActive = true;
-                    endHint.classList.add('visible');
-                    if(navigator.vibrate) navigator.vibrate(10); // Haptic feedback
-                } else {
-                    // Second attempt: Go Home
-                    goHome();
-                }
-            }
-        };
-
-        let lastWheelTime = 0;
-        scrollContainer.addEventListener('wheel', e => {
-            // Prevent default scroll behavior only if we are trapping the user at the end for the action
-            if (isAtEnd && e.deltaY > 0) {
-                const now = Date.now();
-                if (now - lastWheelTime > 500) { // Throttle attempts
-                    handleNavigationAttempt(1);
-                    lastWheelTime = now;
-                }
-            }
-        }, { passive: false });
-        
-        let touchStartY = 0;
-        scrollContainer.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
-        scrollContainer.addEventListener('touchend', e => {
-            const deltaY = touchStartY - e.changedTouches[0].clientY;
-            // deltaY > 50 means Swipe Up (Finger moves up, content moves down)
-            if (deltaY > 50) { 
-                handleNavigationAttempt(1); 
-            }
-        });
-
-        // --- Mobile Manual Wheel Interaction ---
-        // Keeps the manual drag capability but syncs with scroll
-        let startAngle = 0, initialTouchAngle = 0, currentManualRotation = 0;
-        const wheel = document.getElementById('mobile-wheel');
-        
-        wheel.addEventListener('touchstart', e => {
-            const rect = wheel.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            initialTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
-            // Get current rotation from style string
-            const style = window.getComputedStyle(wheelContainer);
-            const matrix = new DOMMatrix(style.transform);
-            // Rough estimation of current angle
-            // Actually, better to reset based on logic, but for simplicity let's rely on visual drag
-            startAngle = (Math.atan2(matrix.b, matrix.a) * (180/Math.PI));
-        }, { passive: true });
-
-        wheel.addEventListener('touchmove', e => {
-            e.preventDefault();
-            const rect = wheel.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const currentTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
-            const angleDiff = currentTouchAngle - initialTouchAngle;
-            currentManualRotation = startAngle + angleDiff * (180 / Math.PI);
-            wheelContainer.style.transform = `rotate(${currentManualRotation}deg)`;
-        }, { passive: false });
-
-        wheel.addEventListener('touchend', () => {
-            // Snap to nearest section
-            const anglePerItem = 360 / totalSlides;
-            // Normalize angle
-            let normAngle = currentManualRotation % 360;
-            if (normAngle > 0) normAngle -= 360; // Force negative rotation logic
-            
-            const activeIndex = Math.round(Math.abs(normAngle) / anglePerItem) % totalSlides;
-            document.getElementById(`sec-${activeIndex}`).scrollIntoView({ behavior: 'smooth' });
-        });
-        
+        // --- 6. Initialization ---
+        // Trigger first active
+        setTimeout(() => document.getElementById('sec-0').classList.add('active'), 100);
         bindCursorEvents();
-        // Force PC TOC on desktop
-        if (window.innerWidth > 769) {
-            document.querySelector('.pc-toc-panel').classList.add('active-panel');
-        }
     });
 
-    // --- Helper Functions ---
-    function togglePcToc() { 
-        const panel = document.querySelector('.pc-toc-panel');
-        panel.classList.toggle('active-panel');
-        // If it's desktop, toggle class 'hidden' logic inverted or just opacity
-        if (panel.classList.contains('active-panel')) {
-             panel.style.transform = 'translateX(0)';
-        } else {
-             panel.style.transform = 'translateX(100%)';
-        }
-    }
-    
+    // --- Global Helpers ---
     function goHome() { 
-        document.body.style.animation = 'fadeOut 0.5s ease forwards'; 
-        setTimeout(() => window.location.href = 'home.html', 500); 
+        document.body.style.animation = 'fadeOut 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards'; 
+        setTimeout(() => window.location.href = 'home.html', 600); 
     }
-    function goBack() { goHome(); }
     
-    async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); showToast('Copied'); } catch(e){} }
-    function showToast(msg) { const t = document.getElementById('toast-msg'); t.innerText = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 1000); }
+    async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch(e){} }
     
-    // Lightbox Logic
-    const lightbox = document.getElementById('lightbox');
-    const lbImg = document.getElementById('lb-img');
-    
-    // Made global to be accessible from inline HTML
     window.openLightbox = function(momentId, index) {
         const momentData = momentsData.find(m => m.id === momentId);
-        if (momentData && momentData.type === 'gallery') {
-            lbImg.src = momentData.content.images[index];
-            lightbox.classList.add('active');
-        }
+        const imgSrc = momentData.content.images[index];
+        document.getElementById('lb-img').src = imgSrc;
+        document.getElementById('lightbox').classList.add('active');
     };
-    
-    window.closeLightbox = function() { lightbox.classList.remove('active'); };
+    window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('active'); };
 
     const cursor = document.getElementById('custom-cursor');
     document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
-    document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
     
     function bindCursorEvents() {
         document.querySelectorAll('.interactable, .interactable-text, .pc-toc-item, .gallery-item').forEach(el => {
