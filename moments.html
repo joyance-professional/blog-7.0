@@ -5,20 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <!-- Load the data first -->
     <script src="./moments-data.js" defer></script>
 
     <style>
         :root {
             --bg-color: #ffffff; --text-color: #1a1a1a;
-            --overlay-bg: rgba(255, 255, 255, 0.9);
-            --toc-bg-pc: linear-gradient(to left, #ffffff 60%, rgba(255,255,255,0));
+            --toc-bg-pc: linear-gradient(to left, var(--bg-color) 70%, rgba(255,255,255,0));
             --accent-color: #000000;
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
                 --bg-color: #000000; --text-color: #e5e5e5;
-                --overlay-bg: rgba(0, 0, 0, 0.9);
-                --toc-bg-pc: linear-gradient(to left, #000000 60%, rgba(0,0,0,0));
+                --toc-bg-pc: linear-gradient(to left, var(--bg-color) 70%, rgba(0,0,0,0));
                 --accent-color: #ffffff;
             } 
         }
@@ -33,192 +32,74 @@
             opacity: 0; animation: fadeIn 0.8s ease forwards;
         }
 
-        /* --- 自定義鼠標 --- */
-        #custom-cursor {
-            position: fixed; top: 0; left: 0; width: 12px; height: 12px;
-            background-color: var(--text-color); transform: rotate(45deg);
-            pointer-events: none; z-index: 99999;
-            transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference;
-        }
+        /* --- Custom Cursor --- */
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
         #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--text-color); }
 
-        /* --- 頂部導航 --- */
-        .back-arrow {
-            position: fixed; top: 30px; left: 30px; z-index: 200;
-            width: 40px; height: 40px; opacity: 0.6; transition: 0.3s;
-            display: flex; align-items: center; justify-content: center;
-        }
+        /* --- Top Navigation --- */
+        .back-arrow { position: fixed; top: 30px; left: 30px; z-index: 200; width: 40px; height: 40px; opacity: 0.6; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
 
-        /* --- PC TOC 按鈕 (三道槓) --- */
-        .pc-toc-toggle {
-            position: fixed; top: 30px; right: 30px; z-index: 200;
-            width: 40px; height: 40px; cursor: none;
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px;
-            opacity: 0.6; transition: 0.3s;
-        }
-        .pc-toc-toggle:hover { opacity: 1; }
-        .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
-        .pc-toc-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
-        .pc-toc-toggle.active span:nth-child(2) { opacity: 0; }
-        .pc-toc-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
-
-        /* --- 主滾動容器 --- */
-        .snap-container {
-            height: 100vh; width: 100vw;
-            overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth;
-        }
+        /* --- Main Scroll Container --- */
+        .snap-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
         .snap-container::-webkit-scrollbar { display: none; }
+        .moment-section { height: 100vh; width: 100vw; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        .moment-section {
-            height: 100vh; width: 100vw; scroll-snap-align: start;
-            position: relative; display: flex; justify-content: center; align-items: center;
-            overflow: hidden;
-        }
-
-        /* --- 1. 圖片模式 --- */
+        /* --- 1. Image Mode --- */
         .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; z-index: 1; }
         .img-bg.loaded { opacity: 1; }
         .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; pointer-events: none; }
         .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; }
         .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); }
 
-        /* --- 2. 畫廊模式 (Gallery) --- */
-        .gallery-wrapper {
-            z-index: 3; width: 100%; max-width: 1200px; padding: 0 5%;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: #fff;
-        }
-        .gallery-scroll {
-            display: flex; gap: 20px; 
-            overflow-x: auto; scroll-snap-type: x mandatory;
-            padding: 20px 0; width: 100%;
-            scrollbar-width: none;
-            /* 鎖定垂直滾動，確保可以橫向滑 */
-            overscroll-behavior-x: contain;
-        }
+        /* --- 2. Gallery Mode (Redesigned) --- */
+        .gallery-mode { background: var(--bg-color); color: var(--text-color); flex-direction: column; }
+        .gallery-text { margin-bottom: 2rem; max-width: 500px; text-align: center; }
+        .gallery-scroll { display: flex; gap: 30px; width: 90%; overflow-x: auto; scroll-snap-type: x mandatory; padding: 20px 5%; overscroll-behavior-x: contain; }
         .gallery-scroll::-webkit-scrollbar { display: none; }
-        .gallery-item {
-            flex: 0 0 auto; width: 260px; height: 360px;
-            scroll-snap-align: center; border-radius: 4px; overflow: hidden;
-            position: relative; transition: transform 0.3s;
-        }
+        .gallery-item { flex: 0 0 auto; width: 50vh; /* Taller images */ height: 70vh; scroll-snap-align: center; border-radius: 4px; overflow: hidden; position: relative; transition: transform 0.3s; }
         .gallery-item:hover { transform: scale(1.02); }
         .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* --- 3. 詩歌模式 (第一行居中，向左流) --- */
-        .poem-mode { 
-            background: var(--bg-color); color: var(--text-color); 
-            writing-mode: vertical-rl; text-orientation: upright;
-            position: relative;
-        }
-        .poem-container {
-            position: absolute;
-            right: 50%; /* 核心：從屏幕中線開始 */
-            transform: translateX(50%); /* 微調，讓第一行正對中線 (需配合 padding) */
-            height: 70vh;
-            display: flex; flex-wrap: wrap; align-content: flex-start; /* 內容向左堆疊 */
-            gap: 0 60px; padding-right: 1em; /* 第一行與中線的偏移 */
-            overflow-x: visible; /* 允許向左溢出屏幕 */
-        }
+        /* --- 3. Poem Mode (Redesigned) --- */
+        .poem-mode { background: var(--bg-color); color: var(--text-color); writing-mode: vertical-rl; text-orientation: upright; }
+        .poem-container { position: absolute; right: 50%; /* Start from center */ transform: translateX(50%); height: 80vh; display: flex; flex-direction: column; flex-wrap: wrap; /* Key for horizontal columns */ align-content: flex-start; gap: 0 60px; }
         .poem-line { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 2; white-space: nowrap; }
 
-        /* --- PC 目錄 (右側豎條) --- */
-        .pc-toc-panel {
-            position: fixed; top: 0; right: 0; bottom: 0;
-            width: 200px; 
-            background: var(--toc-bg-pc); /* 漸變背景 */
-            z-index: 150;
-            display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
-            padding-right: 40px; gap: 20px;
-            transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
+        /* --- PC Table of Contents (Redesigned) --- */
+        .pc-toc-toggle { position: fixed; top: 30px; right: 30px; z-index: 200; width: 40px; height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; opacity: 0.6; transition: 0.3s; }
+        .pc-toc-toggle:hover { opacity: 1; }
+        .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
+        .pc-toc-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
+        .pc-toc-toggle.active span:nth-child(2) { opacity: 0; }
+        .pc-toc-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
+        .pc-toc-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 80px; background: var(--toc-bg-pc); z-index: 150; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 30px; writing-mode: vertical-rl; text-orientation: upright; transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
         .pc-toc-panel.hidden { transform: translateX(100%); }
-        .pc-toc-item {
-            font-size: 0.9rem; color: var(--text-color); opacity: 0.5;
-            cursor: none; transition: 0.3s; text-align: right;
-            position: relative;
-        }
-        .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; transform: translateX(-10px); }
-        .pc-toc-item.active::after {
-            content: ''; position: absolute; right: -15px; top: 50%; transform: translateY(-50%);
-            width: 4px; height: 4px; background: var(--text-color); border-radius: 50%;
-        }
+        .pc-toc-item { font-size: 0.9rem; color: var(--text-color); opacity: 0.5; cursor: none; transition: 0.3s; letter-spacing: 0.2em; }
+        .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; letter-spacing: 0.3em; }
 
-        /* --- 手機轉盤 (底部) --- */
-        .mobile-wheel {
-            display: none; /* PC隱藏 */
-            position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%);
-            width: 240px; height: 240px;
-            border-radius: 50%;
-            background: var(--bg-color);
-            border: 1px solid var(--text-color);
-            z-index: 150;
-            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
-            align-items: flex-start; justify-content: center;
-            padding-top: 30px;
-            transition: transform 0.1s;
-            touch-action: none; /* 接管觸摸 */
-        }
-        .wheel-indicator {
-            width: 4px; height: 15px; background: var(--accent-color);
-            border-radius: 2px;
-        }
-        .wheel-text {
-            position: absolute; top: -40px; width: 200px; text-align: center;
-            font-size: 0.9rem; font-weight: 500; opacity: 0; transition: opacity 0.3s;
-            pointer-events: none;
-            background: var(--bg-color); padding: 5px 10px; border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .wheel-text.visible { opacity: 1; }
+        /* --- Mobile Wheel (Redesigned) --- */
+        .mobile-wheel { display: none; position: fixed; bottom: -125px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; border-radius: 50%; z-index: 150; touch-action: none; }
+        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.05s linear; }
+        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.6; }
+        .wheel-indicator { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--accent-color); z-index: 151; }
 
-        /* --- 提示層 (最後一頁 & 複製) --- */
-        .toast-msg {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
-            font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300;
-        }
-        .end-hint {
-            position: fixed; bottom: 100px; width: 100%; text-align: center;
-            font-size: 0.8rem; opacity: 0; transition: 0.5s; pointer-events: none; z-index: 10;
-        }
-
-        /* --- 燈箱 (Lightbox) --- */
-        .lightbox {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 999;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: 0.3s;
-        }
+        /* --- General UI --- */
+        .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300; }
+        .end-hint { position: fixed; bottom: 100px; width: 100%; text-align: center; font-size: 0.8rem; opacity: 0; transition: 0.5s; pointer-events: none; z-index: 10; animation: bounceUp 2s infinite; }
+        .lightbox { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 999; opacity: 0; pointer-events: none; transition: 0.3s; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .lightbox-nav {
-            position: absolute; top: 50%; transform: translateY(-50%);
-            width: 50px; height: 50px; cursor: none;
-            display: flex; align-items: center; justify-content: center;
-            color: #fff; font-size: 2rem; opacity: 0.5;
-        }
-        .lightbox-nav:hover { opacity: 1; }
-        .lb-prev { left: 20px; } .lb-next { right: 20px; }
-        .lb-close { position: absolute; top: 30px; right: 30px; color: #fff; font-size: 1.5rem; opacity: 0.7; }
+        .lightbox img { width: 100%; height: 100%; object-fit: contain; }
 
-        /* --- PC vs Mobile 佈局調整 --- */
-        @media (min-width: 769px) {
-            /* PC: 內容左移，留出右側目錄位置 */
-            .moment-section { padding-right: 150px; } 
-            .mobile-wheel { display: none !important; }
-        }
+        /* --- Layout Control --- */
+        @media (min-width: 769px) { .moment-section { padding-right: 80px; } }
         @media (max-width: 768px) {
-            /* Mobile */
             body, html, a, button, img { cursor: auto !important; }
-            #custom-cursor { display: none; }
-            .pc-toc-panel, .pc-toc-toggle { display: none !important; }
-            .mobile-wheel { display: flex; }
-            .moment-section { padding-right: 0; }
-            .poem-container { right: 10%; transform: none; height: 60vh; overflow-y: hidden; } /* 手機上詩歌靠右一點 */
+            #custom-cursor, .pc-toc-panel, .pc-toc-toggle { display: none !important; }
+            .mobile-wheel { display: block; }
+            .gallery-item { width: 65vw; height: 80vw; }
         }
 
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -228,42 +109,17 @@
 </head>
 <body>
     <div id="custom-cursor"></div>
-    
-    <!-- 返回 -->
     <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
-
-    <!-- PC 目錄開關 & 面板 -->
-    <div class="pc-toc-toggle active interactable" onclick="togglePcToc()">
-        <span></span><span></span><span></span>
-    </div>
-    <div class="pc-toc-panel" id="pc-toc-list">
-        <!-- JS 生成目錄項 -->
-    </div>
-
-    <!-- 手機轉盤 -->
-    <div class="mobile-wheel" id="mobile-wheel">
-        <div class="wheel-indicator"></div>
-        <div class="wheel-text" id="wheel-text">Title</div>
-    </div>
-
-    <!-- 提示信息 -->
+    <div class="pc-toc-toggle active interactable" onclick="togglePcToc()"><span></span><span></span><span></span></div>
+    <div class="pc-toc-panel" id="pc-toc-list"></div>
+    <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
+    <div class="wheel-indicator"></div>
     <div class="toast-msg" id="toast-msg"></div>
-    <div class="end-hint" id="end-hint">再次滑動回到首頁<br>Scroll again to Home</div>
-
-    <!-- 主滾動區 -->
-    <div class="snap-container" id="main-scroll">
-        <!-- JS 生成內容 -->
-    </div>
-
-    <!-- 燈箱 -->
-    <div class="lightbox" id="lightbox">
-        <div class="lb-close interactable" onclick="closeLightbox()">✕</div>
-        <div class="lightbox-nav lb-prev interactable" onclick="changeLightbox(-1)">‹</div>
-        <div class="lightbox-nav lb-next interactable" onclick="changeLightbox(1)">›</div>
-        <img id="lb-img" src="">
-    </div>
+    <div class="end-hint" id="end-hint">再次滑動回到首頁</div>
+    <div class="snap-container" id="main-scroll"></div>
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lb-img" src=""></div>
 
     <script defer>
     document.addEventListener('DOMContentLoaded', () => {
@@ -271,14 +127,28 @@
 
         const scrollContainer = document.getElementById('main-scroll');
         const pcTocList = document.getElementById('pc-toc-list');
-        let galleryImages = []; // 暫存畫廊圖片用於燈箱
-        let currentLbIndex = 0;
+        const wheelContainer = document.getElementById('wheel-container');
+        let currentLbGallery = [];
 
-        // 1. 渲染內容
+        // --- 1. Render Content & Nav ---
         momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
             section.id = `sec-${index}`;
+            // ... (Content rendering logic remains largely the same)
+            if (moment.type === 'image') {
+                section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
+            } else if (moment.type === 'gallery') {
+                section.classList.add('gallery-mode');
+                const imgsHtml = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox(this, '${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgsHtml}</div>`;
+                section.dataset.galleryId = moment.id;
+            } else if (moment.type === 'poem') {
+                section.classList.add('poem-mode');
+                const poemHTML = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
+                section.innerHTML = `<div class="poem-container interactable-text" onclick="copyText(this)">${poemHTML}<div class="poem-line" style="font-size:0.9rem;margin-top:20px;">—— ${moment.content.author}</div></div>`;
+            }
+            scrollContainer.appendChild(section);
 
             // PC TOC Item
             const tocItem = document.createElement('div');
@@ -286,43 +156,24 @@
             tocItem.innerText = moment.title;
             tocItem.onclick = () => section.scrollIntoView({ behavior: 'smooth' });
             pcTocList.appendChild(tocItem);
-
-            // Content Rendering
-            if (moment.type === 'image') {
-                section.innerHTML = `
-                    <img data-src="${moment.content.imageSrc}" class="img-bg lazy-img">
-                    <div class="bg-overlay"></div>
-                    <div class="text-overlay">
-                        <p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p>
-                    </div>`;
-            } else if (moment.type === 'gallery') {
-                const imgsHtml = moment.content.images.map((src, i) => 
-                    `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})">
-                        <img data-src="${src}" class="lazy-img">
-                     </div>`
-                ).join('');
-                section.innerHTML = `
-                    <img data-src="${moment.content.images[0]}" class="img-bg lazy-img" style="filter:blur(20px);opacity:0.3;">
-                    <div class="bg-overlay" style="background:rgba(0,0,0,0.8);"></div>
-                    <div class="gallery-wrapper">
-                        <div style="margin-bottom:20px;text-align:center;">${moment.content.text}</div>
-                        <div class="gallery-scroll" id="gallery-${moment.id}">${imgsHtml}</div>
-                    </div>`;
-                // 保存該 moment 的圖片數據供燈箱使用
-                section.dataset.gallery = JSON.stringify(moment.content.images);
-            } else if (moment.type === 'poem') {
-                section.classList.add('poem-mode');
-                const poemHTML = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
-                section.innerHTML = `
-                    <div class="poem-container interactable-text" onclick="copyText(this)">
-                        ${poemHTML}
-                        <div class="poem-line" style="font-size:0.9rem;margin-top:20px;">—— ${moment.content.author}</div>
-                    </div>`;
-            }
-            scrollContainer.appendChild(section);
         });
 
-        // 2. 懶加載
+        // --- 2. Mobile Wheel Setup ---
+        const radius = 125; // Wheel radius
+        momentsData.forEach((moment, index) => {
+            const angleRad = (index / momentsData.length) * 2 * Math.PI - Math.PI / 2; // Start from top
+            const x = radius * Math.cos(angleRad);
+            const y = radius * Math.sin(angleRad);
+            
+            const item = document.createElement('div');
+            item.className = 'wheel-item';
+            item.innerText = moment.title;
+            // Position and rotate the item container, then rotate the text back to point to the center
+            item.style.transform = `translate(${x}px, ${y}px) rotate(${angleRad * 180 / Math.PI + 90}deg)`;
+            wheelContainer.appendChild(item);
+        });
+
+        // --- 3. Lazy Load ---
         const imgObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -334,150 +185,90 @@
         }, { threshold: 0.1 });
         document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
 
-        // 3. 滾動監聽 (高亮 PC 目錄 & 最後一頁檢測)
-        let isAtEnd = false;
-        let endHintShown = false;
-        
+        // --- 4. Event Listeners ---
+        let isAtEnd = false, endHintShown = false, currentRotation = 0, lastVibratedAngle = 0;
         scrollContainer.addEventListener('scroll', () => {
             const scrollY = scrollContainer.scrollTop;
             const height = window.innerHeight;
             const index = Math.round(scrollY / height);
+
+            document.querySelectorAll('.pc-toc-item').forEach((item, i) => item.classList.toggle('active', i === index));
             
-            // 更新 PC 目錄高亮
-            document.querySelectorAll('.pc-toc-item').forEach((item, i) => {
-                item.classList.toggle('active', i === index);
-            });
-
-            // 手機轉盤文字更新 (簡單版)
-            if (window.innerWidth <= 768 && momentsData[index]) {
-                const wheelText = document.getElementById('wheel-text');
-                wheelText.innerText = momentsData[index].title;
-                wheelText.classList.add('visible');
-                clearTimeout(window.wheelTextTimer);
-                window.wheelTextTimer = setTimeout(() => wheelText.classList.remove('visible'), 2000);
-            }
-
-            // 檢測是否到底部
-            if (scrollY + height >= scrollContainer.scrollHeight - 10) {
-                isAtEnd = true;
-                if (!endHintShown) {
-                    document.getElementById('end-hint').style.opacity = '1';
-                    endHintShown = true;
-                }
-            } else {
-                isAtEnd = false;
-                document.getElementById('end-hint').style.opacity = '0';
-                endHintShown = false;
-            }
+            isAtEnd = (scrollY + height >= scrollContainer.scrollHeight - 10);
+            if (isAtEnd && !endHintShown) { document.getElementById('end-hint').style.opacity = '1'; endHintShown = true; }
+            if (!isAtEnd) { document.getElementById('end-hint').style.opacity = '0'; endHintShown = false; }
         });
 
-        // 4. 最後一頁跳轉邏輯
+        // Last page scroll logic
+        scrollContainer.addEventListener('wheel', e => { if (isAtEnd && e.deltaY > 5) goHome(); });
         let touchStartY = 0;
-        scrollContainer.addEventListener('wheel', (e) => {
-            if (isAtEnd && e.deltaY > 0) goHome();
-        });
         scrollContainer.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
-        scrollContainer.addEventListener('touchmove', e => {
-            let touchY = e.touches[0].clientY;
-            if (isAtEnd && touchStartY - touchY > 50) goHome(); // 向上滑動 (手指向下)
-        });
+        scrollContainer.addEventListener('touchend', e => { if (isAtEnd && touchStartY - e.changedTouches[0].clientY > 50) goHome(); });
 
-        // 5. 手機轉盤邏輯 (Haptic Wheel)
+        // Mobile wheel interaction
+        let startAngle = 0, initialTouchAngle = 0;
         const wheel = document.getElementById('mobile-wheel');
-        let wheelStartY = 0;
-        let lastIndex = 0;
-
         wheel.addEventListener('touchstart', e => {
-            wheelStartY = e.touches[0].clientY;
-            wheel.style.transform = 'translateX(-50%) scale(1.1)'; // 按下效果
-        }, {passive: false});
+            const rect = wheel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            initialTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
+            startAngle = currentRotation;
+        }, { passive: true });
 
         wheel.addEventListener('touchmove', e => {
-            e.preventDefault(); // 防止頁面滾動
-            const deltaY = wheelStartY - e.touches[0].clientY;
-            // 模擬旋轉：每20px 切換一個
-            const step = 30; 
-            const indexChange = Math.floor(deltaY / step);
+            e.preventDefault();
+            const rect = wheel.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const currentTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
+            const angleDiff = currentTouchAngle - initialTouchAngle;
             
-            // 獲取當前 index
-            const currentIndex = Math.round(scrollContainer.scrollTop / window.innerHeight);
-            let targetIndex = currentIndex + (deltaY > 0 ? 1 : -1);
-            
-            // 限制範圍
-            if (targetIndex < 0) targetIndex = 0;
-            if (targetIndex >= momentsData.length) targetIndex = momentsData.length - 1;
+            currentRotation = startAngle + angleDiff * (180 / Math.PI);
+            wheelContainer.style.transform = `rotate(${currentRotation}deg)`;
 
-            if (targetIndex !== lastIndex && Math.abs(deltaY) > 10) {
-                // 觸發震動
+            if (Math.abs(currentRotation - lastVibratedAngle) > (360 / momentsData.length)) {
                 if (navigator.vibrate) navigator.vibrate(10);
-                // 滾動頁面
-                document.getElementById(`sec-${targetIndex}`).scrollIntoView({ behavior: 'smooth' });
-                wheelStartY = e.touches[0].clientY; // 重置起點，實現連續滾動
-                lastIndex = targetIndex;
+                lastVibratedAngle = currentRotation;
             }
-        }, {passive: false});
+        }, { passive: false });
 
         wheel.addEventListener('touchend', () => {
-            wheel.style.transform = 'translateX(-50%) scale(1)';
+            const anglePerItem = 360 / momentsData.length;
+            const activeIndex = Math.round(-currentRotation / anglePerItem + momentsData.length) % momentsData.length;
+            document.getElementById(`sec-${activeIndex}`).scrollIntoView({ behavior: 'smooth' });
         });
-
+        
         bindCursorEvents();
+        if (window.innerWidth > 768) togglePcToc(); // Default open on PC
     });
 
-    // --- 輔助函數 ---
-    function togglePcToc() {
-        document.querySelector('.pc-toc-panel').classList.toggle('hidden');
-        document.querySelector('.pc-toc-toggle').classList.toggle('active');
-    }
-    
-    function goHome() {
-        document.body.style.animation = 'fadeOut 0.5s ease forwards';
-        setTimeout(() => window.location.href = 'home.html', 500);
-    }
-
+    // --- Helper Functions ---
+    function togglePcToc() { document.querySelector('.pc-toc-panel').classList.toggle('hidden'); document.querySelector('.pc-toc-toggle').classList.toggle('active'); }
+    function goHome() { document.body.style.animation = 'fadeOut 0.5s ease forwards'; setTimeout(() => window.location.href = 'home.html', 500); }
     function goBack() { goHome(); }
-
-    async function copyText(el) {
-        try { await navigator.clipboard.writeText(el.innerText); showToast('Copied'); } catch(e){}
-    }
-    function showToast(msg) {
-        const t = document.getElementById('toast-msg');
-        t.innerText = msg; t.style.opacity = '1';
-        setTimeout(() => t.style.opacity = '0', 1000);
-    }
-
-    // --- 燈箱邏輯 ---
-    let activeGallery = [];
-    function openLightbox(momentId, index) {
-        const sec = document.getElementById(momentId);
-        if (sec.dataset.gallery) {
-            activeGallery = JSON.parse(sec.dataset.gallery);
-            currentLbIndex = index;
-            updateLightbox();
-            document.getElementById('lightbox').classList.add('active');
+    async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); showToast('Copied'); } catch(e){} }
+    function showToast(msg) { const t = document.getElementById('toast-msg'); t.innerText = msg; t.style.opacity = '1'; setTimeout(() => t.style.opacity = '0', 1000); }
+    
+    // Lightbox Logic (simplified)
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    function openLightbox(el, momentId, index) {
+        const momentData = momentsData.find(m => m.id === momentId);
+        if (momentData && momentData.type === 'gallery') {
+            lbImg.src = momentData.content.images[index];
+            lightbox.classList.add('active');
         }
     }
-    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
-    function changeLightbox(dir) {
-        currentLbIndex = (currentLbIndex + dir + activeGallery.length) % activeGallery.length;
-        updateLightbox();
-    }
-    function updateLightbox() {
-        const img = document.getElementById('lb-img');
-        img.style.opacity = 0;
-        setTimeout(() => {
-            img.src = activeGallery[currentLbIndex];
-            img.onload = () => img.style.opacity = 1;
-        }, 100);
-    }
+    function closeLightbox() { lightbox.classList.remove('active'); }
 
-    // 鼠標邏輯
+    // Cursor Logic
     const cursor = document.getElementById('custom-cursor');
     document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
     document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
     function bindCursorEvents() {
-        document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+        document.querySelectorAll('.interactable, .interactable-text, .pc-toc-item, .gallery-item').forEach(el => {
             el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
             el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
         });
