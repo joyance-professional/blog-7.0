@@ -16,13 +16,8 @@
             --accent-color: #000000;
             --secondary-text: #666666;
             
-            /* 
-               幾何設置:
-               skewX(-15deg) -> 形狀呈現 \ (頂部在左，底部在右)
-               如果你想要 / 形狀，改成 15deg
-            */
             --skew-angle: -15deg; 
-            --content-angle: 15deg; /* 用來抵消內容傾斜 */
+            --content-angle: 15deg; 
         }
 
         @media (prefers-color-scheme: dark) {
@@ -59,18 +54,18 @@
             height: 100%;
             padding: 60px 40px;
             display: flex;
-            flex-direction: row; /* 名字和格言並排 */
+            flex-direction: row; 
             justify-content: center;
             align-items: center;
-            z-index: 50; /* 確保在最上層 */
+            z-index: 50; 
             background: transparent;
-            gap: 40px; /* 名字和格言之間的間距 */
+            gap: 40px; 
+            transition: opacity 0.5s ease, transform 0.5s ease; /* 添加過渡 */
         }
 
-        /* 豎排文字通用設置 */
         .vertical-text {
-            writing-mode: vertical-rl; /* 從上到下，從右到左 */
-            text-orientation: upright; /* 文字直立 */
+            writing-mode: vertical-rl;
+            text-orientation: upright;
             letter-spacing: 0.3em;
             user-select: none;
         }
@@ -78,20 +73,19 @@
         .my-name {
             font-size: 2.5rem;
             font-weight: 700;
-            border-left: 2px solid var(--accent-color); /* 線條在名字左側 */
+            border-left: 2px solid var(--accent-color); 
             padding-left: 20px;
             display: flex;
             letter-spacing: 0.2em;
-            align-items: center; /* 豎向居中 */
+            align-items: center; 
             writing-mode: vertical-rl;
         }
 
-        /* 格言容器 */
         .quote-wrapper {
             height: 60%;
             position: relative;
             cursor: pointer;
-            width: 60px; /* 限制寬度 */
+            width: 60px; 
         }
 
         .quote-text {
@@ -101,29 +95,16 @@
             height: 100%;
             position: absolute;
             top: 0;
-            right: 0; /* 靠右對齊 */
+            right: 0; 
             transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
             opacity: 1;
-            /* 豎排 */
             writing-mode: vertical-rl;
             text-orientation: upright;
         }
 
-        /* 格言切換動畫狀態 */
-        .quote-enter { opacity: 0; transform: translateX(20px); } /* 從右邊進來 */
+        .quote-enter { opacity: 0; transform: translateX(20px); } 
         .quote-active { opacity: 1; transform: translateX(0); }
-        .quote-exit { opacity: 0; transform: translateX(-20px); } /* 往左邊出去 */
-
-        .quote-hint {
-            position: absolute;
-            bottom: -40px;
-            right: 0;
-            font-size: 0.7rem;
-            color: var(--secondary-text);
-            writing-mode: horizontal-tb; /* 提示文字橫排 */
-            opacity: 0.5;
-            white-space: nowrap;
-        }
+        .quote-exit { opacity: 0; transform: translateX(-20px); } 
 
 
         /* --- 3. 右側幾何區域 --- */
@@ -133,44 +114,34 @@
             position: relative;
         }
 
-        /* 平行四邊形視窗 */
         .geo-viewport {
             position: absolute;
             background: var(--bg-color);
             border: 1.5px solid var(--accent-color);
-            transform: skewX(var(--skew-angle)); /* \ 形狀 */
+            transform: skewX(var(--skew-angle)); 
             overflow: hidden;
-            transition: transform 0.4s ease, z-index 0s; /* z-index 瞬變 */
-            /* 默認陰影 */
+            transition: transform 0.4s ease, z-index 0s, width 0.8s, height 0.8s, top 0.8s, left 0.8s, border-width 0.3s; 
+            /* 增加了 width/height 等屬性的 transition 用於展開動畫 */
             box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
         }
 
-        /* 激活/懸停狀態 */
         .geo-viewport.active, .geo-viewport:hover {
             transform: skewX(var(--skew-angle)) scale(1.02);
             box-shadow: -15px 15px 40px rgba(0,0,0,0.15);
             border-color: var(--text-color);
         }
 
-        /* 內部滾動軌道 (Vertical Scroll) 
-           因為外框斜了，為了讓內容「反向」或者說「正常」顯示，
-           我們只需要簡單的反向 Skew 內容即可。
-           這裡為了視覺上的「錯位感」，我們保持列表是垂直滑動的，
-           這樣它會與斜邊框形成交叉 (Opposite Direction)。
-        */
         .geo-scroller {
-            width: 120%; /* 補償寬度 */
+            width: 120%; 
             height: 100%;
-            margin-left: -10%; /* 居中 */
-            transform: skewX(var(--content-angle)*2); /* 反向擺正內容 */
-            
+            margin-left: -10%; 
+            transform: skewX(var(--content-angle)*2); 
             overflow-y: auto;
             overflow-x: hidden;
-            padding: 60px 100px; /* 增加內邊距防止文字切邊 */
-            
-            /* 隱藏滾動條 */
+            padding: 60px 100px; 
             scrollbar-width: none;
             -ms-overflow-style: none;
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1), padding 0.8s ease; /* 內容反向旋轉的過渡 */
         }
         .geo-scroller::-webkit-scrollbar { display: none; }
 
@@ -179,12 +150,32 @@
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 30px;
-            display: block;
+            display: inline-block; /* 改為 inline-block 以便做效果 */
             border-bottom: 2px solid var(--accent-color);
             padding-bottom: 10px;
+            cursor: pointer; /* 變為手型，提示可點擊 */
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        /* 標題懸停提示效果 */
+        .box-title:hover {
+            color: var(--secondary-text);
+        }
+        .box-title::after {
+            content: ' ↗'; /* 提示跳轉 */
+            font-size: 0.8em;
+            opacity: 0;
+            transition: opacity 0.3s, transform 0.3s;
+            display: inline-block;
+            transform: translate(-10px, 10px);
+        }
+        .box-title:hover::after {
+            opacity: 1;
+            transform: translate(5px, -5px);
         }
 
-        /* 動態 (MOMENTS) */
+        /* MOMENTS */
         .moment-item {
             margin-bottom: 40px;
             padding-bottom: 20px;
@@ -207,7 +198,6 @@
             cursor: pointer;
             position: relative;
         }
-        /* 呼吸效果 */
         @keyframes breathe {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
@@ -217,7 +207,7 @@
             color: var(--secondary-text);
         }
 
-        /* 文章 (ARTICLES) */
+        /* ARTICLES */
         .article-item {
             display: flex;
             justify-content: space-between;
@@ -232,8 +222,7 @@
         .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
 
 
-        /* --- 定位與默認層級 --- */
-        /* Moments 在左上方 */
+        /* --- 定位 --- */
         #moments-box {
             width: 45%;
             height: 50%;
@@ -242,13 +231,53 @@
             z-index: 10; 
         }
 
-        /* Articles 在右下方 */
         #articles-box {
             width: 55%;
             height: 60%;
             bottom: 5%;
             right: 5%;
             z-index: 9;
+        }
+
+        /* --- 4. 關鍵過渡動畫 CSS (新增部分) --- */
+        
+        /* 當頁面處於跳轉狀態時 */
+        body.is-transitioning .left-section {
+            opacity: 0;
+            transform: translateX(-50px);
+            pointer-events: none;
+        }
+        
+        body.is-transitioning .geo-viewport:not(.expanding) {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        /* 正在展開的板塊 */
+        .geo-viewport.expanding {
+            position: fixed !important; /* 強制固定全屏 */
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            transform: skewX(0deg) !important; /* 取消傾斜，變回矩形 */
+            z-index: 9999 !important; /* 最上層 */
+            border-width: 0 !important;
+            background-color: var(--bg-color); /* 確保背景不透明 */
+            transition: all 0.8s cubic-bezier(0.7, 0, 0.3, 1) !important; /* 優雅的貝塞爾曲線 */
+            box-shadow: none !important;
+        }
+
+        /* 展開時，內部的滾動容器也要取消傾斜 */
+        .geo-viewport.expanding .geo-scroller {
+            transform: skewX(0deg) !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            padding: 100px 20%; /* 展開後內容居中，兩側留白 */
+            max-width: 1200px; /* 限制最大閱讀寬度 */
+            margin: 0 auto !important; /* 居中 */
         }
 
         /* 手機適配簡單處理 */
@@ -259,6 +288,8 @@
             .my-name, .quote-wrapper { writing-mode: horizontal-tb; height: auto; width: auto; border: none; }
             .geo-viewport { transform: none !important; border: 1px solid var(--accent-color); }
             .geo-scroller { transform: none; width: 100%; margin: 0; padding: 20px; }
+            /* 手機版展開邏輯可以簡化，直接跳轉，或者同樣全屏覆蓋 */
+            .geo-viewport.expanding .geo-scroller { padding: 80px 20px; }
         }
 
     </style>
@@ -270,12 +301,8 @@
         <div class="my-name">
             Joyance
         </div>
-        
-        <!-- 格言區域：點擊或滑動切換 -->
         <div class="quote-wrapper" id="quote-area">
-            <div class="quote-text quote-active" id="current-quote">
-                <!-- 文字由 JS 填充 -->
-            </div>
+            <div class="quote-text quote-active" id="current-quote"></div>
         </div>
     </section>
 
@@ -285,7 +312,8 @@
         <!-- 1. MOMENTS 動態板塊 -->
         <div class="geo-viewport" id="moments-box" data-id="moments">
             <div class="geo-scroller">
-                <span class="box-title">MOMENTS</span>
+                <!-- 添加 onclick 觸發展開 -->
+                <span class="box-title" onclick="expandSection('moments', event)">MOMENTS</span>
                 
                 <div class="moment-item">
                     <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80" class="moment-img">
@@ -300,14 +328,7 @@
                         仰望星空，腳踏實地。
                     </p>
                 </div>
-
-                <div class="moment-item">
-                    <p class="moment-text copy-target" onclick="copyText(this)">
-                        純粹的文字記錄，有時候比圖像更有力量。
-                    </p>
-                </div>
-
-                <!-- 佔位，防止底部遮擋 -->
+                <!-- 更多內容... -->
                 <div style="height: 100px;"></div>
             </div>
         </div>
@@ -315,7 +336,8 @@
         <!-- 2. ARTICLES 文章板塊 -->
         <div class="geo-viewport" id="articles-box" data-id="articles">
             <div class="geo-scroller">
-                <span class="box-title">ARTICLES</span>
+                <!-- 添加 onclick 觸發展開 -->
+                <span class="box-title" onclick="expandSection('articles', event)">ARTICLES</span>
                 
                 <div class="article-item" onclick="openLink('post-1')">
                     <span class="article-title">幾何美學的構建</span>
@@ -329,15 +351,6 @@
                     <span class="article-title">垂直排版的藝術</span>
                     <span class="article-date">2023.09.28</span>
                 </div>
-                <div class="article-item" onclick="openLink('post-4')">
-                    <span class="article-title">呼吸效果與交互</span>
-                    <span class="article-date">2023.08.12</span>
-                </div>
-                <div class="article-item" onclick="openLink('post-5')">
-                    <span class="article-title">舊日時光</span>
-                    <span class="article-date">2023.07.01</span>
-                </div>
-                
                 <div style="height: 100px;"></div>
             </div>
         </div>
@@ -345,68 +358,55 @@
     </section>
 
     <script>
-        // --- 1. 格言系統 (順序播放 + 左右滑動) ---
+        // --- 1. 格言系統 ---
         const quotes = [
             "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
             "我不想安慰你 在顫抖的楓葉上 寫滿春天的謊言",
+            "風起的時候，我們一起回家",
+            "沈默是另一種大聲的喧嘩"
         ];
         
         let quoteIndex = 0;
         const quoteEl = document.getElementById('current-quote');
         const quoteArea = document.getElementById('quote-area');
         
-        // 初始化第一條
         quoteEl.innerText = quotes[0];
 
         function updateQuote(direction) {
-            // 1. 舊文字離場
             quoteEl.classList.remove('quote-active');
-            quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter'); // 這裡可以根據方向做動畫區分，這裡簡化為統一淡出
+            quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter');
             
             setTimeout(() => {
-                // 2. 計算新索引 (循環)
                 if (direction === 'next') {
                     quoteIndex = (quoteIndex + 1) % quotes.length;
                 } else {
                     quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
                 }
-                
-                // 3. 更新文字
                 quoteEl.innerText = quotes[quoteIndex];
-                
-                // 4. 重置狀態準備進場
                 quoteEl.classList.remove('quote-exit', 'quote-enter');
-                // 強制重繪 (Reflow) 以觸發動畫
                 void quoteEl.offsetWidth;
-                
-                // 5. 新文字進場
                 quoteEl.classList.add('quote-active');
-            }, 300); // 等待 CSS transition 0.3s (這裡用 JS 配合 CSS 時間)
+            }, 300);
         }
 
-        // 點擊切換
         quoteArea.addEventListener('click', () => updateQuote('next'));
 
-        // 左右滑動切換 (Wheel or Touch)
         let isScrolling = false;
         quoteArea.addEventListener('wheel', (e) => {
             if (isScrolling) return;
-            // 橫向滾動 deltaX，或者豎向滾動 deltaY 都可以觸發，方便操作
             if (Math.abs(e.deltaY) > 20 || Math.abs(e.deltaX) > 20) {
                 isScrolling = true;
                 const dir = (e.deltaY > 0 || e.deltaX > 0) ? 'next' : 'prev';
                 updateQuote(dir);
-                setTimeout(() => isScrolling = false, 800); // 冷卻時間
+                setTimeout(() => isScrolling = false, 800);
             }
         });
 
-
-        // --- 2. 複製功能 (Copy) ---
+        // --- 2. 複製功能 ---
         async function copyText(el) {
             const text = el.innerText.replace('（點擊複製我）', '').trim();
             try {
                 await navigator.clipboard.writeText(text);
-                // 視覺反饋
                 const originalColor = el.style.color;
                 el.style.color = '#ccc'; 
                 el.style.transition = 'color 0.2s';
@@ -416,46 +416,65 @@
             }
         }
 
-
-        // --- 3. 板塊層級管理 (Z-Index Persistence) ---
+        // --- 3. 板塊層級管理 ---
         const momentsBox = document.getElementById('moments-box');
         const articlesBox = document.getElementById('articles-box');
         const boxes = [momentsBox, articlesBox];
         const STORAGE_KEY = 'blog_active_box';
 
         function bringToFront(activeId) {
+            // 如果正在動畫中，禁止切換層級，避免閃爍
+            if (document.body.classList.contains('is-transitioning')) return;
+
             boxes.forEach(box => {
                 if (box.id === activeId) {
-                    box.style.zIndex = 20; // 提昇層級
+                    box.style.zIndex = 20; 
                     box.classList.add('active');
                 } else {
-                    box.style.zIndex = 10; // 降低層級
+                    box.style.zIndex = 10; 
                     box.classList.remove('active');
                 }
             });
-            // 保存狀態
             localStorage.setItem(STORAGE_KEY, activeId);
         }
 
-        // 綁定事件：移入或點擊時觸發
         boxes.forEach(box => {
             box.addEventListener('mouseenter', () => bringToFront(box.id));
             box.addEventListener('click', () => bringToFront(box.id));
         });
 
-        // 初始化：讀取上次狀態，如果沒有則默認 moments 在前
         const savedId = localStorage.getItem(STORAGE_KEY);
-        if (savedId) {
-            bringToFront(savedId);
-        } else {
-            bringToFront('moments-box'); // 默認
+        if (savedId) bringToFront(savedId);
+        else bringToFront('moments-box');
+
+
+        // --- 4. 展開跳轉邏輯 (新增) ---
+        // 點擊 Title 觸發
+        function expandSection(type, event) {
+            // 阻止冒泡，避免觸發 z-index 切換（雖然不影響，但保險）
+            if(event) event.stopPropagation();
+
+            const box = document.getElementById(type + '-box');
+            
+            // 1. 設置 body 狀態：隱藏左邊欄和另一個板塊
+            document.body.classList.add('is-transitioning');
+            
+            // 2. 讓被點擊的板塊執行展開動畫
+            // 這裡必須確保它的 z-index 最高
+            box.style.zIndex = 9999;
+            box.classList.add('expanding');
+
+            // 3. 800ms 動畫結束後跳轉到對應頁面
+            setTimeout(() => {
+                // 假設完整頁面文件名為 moments.html 和 articles.html
+                window.location.href = './' + type + '.html';
+            }, 800);
         }
 
-
-        // --- 4. 頁面跳轉 ---
         function openLink(slug) {
-            console.log("Opening:", slug);
-            // window.location.href = `/posts/${slug}`;
+            // 這裡可以做文章具體跳轉邏輯
+            console.log("Opening post:", slug);
+            // window.location.href = slug + '.html';
         }
 
     </script>
