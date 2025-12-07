@@ -152,17 +152,9 @@
             // 1. 添加離場 CSS 類 (向上滑動消失)
             introPage.classList.add('slide-out');
 
-            // 2. 等待動畫結束後跳轉
-            // 目前我們還沒有首頁文件，所以暫時用 console.log 代替
-            // 之後做好首頁後，這裡改成: window.location.href = 'home.html';
+            // 2. 800ms 動畫結束後跳轉
             setTimeout(() => {
-                console.log("跳轉到主頁 (home.html)");
-                // 為了演示效果，這裡暫時重置，實際開發請刪除下面兩行
-                // alert("即將進入主頁..."); 
-                // location.reload(); 
-                
-                // TODO: 創建 home.html 後取消註釋下面這行
-                window.location.href = '/home.html';
+                window.location.href = './home.html';
             }, 800);
         }
 
