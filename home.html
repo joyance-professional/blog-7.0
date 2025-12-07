@@ -31,55 +31,38 @@
             }
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        
-        /* 隱藏默認鼠標 */
-        body, html, a, button { cursor: none !important; }
+        /* 優化：避免使用全局選擇器 *，針對性重置 */
+        body, h1, h2, h3, p, div, section, span, img { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        html {
+            height: 100%;
+        }
 
         body {
             font-family: 'Noto Serif TC', serif;
             background-color: var(--bg-color);
             color: var(--text-color);
-            height: 100vh;
             width: 100vw;
+            height: 100%;
             overflow: hidden;
             display: flex;
             opacity: 0; 
+            /* 優化：將 transform 添加到 will-change */
+            will-change: transform, opacity;
             animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
         @keyframes pageFadeIn {
-            0% { opacity: 0; transform: translateY(20px); }
-            100% { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- 自定義鼠標樣式 --- */
-        #custom-cursor {
-            position: fixed;
-            top: 0; left: 0;
-            width: 12px; height: 12px;
-            background-color: var(--text-color);
-            transform: rotate(45deg); /* 傾斜的四邊形 (菱形) */
-            pointer-events: none;
-            z-index: 99999;
-            transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
-            mix-blend-mode: difference; /* 確保在黑白背景下都可見 */
-        }
-        
-        /* 空心狀態 (移到鏈接或可複製文本) */
-        #custom-cursor.hollow {
-            background-color: transparent;
-            border: 1.5px solid var(--text-color);
-            transform: rotate(45deg) scale(1.2);
-        }
-
-        /* 點擊瞬間 (快門效果) */
-        #custom-cursor.clicking {
-            transform: rotate(45deg) scale(0.6);
-            background-color: var(--accent-color);
-        }
-
-        /* --- 2. PC端默認樣式 (保持幾何風格) --- */
+        /* --- 2. PC端默認樣式 --- */
         .left-section {
             width: 30%;
             height: 100%;
@@ -116,6 +99,8 @@
             height: 100%;
             position: absolute;
             top: 0; right: 0; 
+            /* 優化：明確 transform 和 opacity 會變動 */
+            will-change: transform, opacity;
             transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
             opacity: 1;
             writing-mode: vertical-rl;
@@ -138,29 +123,11 @@
             border: 1.5px solid var(--accent-color);
             transform: skewX(var(--skew-angle)); 
             overflow: hidden;
-            transition: transform 0.4s ease, border-color 0.3s; 
             box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
-            /* 動畫原點設為中心，方便擴展 */
             transform-origin: center center;
-        }
-
-        /* PC端懸停與定位 */
-        @media (min-width: 769px) {
-            .geo-viewport.active, .geo-viewport:hover {
-                transform: skewX(var(--skew-angle)) scale(1.02);
-                box-shadow: -15px 15px 40px rgba(0,0,0,0.15);
-                border-color: var(--text-color);
-                z-index: 20;
-            }
-            .geo-viewport:not(.active):not(:hover) {
-                z-index: 10;
-            }
-            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; }
-            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; }
-            
-            .box-title { border-bottom: 2px solid var(--accent-color); }
-            .moment-item { border-bottom: 1px dashed var(--border-color); }
-            .article-item { border-bottom: 1px solid var(--border-color); }
+            /* 優化：告知瀏覽器 transform 和 border-color 會變動 */
+            will-change: transform, border-color;
+            transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease; 
         }
 
         .geo-scroller {
@@ -172,6 +139,7 @@
             overflow-x: hidden;
             padding: 60px 100px; 
             scrollbar-width: none;
+            -ms-overflow-style: none;
             scroll-behavior: smooth;
         }
         .geo-scroller::-webkit-scrollbar { display: none; }
@@ -182,34 +150,32 @@
             margin-bottom: 30px;
             display: inline-block;
             padding-bottom: 10px;
-            /* cursor: pointer; */ /* 統一由 JS 接管 cursor */
+            border-bottom: 2px solid var(--accent-color);
             transition: transform 0.2s, color 0.2s;
         }
 
         .moment-item {
             margin-bottom: 40px;
             padding-bottom: 20px;
+            border-bottom: 1px dashed var(--border-color);
         }
         .moment-img {
             width: 100%;
             height: 180px;
             object-fit: cover;
             filter: grayscale(100%);
+            /* 優化：告知瀏覽器 filter 會變動 */
+            will-change: filter;
             transition: filter 0.4s;
             margin-bottom: 15px;
             border-radius: 2px;
         }
-        .geo-viewport:hover .moment-img { filter: grayscale(0%); }
+        
         .moment-text {
             font-size: 0.95rem;
             line-height: 1.8;
             word-break: break-all;
             text-align: justify;
-        }
-        
-        /* 交互目標樣式 */
-        .interactable {
-            /* 用於JS識別鼠標狀態 */
         }
 
         .article-item {
@@ -217,6 +183,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 18px 0;
+            border-bottom: 1px solid var(--border-color);
             transition: background-color 0.2s;
         }
         .article-title { 
@@ -228,10 +195,49 @@
             max-width: 70%;
         }
         .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
+        
+        /* --- PC 專有樣式：自定義滑鼠、懸停效果 --- */
+        @media (min-width: 769px) {
+            body, html, a, button { cursor: none !important; }
 
+            #custom-cursor {
+                position: fixed;
+                top: 0; left: 0;
+                width: 12px; height: 12px;
+                background-color: var(--text-color);
+                transform: rotate(45deg);
+                pointer-events: none;
+                z-index: 99999;
+                transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
+                mix-blend-mode: difference;
+            }
+            #custom-cursor.hollow {
+                background-color: transparent;
+                border: 1.5px solid var(--text-color);
+                transform: rotate(45deg) scale(1.2);
+            }
+            #custom-cursor.clicking {
+                transform: rotate(45deg) scale(0.6);
+                background-color: var(--accent-color);
+            }
+            
+            .geo-viewport:hover .moment-img { filter: grayscale(0%); }
+
+            .geo-viewport.active, .geo-viewport:hover {
+                transform: skewX(var(--skew-angle)) scale(1.02);
+                box-shadow: -15px 15px 40px rgba(0,0,0,0.15);
+                border-color: var(--text-color);
+                z-index: 20;
+            }
+            .geo-viewport:not(.active):not(:hover) {
+                z-index: 10;
+            }
+            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; }
+            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; }
+        }
 
         /* ========================================= */
-        /* --- 3. 手機版適配 (保持原有邏輯) --- */
+        /* --- 3. 手機版適配 --- */
         /* ========================================= */
         @media (max-width: 768px) {
             body { 
@@ -241,9 +247,8 @@
                 height: auto; 
                 padding-bottom: 80px;
                 -webkit-overflow-scrolling: touch;
-                cursor: auto !important; /* 手機恢復默認觸摸 */
             }
-            #custom-cursor { display: none; } /* 手機不顯示自定義鼠標 */
+            #custom-cursor { display: none; }
 
             .left-section {
                 width: 100%;
@@ -252,12 +257,11 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 20px;
-                background: var(--bg-color);
             }
 
             .my-name {
                 writing-mode: horizontal-tb;
-                border: none !important;
+                border: none;
                 width: 100%;
                 padding-left: 0;
                 font-size: 2.2rem;
@@ -279,10 +283,8 @@
                 font-size: 0.9rem;
                 color: var(--secondary-text);
             }
-            
-            .quote-enter { opacity: 0; transform: translateY(10px); } 
-            .quote-active { opacity: 1; transform: translateY(0); }
-            .quote-exit { opacity: 0; transform: translateY(-10px); }
+            .quote-enter { transform: translateY(10px); } 
+            .quote-exit { transform: translateY(-10px); }
 
             .right-section {
                 width: 100%;
@@ -292,7 +294,8 @@
                 gap: 50px;
                 padding: 0 25px;
             }
-
+            
+            /* 優化：手機端不需要複雜的 transform, shadow, border */
             .geo-viewport {
                 position: relative !important;
                 top: auto !important; left: auto !important;
@@ -301,7 +304,7 @@
                 transform: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                z-index: 1 !important;
+                overflow: visible; /* 避免內容被裁切 */
             }
 
             .geo-scroller {
@@ -316,7 +319,7 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
-                border: none !important;
+                border: none;
                 margin-bottom: 20px;
                 font-size: 1.2rem;
                 opacity: 0.8;
@@ -327,14 +330,15 @@
                 font-size: 1.2rem;
                 opacity: 0.3;
             }
-
-            .moment-item:nth-of-type(n+4),
-            .article-item:nth-of-type(n+4) {
-                display: none !important;
+            
+            /* 優化：手機版僅顯示前3條，使用 :nth-child 性能更好 */
+            .moment-item:nth-child(n+5), /* 標題是第1個子元素，所以從n+5開始 */
+            .article-item:nth-child(n+5) {
+                display: none;
             }
 
             .moment-item {
-                border: none !important;
+                border: none;
                 margin-bottom: 30px;
                 padding-bottom: 0;
             }
@@ -347,7 +351,7 @@
             }
 
             .article-item {
-                border: none !important;
+                border: none;
                 padding: 12px 0;
             }
             .article-title {
@@ -358,15 +362,17 @@
         /* --- 展開動畫 (CSS部分) --- */
         .geo-viewport.expanding {
             position: fixed !important;
-            top: 0 !important; left: 0 !important; bottom: 0 !important; right: 0 !important;
+            top: 0 !important; left: 0 !important;
             width: 100vw !important; height: 100vh !important;
-            transform: skewX(0) scale(1) !important; 
+            transform: none !important;
             z-index: 9999 !important;
             background-color: var(--bg-color);
             transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
-            margin: 0 !important;
-            padding: 0 !important;
             border: none;
+            /* 重置 margin 和 padding 以確保全螢幕 */
+            margin: 0 !important;
+            padding: 25px !important; /* 可以保留一些邊距以匹配目標頁面 */
+            overflow-y: auto; /* 允許在動畫期間滾動 */
         }
         
         .geo-viewport.expanding .geo-scroller {
@@ -374,20 +380,25 @@
             transition: opacity 0.2s;
         }
 
-        body.is-transitioning .left-section { opacity: 0; pointer-events: none; }
-        body.is-transitioning .geo-viewport:not(.expanding) { opacity: 0; transition: opacity 0.3s; }
+        body.is-transitioning .left-section,
+        body.is-transitioning .geo-viewport:not(.expanding) {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
 
     </style>
 </head>
 <body>
-    <!-- 自定義鼠標 -->
+    <!-- 自定義鼠標 (手機端會被CSS隱藏) -->
     <div id="custom-cursor"></div>
 
     <!-- 左側區 -->
     <section class="left-section">
         <div class="my-name">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
-            <div class="quote-text quote-active" id="current-quote"></div>
+            <!-- 初始內容由JS填充 -->
+            <div class="quote-text" id="current-quote"></div>
         </div>
     </section>
 
@@ -401,30 +412,28 @@
                     MOMENTS
                 </span>
                 
-                <!-- 1 -->
                 <div class="moment-item">
-                    <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy">
+                    <!-- 優化：添加 decoding="async" -->
+                    <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy" decoding="async">
                     <p class="moment-text interactable" onclick="copyText(this)">
                         生活不是等待風暴過去，而是學會在雨中跳舞。（點擊複製）
                     </p>
                 </div>
                 
-                <!-- 2 -->
                 <div class="moment-item">
-                    <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy">
+                    <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy" decoding="async">
                     <p class="moment-text interactable" onclick="copyText(this)">
                         仰望星空，腳踏實地。
                     </p>
                 </div>
 
-                <!-- 3 -->
                 <div class="moment-item">
                      <p class="moment-text interactable" onclick="copyText(this)">
                         保持熱愛，奔赴山海。純粹的文字記錄，有時候比圖像更有力量。
                     </p>
                 </div>
 
-                <!-- 4 (手機上會被CSS隱藏, PC保留滾動顯示) -->
+                <!-- 第4條及以後的內容 -->
                 <div class="moment-item">
                      <p class="moment-text interactable" onclick="copyText(this)">
                         這是一條被隱藏的動態，只有電腦版或者點擊標題進入詳情頁才能看到。
@@ -440,28 +449,23 @@
                     ARTICLES
                 </span>
                 
-                <!-- 1 -->
                 <div class="article-item interactable" onclick="openLink('post-1')">
                     <span class="article-title">幾何美學的構建</span>
                     <span class="article-date">11.02</span>
                 </div>
-                <!-- 2 -->
                 <div class="article-item interactable" onclick="openLink('post-2')">
                     <span class="article-title">CSS Skew 的反向邏輯</span>
                     <span class="article-date">10.15</span>
                 </div>
-                <!-- 3 -->
                 <div class="article-item interactable" onclick="openLink('post-3')">
                     <span class="article-title">垂直排版的藝術</span>
                     <span class="article-date">09.28</span>
                 </div>
                 
-                <!-- 4 (手機隱藏) -->
                 <div class="article-item interactable" onclick="openLink('post-4')">
                     <span class="article-title">移動端適配指南</span>
                     <span class="article-date">08.12</span>
                 </div>
-                 <!-- 5 (手機隱藏) -->
                  <div class="article-item interactable" onclick="openLink('post-5')">
                     <span class="article-title">關於時間的思考</span>
                     <span class="article-date">07.01</span>
@@ -471,126 +475,139 @@
 
     </section>
 
-    <script>
-        // --- 0. 鼠標邏輯 ---
-        const cursor = document.getElementById('custom-cursor');
-        
-        // 鼠標移動跟隨
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY + 'px';
-        });
+    <!-- 優化：添加 defer 屬性，讓腳本在文檔解析後執行 -->
+    <script defer>
+        // 使用 'DOMContentLoaded' 確保所有元素都已加載
+        document.addEventListener('DOMContentLoaded', () => {
 
-        // 鼠標點擊動畫 (所有點擊都觸發快門效果)
-        document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-        document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+            const isMobile = window.innerWidth <= 768;
 
-        // 檢測 Hover 狀態 (空心效果)
-        const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper');
-        interactables.forEach(el => {
-            el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
-            el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
-        });
+            // --- 0. 鼠標邏輯 (僅PC) ---
+            if (!isMobile) {
+                const cursor = document.getElementById('custom-cursor');
+                if (cursor) {
+                    document.addEventListener('mousemove', (e) => {
+                        cursor.style.left = e.clientX + 'px';
+                        cursor.style.top = e.clientY + 'px';
+                    });
 
+                    document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+                    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
 
-        // --- 1. 格言系統 (保持不變) ---
-        const quotes = [
-            "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
-            "在顫抖的楓葉上 寫滿春天的謊言",
-            "風起的時候，我們一起回家",
-            "沈默是另一種大聲的喧嘩"
-        ];
-        
-        let quoteIndex = 0;
-        const quoteEl = document.getElementById('current-quote');
-        const quoteArea = document.getElementById('quote-area');
-        quoteEl.innerText = quotes[0];
-
-        function updateQuote(direction) {
-            quoteEl.classList.remove('quote-active');
-            quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter');
-            
-            setTimeout(() => {
-                if (direction === 'next') {
-                    quoteIndex = (quoteIndex + 1) % quotes.length;
-                } else {
-                    quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
+                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper');
+                    interactables.forEach(el => {
+                        el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+                        el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+                    });
                 }
-                quoteEl.innerText = quotes[quoteIndex];
-                quoteEl.classList.remove('quote-exit', 'quote-enter');
-                void quoteEl.offsetWidth; 
+            }
+
+            // --- 1. 格言系統 ---
+            const quotes = [
+                "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
+                "在顫抖的楓葉上 寫滿春天的謊言",
+                "風起的時候，我們一起回家",
+                "沈默是另一種大聲的喧嘩"
+            ];
+            
+            let quoteIndex = 0;
+            const quoteEl = document.getElementById('current-quote');
+            const quoteArea = document.getElementById('quote-area');
+            
+            if (quoteEl) {
+                quoteEl.innerText = quotes[0];
                 quoteEl.classList.add('quote-active');
-            }, 300);
-        }
 
-        quoteArea.addEventListener('click', () => updateQuote('next'));
+                const updateQuote = (direction) => {
+                    quoteEl.classList.remove('quote-active');
+                    quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter');
+                    
+                    setTimeout(() => {
+                        if (direction === 'next') {
+                            quoteIndex = (quoteIndex + 1) % quotes.length;
+                        } else {
+                            quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
+                        }
+                        quoteEl.innerText = quotes[quoteIndex];
+                        quoteEl.classList.remove('quote-exit', 'quote-enter');
+                        void quoteEl.offsetWidth; 
+                        quoteEl.classList.add('quote-active');
+                    }, 300);
+                }
 
-        let touchStartX = 0;
-        quoteArea.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-        }, {passive: true});
-        
-        quoteArea.addEventListener('touchend', e => {
-            let touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 30) updateQuote('next'); 
-            if (touchEndX - touchStartX > 30) updateQuote('prev'); 
-        }, {passive: true});
+                quoteArea.addEventListener('click', () => updateQuote('next'));
 
+                let touchStartX = 0;
+                quoteArea.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, {passive: true}); // 優化：明確 passive
+                
+                quoteArea.addEventListener('touchend', e => {
+                    let touchEndX = e.changedTouches[0].screenX;
+                    if (touchStartX - touchEndX > 30) updateQuote('next'); 
+                    if (touchEndX - touchStartX > 30) updateQuote('prev'); 
+                }, {passive: true}); // 優化：明確 passive
+            }
 
-        // --- 2. 複製功能 (首頁預覽用，簡單動畫) ---
+            // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
+            if (!isMobile) {
+                const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
+                const bringToFront = (activeId) => {
+                    if (document.body.classList.contains('is-transitioning')) return;
+                    boxes.forEach(box => {
+                        if (box) {
+                            if (box.id === activeId) {
+                                box.classList.add('active');
+                            } else {
+                                box.classList.remove('active');
+                            }
+                        }
+                    });
+                }
+                boxes.forEach(box => {
+                    if(box) {
+                       box.addEventListener('mouseenter', () => bringToFront(box.id));
+                    }
+                });
+            }
+        });
+
+        // --- 2. 複製功能 (全局函數) ---
         async function copyText(el) {
             if(window.event) window.event.stopPropagation();
             const text = el.innerText.replace('（點擊複製）', '').trim();
             try {
                 await navigator.clipboard.writeText(text);
-                // 簡單閃爍反饋
+                el.style.transition = 'opacity 0.3s';
                 el.style.opacity = '0.5';
                 setTimeout(() => el.style.opacity = '1', 300);
-            } catch (err) { console.error('Copy failed'); }
+            } catch (err) { 
+                console.error('Copy failed', err); 
+            }
         }
 
-        // --- 3. 展開動畫邏輯 (優化後) ---
+        // --- 3 & 4. 頁面跳轉邏輯 (全局函數) ---
+        function handleTransition(boxId, url) {
+            const box = document.getElementById(boxId);
+            if (!box) return;
+
+            document.body.classList.add('is-transitioning');
+            box.classList.add('expanding');
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 600);
+        }
+
         function expandSection(type, event) {
             if(event) event.stopPropagation();
-            const box = document.getElementById(type + '-box');
-            
-            document.body.classList.add('is-transitioning');
-            box.classList.add('expanding');
-            
-            // 等待動畫完成後跳轉
-            setTimeout(() => {
-                window.location.href = './' + type + '.html';
-            }, 600);
+            handleTransition(type + '-box', './' + type + '.html');
         }
 
-        // --- 4. 文章跳轉 ---
         function openLink(slug) {
-            // 跳轉動畫
-            const box = document.getElementById('articles-box');
-            document.body.classList.add('is-transitioning');
-            box.classList.add('expanding');
-            setTimeout(() => {
-                window.location.href = 'article/' + slug + '/'; // 修改為符合文件結構的路徑
-            }, 600);
+            handleTransition('articles-box', 'article/' + slug + '/');
         }
 
-        // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
-        if (window.innerWidth > 768) {
-            const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
-            function bringToFront(activeId) {
-                if (document.body.classList.contains('is-transitioning')) return;
-                boxes.forEach(box => {
-                    if (box.id === activeId) {
-                        box.classList.add('active'); box.style.zIndex = 20;
-                    } else {
-                        box.classList.remove('active'); box.style.zIndex = 10;
-                    }
-                });
-            }
-            boxes.forEach(box => {
-                box.addEventListener('mouseenter', () => bringToFront(box.id));
-            });
-        }
     </script>
 </body>
 </html>
