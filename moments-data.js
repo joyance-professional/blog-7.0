@@ -53,7 +53,7 @@ const momentsData = [
       "改變的不是旋律",
       "而是人",
       "不是時間",
-      "會逝去的"
+      "會逝去的",
         "",
     ],
     "author": "Joyance"
