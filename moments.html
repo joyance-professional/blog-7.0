@@ -19,6 +19,13 @@
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        /* --- 1. Global Scrollbar Hiding (The cleanest look) --- */
+        /* For Chrome, Safari, Edge, Opera */
+        ::-webkit-scrollbar { display: none; }
+        /* For Firefox, IE */
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+
         body, html { 
             cursor: none !important; user-select: none; -webkit-user-select: none; 
             width: 100%; height: 100%; overflow: hidden;
@@ -36,11 +43,12 @@
         #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.15s, width 0.2s, height 0.2s; mix-blend-mode: difference; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.5); }
         .interactable, .interactable-text, .gallery-item { cursor: none; }
+        
         .back-arrow { position: fixed; top: 30px; left: 30px; z-index: 200; width: 40px; height: 40px; opacity: 0.6; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
         .back-arrow:hover { opacity: 1; transform: scale(1.1); }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
+        
         .snap-container { height: 100vh; width: 100vw; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; }
-        .snap-container::-webkit-scrollbar { display: none; } 
         .moment-section { height: 100vh; width: 100vw; scroll-snap-align: start; scroll-snap-stop: always; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
         /* --- Image Type --- */
@@ -51,33 +59,36 @@
         .moment-section.active .text-overlay { transform: translateY(0); opacity: 1; }
         .moment-text { font-size: 1.15rem; line-height: 1.8; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
-        /* --- Gallery Type --- */
+        /* --- Gallery Type (Drag to Scroll) --- */
         .gallery-mode { background: var(--bg-color); flex-direction: column; }
         .gallery-text { margin-bottom: 4vh; max-width: 500px; text-align: center; z-index: 4; }
-        .gallery-scroll { display: flex; gap: 40px; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 10; scrollbar-width: none; }
-        .gallery-scroll::-webkit-scrollbar { display: none; }
-        .gallery-item { flex: 0 0 auto; height: 100%; width: auto; scroll-snap-align: center; transition: transform 0.3s; }
-        .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; }
+        .gallery-scroll { 
+            display: flex; gap: 40px; width: 100%; padding: 0 10vw; 
+            align-items: center; height: 60vh; z-index: 10;
+            overflow-x: auto; 
+            overflow-y: hidden; /* 2. 禁止垂直滾動 */
+            scroll-snap-type: x mandatory; 
+            cursor: grab; /* 提示可拖曳 */
+        }
+        .gallery-scroll.active { cursor: grabbing; scroll-snap-type: none; /* 拖曳時暫時移除吸附，更流暢 */ }
+        .gallery-item { flex: 0 0 auto; height: 100%; width: auto; scroll-snap-align: center; transition: transform 0.3s; pointer-events: none; /* 讓點擊事件穿透給父容器處理拖曳，但 lightbox 需要處理 */ }
+        .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; pointer-events: auto; /* 恢復圖片點擊 */ }
         .gallery-item:hover { transform: scale(1.01); }
 
-        /* --- 【Poem Type FINAL】 --- */
+        /* --- Poem Type (Centered) --- */
         .poem-mode { background: var(--bg-color); }
         .poem-wrapper { 
             width: 100%; height: 80vh; 
-            overflow-x: auto; 
-            scrollbar-width: none; 
-            display: flex; /* Key for centering */
+            display: flex; align-items: center; 
+            overflow-x: auto; overflow-y: hidden;
+            /* 3. 使用 Flex 佈局特性輔助居中 */
+            justify-content: center; 
         }
-        .poem-wrapper::-webkit-scrollbar { display: none; }
         .poem-content { 
-            display: flex; flex-direction: row; 
-            gap: 3rem; height: 100%; 
-            margin: 0 auto; /* Horizontally center the content block itself */
-        }
-        /* 【NEW】The placeholder trick for centering */
-        .poem-content::before, .poem-content::after {
-            content: '';
-            flex: 1;
+            display: flex; flex-direction: row; gap: 3rem; height: 100%; 
+            padding: 0 10vw; /* 增加兩側內邊距 */
+            /* 確保內容未填滿時居中，填滿時可滑動 */
+            margin: auto; 
         }
         .poem-line, .poem-author { writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; font-size: 1.4rem; letter-spacing: 0.3em; line-height: 1.8; }
         .poem-author { font-size: 1rem; opacity: 0.7; }
@@ -105,7 +116,6 @@
         .lightbox.active { opacity: 1; pointer-events: auto; }
         .lightbox img { max-width: 90%; max-height: 90%; object-fit: contain; }
 
-        /* --- Responsive --- */
         @media (min-width: 769px) { .pc-toc-panel { display: flex; } .mobile-wheel, .wheel-indicator { display: none !important; } }
         @media (max-width: 768px) { body, html { cursor: auto !important; } #custom-cursor { display: none; } .mobile-wheel, .wheel-indicator { display: block; } .gallery-item { width: 75vw; } .poem-line, .poem-author { font-size: 1.1rem; } .poem-content { gap: 2rem; } }
     </style>
@@ -142,8 +152,8 @@
                 section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                const imgs = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
-                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgs}</div>`;
+                const imgs = moment.content.images.map((src, i) => `<div class="gallery-item" onclick="openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll" id="gal-scroll-${index}">${imgs}</div>`;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
                 const lines = moment.content.lines.map(line => `<p class="poem-line">${line}</p>`).join('');
@@ -159,21 +169,33 @@
             pcTocList.appendChild(toc);
         });
 
-        // --- 【PC Gallery Scroll FINAL】 ---
+        // --- 2. 【PC Drag-to-Scroll Logic for Gallery】 ---
+        // 既然隱藏了滾動條，我們為電腦版加入「抓取拖曳」功能，體驗更好
         if (isPC) {
-            document.querySelectorAll('.gallery-scroll').forEach(gal => {
-                gal.addEventListener('mouseenter', () => { scrollContainer.style.overflowY = 'hidden'; });
-                gal.addEventListener('mouseleave', () => { scrollContainer.style.overflowY = 'scroll'; });
-                gal.addEventListener('wheel', (e) => {
-                    if (gal.scrollWidth > gal.clientWidth) {
-                        e.preventDefault();
-                        gal.scrollLeft += e.deltaY;
-                    }
-                }, { passive: false });
+            document.querySelectorAll('.gallery-scroll').forEach(slider => {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                slider.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    slider.classList.add('active'); // 改變鼠標樣式
+                    startX = e.pageX - slider.offsetLeft;
+                    scrollLeft = slider.scrollLeft;
+                });
+                slider.addEventListener('mouseleave', () => { isDown = false; slider.classList.remove('active'); });
+                slider.addEventListener('mouseup', () => { isDown = false; slider.classList.remove('active'); });
+                slider.addEventListener('mousemove', (e) => {
+                    if(!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - slider.offsetLeft;
+                    const walk = (x - startX) * 2; // 調整滾動速度
+                    slider.scrollLeft = scrollLeft - walk;
+                });
             });
         }
 
-        // --- Scroll Sync & State Update ---
+        // --- 3. Scroll Sync ---
         let isWheelDragging = false;
         const updateActiveState = () => {
             const idx = Math.round(scrollContainer.scrollTop / window.innerHeight);
@@ -187,7 +209,7 @@
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // --- Mobile Wheel Interaction ---
+        // --- 4. Mobile Wheel Interaction (Smooth) ---
         const wheelObj = document.getElementById('mobile-wheel');
         let startAngle = 0, startRotation = 0;
         const maxAngle = -((totalSlides - 1) / totalSlides) * 360;
@@ -217,7 +239,7 @@
         wheelObj.addEventListener('touchend', () => {
             if (!isWheelDragging) return;
             isWheelDragging = false;
-            wheelContainer.style.transition = 'transform 0.5s var(--ease-out-smooth)';
+            wheelContainer.style.transition = 'transform 0.6s var(--ease-out-smooth)'; // 更平滑的動畫
             const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
             const currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
             let idx = Math.round((-currentRotation / 360) * totalSlides);
@@ -239,7 +261,7 @@
             wheelContainer.appendChild(el);
         });
 
-        // --- "Pull to Home" Logic ---
+        // --- 5. Pull to Home ---
         let tStartY = 0;
         const hint = document.getElementById('end-hint');
         scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, { passive: true });
@@ -262,7 +284,7 @@
             }
         });
 
-        // --- Lazy Load ---
+        // --- 6. Lazy Load & Centering ---
         const lazyObserver = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (e.isIntersecting) {
@@ -274,6 +296,20 @@
             });
         }, { rootMargin: "50px" });
         document.querySelectorAll('.lazy-img').forEach(img => lazyObserver.observe(img));
+
+        // 【POEM CENTERING LOGIC】
+        const poemWrappers = document.querySelectorAll('.poem-wrapper');
+        const centerObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const wrap = entry.target;
+                    // 自動滾動到正中間，精準實現「初始居中」
+                    wrap.scrollLeft = (wrap.scrollWidth - wrap.clientWidth) / 2;
+                    centerObserver.unobserve(wrap);
+                }
+            });
+        }, { threshold: 0.1 });
+        poemWrappers.forEach(w => centerObserver.observe(w));
 
         if (isPC) bindCursor();
     });
