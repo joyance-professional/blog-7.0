@@ -26,7 +26,8 @@ const momentsData = [
             ]
         }
     },
-{
+
+    {
   "id": "moment-3-reversed",
   "type": "poem",
   "title": "頻率",
@@ -57,7 +58,8 @@ const momentsData = [
     ],
     "author": "Joyance"
   }
-}
+},
+
     {
         id: "moment-3",
         type: "image",
