@@ -12,7 +12,6 @@
             --bg-color: #ffffff; --text-color: #1a1a1a;
             --toc-bg-pc: rgba(255, 255, 255, 0.0);
             --ease-elastic: cubic-bezier(0.25, 1, 0.5, 1);
-            /* 【NEW】新增一個極度平滑的動畫曲線，用於滾輪 */
             --ease-out-smooth: cubic-bezier(0.23, 1, 0.32, 1);
         }
         @media (prefers-color-scheme: dark) { 
@@ -52,24 +51,34 @@
         .moment-section.active .text-overlay { transform: translateY(0); opacity: 1; }
         .moment-text { font-size: 1.15rem; line-height: 1.8; text-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
-        /* --- 【Gallery Type REFINED】 --- */
+        /* --- Gallery Type --- */
         .gallery-mode { background: var(--bg-color); flex-direction: column; }
         .gallery-text { margin-bottom: 4vh; max-width: 500px; text-align: center; z-index: 4; }
-        .gallery-scroll { display: flex; gap: 40px; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 10; }
-        /* 在手機上隱藏滾動條 */
-        @media (max-width: 768px) {
-            .gallery-scroll { scrollbar-width: none; }
-            .gallery-scroll::-webkit-scrollbar { display: none; }
-        }
+        .gallery-scroll { display: flex; gap: 40px; width: 100%; padding: 0 10vw; overflow-x: auto; scroll-snap-type: x mandatory; align-items: center; height: 60vh; z-index: 10; scrollbar-width: none; }
+        .gallery-scroll::-webkit-scrollbar { display: none; }
         .gallery-item { flex: 0 0 auto; height: 100%; width: auto; scroll-snap-align: center; transition: transform 0.3s; }
         .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; }
         .gallery-item:hover { transform: scale(1.01); }
 
-        /* --- Poem Type --- */
+        /* --- 【Poem Type FINAL】 --- */
         .poem-mode { background: var(--bg-color); }
-        .poem-wrapper { width: 100%; height: 80vh; display: flex; align-items: center; justify-content: center; overflow-x: auto; scroll-behavior: smooth; scrollbar-width: none; }
+        .poem-wrapper { 
+            width: 100%; height: 80vh; 
+            overflow-x: auto; 
+            scrollbar-width: none; 
+            display: flex; /* Key for centering */
+        }
         .poem-wrapper::-webkit-scrollbar { display: none; }
-        .poem-content { display: flex; flex-direction: row; gap: 3rem; height: 100%; padding: 0 5vw; }
+        .poem-content { 
+            display: flex; flex-direction: row; 
+            gap: 3rem; height: 100%; 
+            margin: 0 auto; /* Horizontally center the content block itself */
+        }
+        /* 【NEW】The placeholder trick for centering */
+        .poem-content::before, .poem-content::after {
+            content: '';
+            flex: 1;
+        }
         .poem-line, .poem-author { writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap; font-size: 1.4rem; letter-spacing: 0.3em; line-height: 1.8; }
         .poem-author { font-size: 1rem; opacity: 0.7; }
 
@@ -150,10 +159,21 @@
             pcTocList.appendChild(toc);
         });
 
-        // --- 2. PC Gallery logic removed for simplicity ---
-        // Native scrollbar is now used on PC.
+        // --- 【PC Gallery Scroll FINAL】 ---
+        if (isPC) {
+            document.querySelectorAll('.gallery-scroll').forEach(gal => {
+                gal.addEventListener('mouseenter', () => { scrollContainer.style.overflowY = 'hidden'; });
+                gal.addEventListener('mouseleave', () => { scrollContainer.style.overflowY = 'scroll'; });
+                gal.addEventListener('wheel', (e) => {
+                    if (gal.scrollWidth > gal.clientWidth) {
+                        e.preventDefault();
+                        gal.scrollLeft += e.deltaY;
+                    }
+                }, { passive: false });
+            });
+        }
 
-        // --- 3. Scroll Sync & State Update ---
+        // --- Scroll Sync & State Update ---
         let isWheelDragging = false;
         const updateActiveState = () => {
             const idx = Math.round(scrollContainer.scrollTop / window.innerHeight);
@@ -167,7 +187,7 @@
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // --- 4. Mobile Wheel Interaction ---
+        // --- Mobile Wheel Interaction ---
         const wheelObj = document.getElementById('mobile-wheel');
         let startAngle = 0, startRotation = 0;
         const maxAngle = -((totalSlides - 1) / totalSlides) * 360;
@@ -197,7 +217,6 @@
         wheelObj.addEventListener('touchend', () => {
             if (!isWheelDragging) return;
             isWheelDragging = false;
-            // 【REFINED】 Use the smooth animation curve and slightly longer duration
             wheelContainer.style.transition = 'transform 0.5s var(--ease-out-smooth)';
             const matrix = new DOMMatrix(window.getComputedStyle(wheelContainer).transform);
             const currentRotation = Math.atan2(matrix.b, matrix.a) * (180 / Math.PI);
@@ -220,7 +239,7 @@
             wheelContainer.appendChild(el);
         });
 
-        // --- 5. "Pull to Home" Logic ---
+        // --- "Pull to Home" Logic ---
         let tStartY = 0;
         const hint = document.getElementById('end-hint');
         scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, { passive: true });
@@ -243,7 +262,7 @@
             }
         });
 
-        // --- 6. Lazy Load & Observers ---
+        // --- Lazy Load ---
         const lazyObserver = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (e.isIntersecting) {
@@ -255,22 +274,6 @@
             });
         }, { rootMargin: "50px" });
         document.querySelectorAll('.lazy-img').forEach(img => lazyObserver.observe(img));
-
-        // 【NEW】Observer to center the poem on first view
-        const poemWrapper = document.querySelector('.poem-wrapper');
-        if (poemWrapper) {
-            const poemObserver = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        // Scroll to the middle
-                        poemWrapper.scrollLeft = (poemWrapper.scrollWidth - poemWrapper.clientWidth) / 2;
-                        // Stop observing after centering once
-                        poemObserver.unobserve(poemWrapper);
-                    }
-                });
-            }, { threshold: 0.5 });
-            poemObserver.observe(poemWrapper);
-        }
 
         if (isPC) bindCursor();
     });
