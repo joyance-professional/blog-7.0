@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joyance's</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
+
+    <style>
+        /* 1. 變量定義：處理深色/淺色模式 */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --sub-text-color: #555555;
+            --cursor-color: #000000;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --sub-text-color: #aaaaaa;
+                --cursor-color: #ffffff;
+            }
+        }
+
+        /* 2. 基礎重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden; /* 禁止默認滾動條，由 JS 接管 */
+            font-family: 'Noto Serif TC', serif; /* 應用宋體 */
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* 3. 介紹頁容器 */
+        #intro-page {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            opacity: 1;
+            transform: translateY(0);
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1), opacity 0.8s ease;
+            position: relative;
+        }
+
+        /* 頁面內容樣式 */
+        .title {
+            font-size: 2.5rem;
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.2em; /* 增加字間距，更顯文藝 */
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 0.5s; /* 進場動畫 */
+        }
+
+        .subtitle {
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--sub-text-color);
+            line-height: 2;
+            max-width: 600px;
+            padding: 0 20px;
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 1s;
+        }
+
+        /* 底部提示區 */
+        .scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 1.5s, float 2s infinite ease-in-out 2s;
+        }
+
+        .scroll-line {
+            width: 1px;
+            height: 40px;
+            background-color: var(--text-color);
+            margin: 0 auto 10px auto;
+            display: block;
+        }
+
+        .scroll-text {
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            font-weight: 300;
+        }
+
+        /* 動畫定義 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(10px); }
+        }
+
+        /* 4. 被觸發離場時的樣式類 */
+        .slide-out {
+            transform: translateY(-100%) !important;
+            opacity: 0 !important;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 介紹頁面區塊 -->
+    <section id="intro-page">
+        <!-- 這裡放你的名字或標題 -->
+        <h1 class="title">Joyance</h1>
+        
+        <!-- 這裡放簡短介紹 -->
+        <p class="subtitle">
+            於無聲處聽驚雷，於無色處見繁花。<br>
+            這是一個關於記錄與思考的角落。
+        </p>
+
+        <!-- 底部提示 -->
+        <div class="scroll-hint">
+            <span class="scroll-text">SCROLL</span>
+            <span class="scroll-line"></span>
+        </div>
+    </section>
+
+    <script>
+        // 簡單的交互邏輯
+        let isNavigating = false;
+        const introPage = document.getElementById('intro-page');
+
+        function goToHome() {
+            if (isNavigating) return;
+            isNavigating = true;
+
+            // 1. 添加離場 CSS 類 (向上滑動消失)
+            introPage.classList.add('slide-out');
+
+            // 2. 等待動畫結束後跳轉
+            // 目前我們還沒有首頁文件，所以暫時用 console.log 代替
+            // 之後做好首頁後，這裡改成: window.location.href = 'home.html';
+            setTimeout(() => {
+                console.log("跳轉到主頁 (home.html)");
+                // 為了演示效果，這裡暫時重置，實際開發請刪除下面兩行
+                // alert("即將進入主頁..."); 
+                // location.reload(); 
+                
+                // TODO: 創建 home.html 後取消註釋下面這行
+                window.location.href = '/home.html';
+            }, 800);
+        }
+
+        // 監聽滾輪事件 (PC)
+        window.addEventListener('wheel', (e) => {
+            // deltaY > 0 代表向下滾動（手勢上滑）
+            if (e.deltaY > 0) {
+                goToHome();
+            }
+        });
+
+        // 監聽觸摸事件 (手機/平板)
+        let touchStartY = 0;
+        window.addEventListener('touchstart', (e) => {
+            touchStartY = e.changedTouches[0].screenY;
+        });
+
+        window.addEventListener('touchend', (e) => {
+            let touchEndY = e.changedTouches[0].screenY;
+            // 如果結束點比開始點小，說明是向上滑動手指
+            if (touchStartY - touchEndY > 50) { 
+                goToHome();
+            }
+        });
+    </script>
+</body>
+</html>
