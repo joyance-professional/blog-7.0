@@ -5,7 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
-    <script src="./moments-data.js" defer></script>
+    
+    <script>
+        const momentsData = [
+            { id: "moment-1", type: "image", title: "風暴與花", content: { imageSrc: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80", text: "風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。" } },
+            { id: "moment-gallery-1", type: "gallery", title: "城市碎片 (組圖)", content: { text: "光影的切片，記錄時間的流逝。", images: [ "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80" ] } },
+            { id: "moment-2", type: "poem", title: "如霧起時", content: { lines: [ "如霧起時", "敲打著窗櫺的", "不是風", "是經年的沈默", "這是為了測試長詩", "而增加的文字", "當內容超過一屏", "你可以左右滑動", "在豎排的文字森林裡", "尋找下一個句子", "光從右邊來", "故事往左邊去", "這就是傳統的閱讀", "在數字時代的回響", "就像一本", "永遠翻不完的書" ], author: "Joyance" } },
+            { id: "moment-3", type: "image", title: "久別重逢", content: { imageSrc: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80", text: `"所有的相遇，都是久別重逢。"`, meta: "2023.12.07" } }
+        ];
+    </script>
 
     <style>
         :root {
@@ -53,8 +61,8 @@
 
         .moment-section { 
             height: 100vh; width: 100vw; 
-            scroll-snap-align: start; /* 每次滾動必停在起點 */
-            scroll-snap-stop: always; /* 防止滾輪一次滑過多頁，增加重量感 */
+            scroll-snap-align: start; 
+            scroll-snap-stop: always; 
             position: relative; 
             display: flex; justify-content: center; align-items: center; 
             overflow: hidden; 
@@ -71,7 +79,6 @@
         /* --- Gallery Type --- */
         .gallery-mode { background: var(--bg-color); flex-direction: column; }
         .gallery-text { margin-bottom: 4vh; max-width: 500px; text-align: center; z-index: 4; }
-        /* 電腦上隱藏滾動條但保留功能 */
         .gallery-scroll { 
             display: flex; gap: 40px; width: 100%; padding: 0 10vw; 
             overflow-x: auto; scroll-snap-type: x mandatory; 
@@ -87,24 +94,31 @@
         .gallery-item img { height: 100%; width: auto; max-width: 80vw; object-fit: cover; display: block; }
         .gallery-item:hover { transform: scale(1.01); }
 
-        /* --- Poem Type (Fixed Layout) --- */
-        .poem-mode { background: var(--bg-color); }
+        /* --- Poem Type (Long Content Scrollable) --- */
+        .poem-mode { background: var(--bg-color); overflow-x: auto; scrollbar-width: none; } /* 關鍵：允許整個區塊水平滾動 */
+        .poem-mode::-webkit-scrollbar { display: none; }
         .poem-wrapper {
-            width: 100%; height: 100%;
+            /* 讓wrapper比視窗寬，以容納所有豎列詩句 */
             display: flex; 
-            justify-content: center; /* 水平居中 */
+            justify-content: flex-end; /* 讓內容靠右對齊 (豎排文字的起點) */
             align-items: center;     /* 垂直居中 */
+            min-width: 100vw; /* 至少一屏寬 */
+            width: max-content; /* 關鍵：讓容器根據內容自動增寬 */
+            height: 100%;
+            padding: 0 50vw; /* 確保內容在螢幕中央開始 */
         }
         .poem-content {
             display: flex;
-            writing-mode: vertical-rl; /* 豎排，從右向左 */
+            writing-mode: vertical-rl; 
             text-orientation: upright;
-            gap: 3rem; /* 行距 */
+            gap: 3rem; 
             max-height: 80vh;
+            padding-right: 50vw; /* 讓詩歌從中央偏右開始 */
+            transform: translateX(50%); /* 修正視覺定位，將詩歌的右邊緣對齊中心 */
         }
         .poem-line { 
             font-size: 1.4rem; letter-spacing: 0.3em; line-height: 1.5; 
-            white-space: nowrap; /* 強制不換行，保持單列 */
+            white-space: nowrap; 
         }
         .poem-author { font-size: 0.9rem; margin-top: 30px; opacity: 0.6; writing-mode: vertical-rl; }
 
@@ -126,10 +140,10 @@
         .mobile-wheel { 
             display: none; position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%); 
             width: 240px; height: 240px; border-radius: 50%; z-index: 150; 
-            touch-action: none; /* 關鍵：允許JS接管觸控 */
-            background: rgba(125,125,125,0.05); /* 擴大觸控區視覺反饋(可選，這裡設很淡) */
+            touch-action: none; 
+            background: rgba(125,125,125,0.05); 
         }
-        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.1s linear; will-change: transform; }
+        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.4s var(--ease-elastic); will-change: transform; } /* 關鍵：增加過渡效果用於卡位 */
         .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.75rem; opacity: 0.5; pointer-events: none; }
         .wheel-indicator { display: none; position: fixed; bottom: 115px; left: 50%; transform: translateX(-50%); width: 2px; height: 12px; background: var(--text-color); z-index: 151; }
 
@@ -182,9 +196,10 @@
 
     <div class="lightbox" id="lightbox" onclick="closeLightbox()"><img id="lb-img" src=""></div>
 
-    <script defer>
+    <script>
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof momentsData === 'undefined') return;
+        // momentsData 數據已在 <script> 頂部定義
+        if (typeof momentsData === 'undefined' || momentsData.length === 0) return;
 
         const scrollContainer = document.getElementById('main-scroll');
         const pcTocList = document.getElementById('pc-toc-list');
@@ -213,11 +228,11 @@
                         <img data-src="${src}" class="lazy-img">
                      </div>`
                 ).join('');
-                // PC上將垂直滾輪轉換為水平滾動
                 inner = `<div class="gallery-text">${moment.content.text}</div>
                          <div class="gallery-scroll" id="gal-scroll-${index}">${imgs}</div>`;
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
+                // 詩歌結構：Section(允許X軸滾動) -> Wrapper(居中，寬度max-content) -> Content(豎排)
                 const lines = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
                 inner = `
                     <div class="poem-wrapper interactable-text" onclick="copyText(this)">
@@ -238,15 +253,17 @@
             pcTocList.appendChild(toc);
         });
 
-        // --- 2. PC Gallery Scroll Logic (Transform V-Wheel to H-Scroll) ---
+        // --- 2. PC Gallery Scroll Logic (Fixing the "Stuck" Issue) ---
         if (isPC) {
             document.querySelectorAll('.gallery-scroll').forEach(gal => {
                 gal.addEventListener('wheel', (e) => {
-                    // 如果畫廊可以水平滾動，則攔截滾輪
+                    // 關鍵修正：檢查是否有水平滾動的空間，才攔截事件
                     if (gal.scrollWidth > gal.clientWidth) {
                         e.preventDefault();
-                        gal.scrollLeft += e.deltaY;
+                        // 修正：增加阻力感，使用更小的增量
+                        gal.scrollLeft += e.deltaY * 0.8;
                     }
+                    // 如果沒有水平空間，則讓垂直滾動事件冒泡，繼續滾動頁面
                 }, { passive: false });
             });
         }
@@ -263,53 +280,81 @@
             });
             document.querySelectorAll('.pc-toc-item').forEach((t, i) => t.classList.toggle('active', i === idx));
             
-            // Sync Mobile Wheel display
-            const deg = -(idx / totalSlides) * 360; 
+            // Sync Mobile Wheel display (角度自動對齊當前頁面)
+            const anglePerSlide = 360 / totalSlides;
+            const deg = -idx * anglePerSlide; 
             wheelContainer.style.transform = `rotate(${deg}deg)`;
         };
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // --- 4. Mobile Wheel Interaction (Draggable) ---
-        // 修正：滾輪可以被拖動
+        // --- 4. Mobile Wheel Interaction (Limited & Snap) ---
         const wheelObj = document.getElementById('mobile-wheel');
-        let wStartY, wStartAngle, wCurrentRot = 0;
+        let wStartAngle, wCurrentRot = 0;
+        const anglePerSlide = 360 / totalSlides;
         
+        // 輔助函數：獲取當前 CSS 角度
+        const getContainerRotation = () => {
+            const style = window.getComputedStyle(wheelContainer);
+            const matrix = new DOMMatrix(style.transform);
+            return Math.atan2(matrix.b, matrix.a) * (180/Math.PI);
+        };
+
         wheelObj.addEventListener('touchstart', (e) => {
-            e.stopPropagation(); // 防止頁面滾動
+            e.stopPropagation(); 
             const rect = wheelObj.getBoundingClientRect();
             const cx = rect.left + rect.width/2;
             const cy = rect.top + rect.height/2;
             wStartAngle = Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
-            
-            // 獲取當前CSS角度
-            const style = window.getComputedStyle(wheelContainer);
-            const matrix = new DOMMatrix(style.transform);
-            wCurrentRot = Math.atan2(matrix.b, matrix.a) * (180/Math.PI);
+            wCurrentRot = getContainerRotation();
         }, { passive: false });
 
         wheelObj.addEventListener('touchmove', (e) => {
-            e.preventDefault(); // 鎖定頁面
+            e.preventDefault(); 
             const rect = wheelObj.getBoundingClientRect();
             const cx = rect.left + rect.width/2;
             const cy = rect.top + rect.height/2;
             const curAngle = Math.atan2(e.touches[0].clientY - cy, e.touches[0].clientX - cx) * 180 / Math.PI;
             
             const diff = curAngle - wStartAngle;
-            wheelContainer.style.transform = `rotate(${wCurrentRot + diff}deg)`;
+            let newRotation = wCurrentRot + diff;
+
+            // 限制：只能順時針轉動 (角度必須介於 0 到 -360度之間)
+            // 將角度轉換為正數 (0到360) 進行比較
+            let normalizedNewRotation = newRotation % 360;
+            if (normalizedNewRotation > 0) normalizedNewRotation -= 360; 
+
+            // 轉到底的限制 (最後一頁為 -360 * (N-1)/N)
+            const maxNegativeAngle = -(totalSlides - 1) * anglePerSlide;
+            
+            // 如果用戶嘗試向後轉動 (角度變大/接近0)，則鎖定在 0 (第一頁)
+            if (newRotation > 0) newRotation = 0;
+
+            // 如果用戶嘗試轉過頭 (角度比最後一頁還小)，則鎖定在最大角度
+            if (newRotation < -360) newRotation = -360; // 限制最多只能轉一圈
+
+            wheelContainer.style.transform = `rotate(${newRotation}deg)`;
         }, { passive: false });
 
         wheelObj.addEventListener('touchend', (e) => {
-            // 計算最近的頁面並跳轉
-            const style = window.getComputedStyle(wheelContainer);
-            const matrix = new DOMMatrix(style.transform);
-            let angle = Math.atan2(matrix.b, matrix.a) * (180/Math.PI);
-            // Normalize angle to find index
-            let idx = Math.round((-angle / 360) * totalSlides);
-            if(idx < 0) idx = 0; 
-            if(idx >= totalSlides) idx = totalSlides - 1;
+            const currentAngle = getContainerRotation();
             
-            document.getElementById(`sec-${idx}`).scrollIntoView({ behavior: 'smooth' });
+            // 關鍵修正：自動卡位 (Snap)
+            // 找出最接近的索引
+            let closestIndex = Math.round((-currentAngle) / anglePerSlide);
+            
+            // 確保索引在有效範圍內
+            if (closestIndex < 0) closestIndex = 0;
+            if (closestIndex >= totalSlides) closestIndex = totalSlides - 1; // 轉到底，卡在最後一頁
+
+            // 計算精確的卡位角度
+            const snapAngle = -closestIndex * anglePerSlide;
+
+            // 平滑過渡到卡位角度
+            wheelContainer.style.transform = `rotate(${snapAngle}deg)`;
+            
+            // 跳轉到對應的頁面
+            document.getElementById(`sec-${closestIndex}`).scrollIntoView({ behavior: 'smooth' });
         });
         
         // Wheel Item Generation
@@ -341,20 +386,17 @@
                 isPulling = true;
                 hint.classList.add('visible');
                 hint.innerText = delta > 100 ? "鬆開手指確認返回" : "繼續上滑以返回首頁";
-                // 增加一點視覺阻尼
                 scrollContainer.style.transform = `translateY(${-Math.min(delta/4, 50)}px)`;
             }
         }, {passive: true});
 
         scrollContainer.addEventListener('touchend', e => {
-            scrollContainer.style.transform = ''; // Reset layout
+            scrollContainer.style.transform = ''; 
             const delta = tStartY - e.changedTouches[0].clientY;
             
             if (isPulling && delta > 100) {
-                // Confirm Exit
                 triggerHomeExit();
             } else {
-                // Cancel
                 hint.classList.remove('visible');
             }
             isPulling = false;
@@ -375,11 +417,12 @@
         bindCursor();
     });
 
-    // --- Helpers ---
+    // --- Global Helpers ---
     function triggerHomeExit() {
         document.getElementById('end-hint').innerText = "正在返回...";
-        document.body.classList.add('exiting'); // 觸發縮小淡出
-        setTimeout(() => window.location.href = 'home.html', 800);
+        document.body.classList.add('exiting');
+        // 假設跳轉到 home.html
+        setTimeout(() => window.location.href = 'home.html', 800); 
     }
 
     async function copyText(el) { 
