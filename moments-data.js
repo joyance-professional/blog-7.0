@@ -6,28 +6,21 @@
 const momentsData = [
     {
         id: "moment-1",
-        type: "image", // 'image', 'poem', 或 'gallery'
-        title: "風暴與花", // 目錄中顯示的標題
+        type: "gallery", // 'gallery', 'image', 或 'poem'
+        title: "光影碎片",
         content: {
-            imageSrc: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80",
-            text: "風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。"
+            // 對於 'gallery' 類型，使用 images 數組
+            images: [
+                { src: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80" },
+                { src: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1200&q=80" },
+                { src: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=1200&q=80" },
+                { src: "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?auto=format&fit=crop&w=1200&q=80" }
+            ],
+            text: "在城市的縫隙中，收集時間的標本。" // 可選的描述文字
         }
     },
     {
         id: "moment-2",
-        type: "gallery",
-        title: "光影碎片",
-        content: {
-            text: "在城市的縫隙中，收集時間的標本。",
-            images: [
-                "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80",
-                "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=800&q=80",
-                "https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?auto=format&fit=crop&w=800&q=80"
-            ]
-        }
-    },
-    {
-        id: "moment-3",
         type: "poem",
         title: "如霧起時 (長詩)",
         content: {
@@ -41,8 +34,8 @@ const momentsData = [
         }
     },
     {
-        id: "moment-4",
-        type: "image",
+        id: "moment-3",
+        type: "image", // 單張圖片類型
         title: "久別重逢",
         content: {
             imageSrc: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80",
