@@ -6,317 +6,482 @@
     <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
     <script src="./moments-data.js" defer></script>
+
     <style>
         :root {
             --bg-color: #ffffff; --text-color: #1a1a1a;
-            --toc-width: 280px;
-            --toc-gradient-pc: linear-gradient(to right, transparent 0%, var(--bg-color) 20%);
+            --overlay-bg: rgba(255, 255, 255, 0.9);
+            --toc-bg-pc: linear-gradient(to left, #ffffff 60%, rgba(255,255,255,0));
+            --accent-color: #000000;
         }
         @media (prefers-color-scheme: dark) { 
             :root { 
                 --bg-color: #000000; --text-color: #e5e5e5;
-                --toc-gradient-pc: linear-gradient(to right, transparent 0%, var(--bg-color) 20%);
+                --overlay-bg: rgba(0, 0, 0, 0.9);
+                --toc-bg-pc: linear-gradient(to left, #000000 60%, rgba(0,0,0,0));
+                --accent-color: #ffffff;
             } 
         }
         
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html, a, button, img { cursor: none !important; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html, a, button, img { cursor: none !important; user-select: none; -webkit-user-select: none; }
 
-        body { background: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; height: 100vh; overflow: hidden; opacity: 0; animation: fadeIn 0.8s ease forwards; }
+        body {
+            background: var(--bg-color); color: var(--text-color);
+            font-family: 'Noto Serif TC', serif;
+            height: 100vh; overflow: hidden;
+            opacity: 0; animation: fadeIn 0.8s ease forwards;
+        }
 
-        /* --- UI & 通用組件 --- */
-        .ui-icon { position: fixed; z-index: 1000; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; opacity: 0.6; transition: 0.3s; }
-        .ui-icon:hover { opacity: 1; transform: scale(1.1); }
-        .back-arrow { top: 30px; left: 30px; }
-        .back-arrow svg { width: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
-        .hamburger { top: 30px; right: 30px; flex-direction: column; justify-content: space-evenly; }
-        .hamburger .line { width: 24px; height: 1.5px; background: var(--text-color); transition: 0.3s; mix-blend-mode: difference; }
-        body.toc-active .hamburger .line:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-        body.toc-active .hamburger .line:nth-child(2) { opacity: 0; }
-        body.toc-active .hamburger .line:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+        /* --- 自定義鼠標 --- */
+        #custom-cursor {
+            position: fixed; top: 0; left: 0; width: 12px; height: 12px;
+            background-color: var(--text-color); transform: rotate(45deg);
+            pointer-events: none; z-index: 99999;
+            transition: transform 0.1s, width 0.2s, height 0.2s; mix-blend-mode: difference;
+        }
+        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
+        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--text-color); }
 
-        /* --- 內容容器 --- */
-        .snap-container { height: 100vh; width: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* --- 頂部導航 --- */
+        .back-arrow {
+            position: fixed; top: 30px; left: 30px; z-index: 200;
+            width: 40px; height: 40px; opacity: 0.6; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .back-arrow:hover { opacity: 1; }
+        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
+
+        /* --- PC TOC 按鈕 (三道槓) --- */
+        .pc-toc-toggle {
+            position: fixed; top: 30px; right: 30px; z-index: 200;
+            width: 40px; height: 40px; cursor: none;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px;
+            opacity: 0.6; transition: 0.3s;
+        }
+        .pc-toc-toggle:hover { opacity: 1; }
+        .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
+        .pc-toc-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 6px); }
+        .pc-toc-toggle.active span:nth-child(2) { opacity: 0; }
+        .pc-toc-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -6px); }
+
+        /* --- 主滾動容器 --- */
+        .snap-container {
+            height: 100vh; width: 100vw;
+            overflow-y: scroll; scroll-snap-type: y mandatory; scroll-behavior: smooth;
+        }
         .snap-container::-webkit-scrollbar { display: none; }
-        .moment-section { height: 100vh; width: 100%; scroll-snap-align: start; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
 
-        /* --- Moment 樣式 --- */
+        .moment-section {
+            height: 100vh; width: 100vw; scroll-snap-align: start;
+            position: relative; display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+
+        /* --- 1. 圖片模式 --- */
         .img-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease; z-index: 1; }
         .img-bg.loaded { opacity: 1; }
-        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; }
+        .bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.4)); z-index: 2; pointer-events: none; }
         .text-overlay { z-index: 3; position: relative; padding: 20px; max-width: 600px; text-align: center; color: #fff; }
-        .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); transition: transform 0.3s; }
-        .moment-text:hover { transform: scale(1.02); } 
-        .moment-text:active { transform: scale(0.98); }
-        /* 多圖畫廊 */
-        .gallery-container { display: flex; gap: 2vw; padding: 0 5vw; max-width: 100%; overflow-x: auto; z-index: 10; }
-        .gallery-container::-webkit-scrollbar { display: none; }
-        .gallery-item { flex: 0 0 auto; height: 40vh; max-height: 300px; border-radius: 4px; overflow: hidden; }
-        .gallery-item img { height: 100%; width: auto; object-fit: cover; transition: 0.4s; }
-        .gallery-item:hover img { transform: scale(1.05); }
-        /* 詩歌 */
-        .poem-mode { writing-mode: vertical-rl; text-orientation: upright; overflow-x: auto; justify-content: center; align-items: center; }
-        .poem-content { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 3; height: 80vh; display: inline-flex; flex-direction: column; flex-wrap: wrap; gap: 0 60px; padding: 0 5vw; padding-right: 40vw; }
+        .moment-text { font-size: 1.1rem; line-height: 1.8; text-shadow: 0 2px 15px rgba(0,0,0,0.8); }
 
-        /* --- 最後一頁提示 --- */
-        .return-hint { position: absolute; bottom: -60px; width: 100%; text-align: center; color: #fff; text-shadow: 0 1px 5px #000; z-index: 20; transition: 0.4s; }
-        .return-hint.visible { bottom: 30px; }
+        /* --- 2. 畫廊模式 (Gallery) --- */
+        .gallery-wrapper {
+            z-index: 3; width: 100%; max-width: 1200px; padding: 0 5%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #fff;
+        }
+        .gallery-scroll {
+            display: flex; gap: 20px; 
+            overflow-x: auto; scroll-snap-type: x mandatory;
+            padding: 20px 0; width: 100%;
+            scrollbar-width: none;
+            /* 鎖定垂直滾動，確保可以橫向滑 */
+            overscroll-behavior-x: contain;
+        }
+        .gallery-scroll::-webkit-scrollbar { display: none; }
+        .gallery-item {
+            flex: 0 0 auto; width: 260px; height: 360px;
+            scroll-snap-align: center; border-radius: 4px; overflow: hidden;
+            position: relative; transition: transform 0.3s;
+        }
+        .gallery-item:hover { transform: scale(1.02); }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* --- 燈箱 --- */
-        .lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.9); z-index: 9998; display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.4s; }
+        /* --- 3. 詩歌模式 (第一行居中，向左流) --- */
+        .poem-mode { 
+            background: var(--bg-color); color: var(--text-color); 
+            writing-mode: vertical-rl; text-orientation: upright;
+            position: relative;
+        }
+        .poem-container {
+            position: absolute;
+            right: 50%; /* 核心：從屏幕中線開始 */
+            transform: translateX(50%); /* 微調，讓第一行正對中線 (需配合 padding) */
+            height: 70vh;
+            display: flex; flex-wrap: wrap; align-content: flex-start; /* 內容向左堆疊 */
+            gap: 0 60px; padding-right: 1em; /* 第一行與中線的偏移 */
+            overflow-x: visible; /* 允許向左溢出屏幕 */
+        }
+        .poem-line { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 2; white-space: nowrap; }
+
+        /* --- PC 目錄 (右側豎條) --- */
+        .pc-toc-panel {
+            position: fixed; top: 0; right: 0; bottom: 0;
+            width: 200px; 
+            background: var(--toc-bg-pc); /* 漸變背景 */
+            z-index: 150;
+            display: flex; flex-direction: column; justify-content: center; align-items: flex-end;
+            padding-right: 40px; gap: 20px;
+            transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .pc-toc-panel.hidden { transform: translateX(100%); }
+        .pc-toc-item {
+            font-size: 0.9rem; color: var(--text-color); opacity: 0.5;
+            cursor: none; transition: 0.3s; text-align: right;
+            position: relative;
+        }
+        .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; transform: translateX(-10px); }
+        .pc-toc-item.active::after {
+            content: ''; position: absolute; right: -15px; top: 50%; transform: translateY(-50%);
+            width: 4px; height: 4px; background: var(--text-color); border-radius: 50%;
+        }
+
+        /* --- 手機轉盤 (底部) --- */
+        .mobile-wheel {
+            display: none; /* PC隱藏 */
+            position: fixed; bottom: -120px; left: 50%; transform: translateX(-50%);
+            width: 240px; height: 240px;
+            border-radius: 50%;
+            background: var(--bg-color);
+            border: 1px solid var(--text-color);
+            z-index: 150;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
+            align-items: flex-start; justify-content: center;
+            padding-top: 30px;
+            transition: transform 0.1s;
+            touch-action: none; /* 接管觸摸 */
+        }
+        .wheel-indicator {
+            width: 4px; height: 15px; background: var(--accent-color);
+            border-radius: 2px;
+        }
+        .wheel-text {
+            position: absolute; top: -40px; width: 200px; text-align: center;
+            font-size: 0.9rem; font-weight: 500; opacity: 0; transition: opacity 0.3s;
+            pointer-events: none;
+            background: var(--bg-color); padding: 5px 10px; border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .wheel-text.visible { opacity: 1; }
+
+        /* --- 提示層 (最後一頁 & 複製) --- */
+        .toast-msg {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px;
+            font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300;
+        }
+        .end-hint {
+            position: fixed; bottom: 100px; width: 100%; text-align: center;
+            font-size: 0.8rem; opacity: 0; transition: 0.5s; pointer-events: none; z-index: 10;
+        }
+
+        /* --- 燈箱 (Lightbox) --- */
+        .lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 999;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: 0.3s;
+        }
         .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox-img { max-width: 90%; max-height: 90%; object-fit: contain; }
-        .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 80px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; }
-        .lightbox:hover .lightbox-nav { opacity: 1; }
-        .lightbox-nav.prev { left: 2%; }
-        .lightbox-nav.next { right: 2%; }
-        .lightbox-nav svg { width: 24px; fill: #fff; }
-        
-        /* --- 電腦版目錄 (右側) --- */
+        .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .lightbox-nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 50px; height: 50px; cursor: none;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 2rem; opacity: 0.5;
+        }
+        .lightbox-nav:hover { opacity: 1; }
+        .lb-prev { left: 20px; } .lb-next { right: 20px; }
+        .lb-close { position: absolute; top: 30px; right: 30px; color: #fff; font-size: 1.5rem; opacity: 0.7; }
+
+        /* --- PC vs Mobile 佈局調整 --- */
         @media (min-width: 769px) {
-            .toc-modal { position: fixed; top: 0; right: 0; width: var(--toc-width); height: 100vh; background: var(--toc-gradient-pc); display: flex; flex-direction: column; justify-content: center; padding: 0 30px 0 60px; z-index: 999; transform: translateX(100%); transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
-            body.toc-active .toc-modal { transform: translateX(0); }
-            body.toc-active .snap-container { width: calc(100% - var(--toc-width)); }
-            .toc-list { display: flex; flex-direction: column; gap: 15px; }
-            .toc-item { font-size: 1rem; opacity: 0.6; transition: 0.3s; white-space: nowrap; }
-            .toc-item.current, .toc-item:hover { opacity: 1; transform: translateX(-10px); }
-            .rotary-dial-container { display: none; } /* 電腦隱藏轉盤 */
+            /* PC: 內容左移，留出右側目錄位置 */
+            .moment-section { padding-right: 150px; } 
+            .mobile-wheel { display: none !important; }
+        }
+        @media (max-width: 768px) {
+            /* Mobile */
+            body, html, a, button, img { cursor: auto !important; }
+            #custom-cursor { display: none; }
+            .pc-toc-panel, .pc-toc-toggle { display: none !important; }
+            .mobile-wheel { display: flex; }
+            .moment-section { padding-right: 0; }
+            .poem-container { right: 10%; transform: none; height: 60vh; overflow-y: hidden; } /* 手機上詩歌靠右一點 */
         }
 
-        /* --- 手機版轉盤目錄 --- */
-        @media (max-width: 768px) {
-            body, html, a, button, img { cursor: auto !important; }
-            #custom-cursor, .toc-modal, .hamburger { display: none; }
-            .rotary-dial-container { position: fixed; bottom: 0; left: 0; width: 100%; height: 150px; z-index: 999; overflow: hidden; pointer-events: none; }
-            .rotary-dial { position: absolute; bottom: -150px; left: 50%; width: 300px; height: 300px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(circle, transparent 40%, var(--bg-color) 41%); pointer-events: auto; touch-action: none; transition: transform 0.3s ease-out; }
-            .rotary-item { position: absolute; top: 0; left: 50%; height: 50%; transform-origin: bottom center; padding-top: 15px; font-size: 12px; opacity: 0.7; text-align: center; }
-            .rotary-item.active { opacity: 1; font-weight: bold; }
-        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { to { opacity: 0; } }
+        @keyframes bounceUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
     </style>
 </head>
-<body class="toc-active"> <!-- 電腦默認展開 -->
+<body>
     <div id="custom-cursor"></div>
-    <div class="back-arrow ui-icon interactable" onclick="goBack()">
+    
+    <!-- 返回 -->
+    <div class="back-arrow interactable" onclick="goBack()">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
-    <div class="hamburger ui-icon interactable" onclick="toggleToc()">
-        <div class="line"></div><div class="line"></div><div class="line"></div>
+
+    <!-- PC 目錄開關 & 面板 -->
+    <div class="pc-toc-toggle active interactable" onclick="togglePcToc()">
+        <span></span><span></span><span></span>
+    </div>
+    <div class="pc-toc-panel" id="pc-toc-list">
+        <!-- JS 生成目錄項 -->
     </div>
 
-    <!-- 電腦目錄 -->
-    <div class="toc-modal"><div class="toc-list" id="toc-list-pc"></div></div>
-    
     <!-- 手機轉盤 -->
-    <div class="rotary-dial-container"><div class="rotary-dial" id="rotary-dial"></div></div>
+    <div class="mobile-wheel" id="mobile-wheel">
+        <div class="wheel-indicator"></div>
+        <div class="wheel-text" id="wheel-text">Title</div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="toast-msg" id="toast-msg"></div>
+    <div class="end-hint" id="end-hint">再次滑動回到首頁<br>Scroll again to Home</div>
+
+    <!-- 主滾動區 -->
+    <div class="snap-container" id="main-scroll">
+        <!-- JS 生成內容 -->
+    </div>
 
     <!-- 燈箱 -->
     <div class="lightbox" id="lightbox">
-        <img src="" class="lightbox-img" id="lightbox-img">
-        <div class="lightbox-nav prev interactable" onclick="navigateLightbox(-1)"><svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg></div>
-        <div class="lightbox-nav next interactable" onclick="navigateLightbox(1)"><svg viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg></div>
+        <div class="lb-close interactable" onclick="closeLightbox()">✕</div>
+        <div class="lightbox-nav lb-prev interactable" onclick="changeLightbox(-1)">‹</div>
+        <div class="lightbox-nav lb-next interactable" onclick="changeLightbox(1)">›</div>
+        <img id="lb-img" src="">
     </div>
 
-    <div class="snap-container" id="main-scroll"></div>
-
-    <script>
+    <script defer>
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof momentsData === 'undefined') { console.error('Data not loaded!'); return; }
+        if (typeof momentsData === 'undefined') return;
 
         const scrollContainer = document.getElementById('main-scroll');
-        const tocListPC = document.getElementById('toc-list-pc');
-        const rotaryDial = document.getElementById('rotary-dial');
-        const isMobile = window.innerWidth <= 768;
+        const pcTocList = document.getElementById('pc-toc-list');
+        let galleryImages = []; // 暫存畫廊圖片用於燈箱
+        let currentLbIndex = 0;
 
-        // --- 1. 渲染內容 ---
-        momentsData.forEach(moment => {
+        // 1. 渲染內容
+        momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
-            section.id = moment.id;
+            section.id = `sec-${index}`;
 
-            let contentHTML = '';
+            // PC TOC Item
+            const tocItem = document.createElement('div');
+            tocItem.className = 'pc-toc-item interactable';
+            tocItem.innerText = moment.title;
+            tocItem.onclick = () => section.scrollIntoView({ behavior: 'smooth' });
+            pcTocList.appendChild(tocItem);
+
+            // Content Rendering
             if (moment.type === 'image') {
-                contentHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p>${moment.content.meta ? `<p class="meta">${moment.content.meta}</p>` : ''}</div>`;
+                section.innerHTML = `
+                    <img data-src="${moment.content.imageSrc}" class="img-bg lazy-img">
+                    <div class="bg-overlay"></div>
+                    <div class="text-overlay">
+                        <p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p>
+                    </div>`;
+            } else if (moment.type === 'gallery') {
+                const imgsHtml = moment.content.images.map((src, i) => 
+                    `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})">
+                        <img data-src="${src}" class="lazy-img">
+                     </div>`
+                ).join('');
+                section.innerHTML = `
+                    <img data-src="${moment.content.images[0]}" class="img-bg lazy-img" style="filter:blur(20px);opacity:0.3;">
+                    <div class="bg-overlay" style="background:rgba(0,0,0,0.8);"></div>
+                    <div class="gallery-wrapper">
+                        <div style="margin-bottom:20px;text-align:center;">${moment.content.text}</div>
+                        <div class="gallery-scroll" id="gallery-${moment.id}">${imgsHtml}</div>
+                    </div>`;
+                // 保存該 moment 的圖片數據供燈箱使用
+                section.dataset.gallery = JSON.stringify(moment.content.images);
             } else if (moment.type === 'poem') {
                 section.classList.add('poem-mode');
-                const poemLines = moment.content.lines.map(line => `<p>${line}</p>`).join('');
-                contentHTML = `<div class="poem-content interactable-text" onclick="copyText(this)">${poemLines}</div>`;
-            } else if (moment.type === 'gallery') {
-                const galleryItems = moment.content.images.map((img, index) => `
-                    <div class="gallery-item interactable-img" onclick="openLightbox('${moment.id}', ${index})">
-                        <img data-src="${img.src}" class="lazy-img">
-                    </div>
-                `).join('');
-                contentHTML = `<div class="text-overlay" style="position:absolute; top: 15%; color: #fff;">${moment.content.text ? `<p>${moment.content.text}</p>` : ''}</div><div class="gallery-container">${galleryItems}</div>`;
+                const poemHTML = moment.content.lines.map(line => `<div class="poem-line">${line}</div>`).join('');
+                section.innerHTML = `
+                    <div class="poem-container interactable-text" onclick="copyText(this)">
+                        ${poemHTML}
+                        <div class="poem-line" style="font-size:0.9rem;margin-top:20px;">—— ${moment.content.author}</div>
+                    </div>`;
             }
-            section.innerHTML = contentHTML;
             scrollContainer.appendChild(section);
         });
-        
-        // 添加最後一頁的提示
-        const lastSection = scrollContainer.lastElementChild;
-        if(lastSection) {
-            const hint = document.createElement('div');
-            hint.className = 'return-hint';
-            hint.innerText = '再滑一次回到首頁';
-            lastSection.appendChild(hint);
-        }
 
-        // --- 2. 渲染目錄 ---
-        if (isMobile) {
-            // 手機轉盤
-            const angleStep = 30;
-            momentsData.forEach((moment, i) => {
-                const item = document.createElement('div');
-                item.className = 'rotary-item';
-                item.textContent = moment.title;
-                item.style.transform = `rotate(${i * angleStep}deg) translateY(-150px)`;
-                item.dataset.targetId = moment.id;
-                item.dataset.index = i;
-                rotaryDial.appendChild(item);
-            });
-            initRotaryDial();
-        } else {
-            // 電腦列表
-            momentsData.forEach(moment => {
-                const item = document.createElement('a');
-                item.className = 'toc-item interactable';
-                item.textContent = moment.title;
-                item.dataset.targetId = moment.id;
-                item.onclick = () => document.getElementById(moment.id).scrollIntoView({ behavior: 'smooth' });
-                tocListPC.appendChild(item);
-            });
-        }
-        
-        // --- 3. 初始化交互 ---
-        initLazyLoading();
-        initScrollObserver();
-        bindCursorEvents();
-        if(isMobile) document.body.classList.remove('toc-active');
-    });
-
-    // --- 交互邏輯函數 ---
-    let canReturnHome = false;
-    function initScrollObserver() {
-        const observer = new IntersectionObserver(entries => {
+        // 2. 懶加載
+        const imgObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
-                const id = entry.target.id;
-                const tocItem = document.querySelector(`.toc-item[data-target-id="${id}"]`);
-                if (tocItem) tocItem.classList.toggle('current', entry.isIntersecting);
-
-                // 最後一頁邏輯
-                if (entry.target.nextElementSibling === null && entry.isIntersecting) {
-                    const hint = entry.target.querySelector('.return-hint');
-                    entry.target.onwheel = (e) => {
-                        if (e.deltaY > 0) { // 向下滾動
-                            if (canReturnHome) goBack();
-                            else {
-                                hint.classList.add('visible');
-                                canReturnHome = true;
-                            }
-                        }
-                    };
-                } else {
-                    entry.target.onwheel = null;
-                    canReturnHome = false;
-                    const hint = entry.target.querySelector('.return-hint');
-                    if(hint) hint.classList.remove('visible');
+                if (entry.isIntersecting) {
+                    entry.target.src = entry.target.dataset.src;
+                    entry.target.onload = () => entry.target.classList.add('loaded');
+                    imgObserver.unobserve(entry.target);
                 }
             });
-        }, { root: document.getElementById('main-scroll'), threshold: 0.5 });
-        document.querySelectorAll('.moment-section').forEach(sec => observer.observe(sec));
-    }
-    
-    function initLazyLoading() { /* ... 同上 ... */ }
-    function toggleToc() { document.body.classList.toggle('toc-active'); }
-    function goBack() { document.body.style.animation = 'fadeOut 0.5s ease forwards'; setTimeout(() => window.location.href = 'home.html', 500); }
-    async function copyText(el) { /* ... 同上 ... */ }
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
 
-    // 燈箱
-    const lightbox = document.getElementById('lightbox');
-    const lightboxImg = document.getElementById('lightbox-img');
-    let currentGalleryId = null;
-    let currentImageIndex = 0;
-    
-    window.openLightbox = (momentId, index) => {
-        const moment = momentsData.find(m => m.id === momentId);
-        if(!moment || moment.type !== 'gallery') return;
-        currentGalleryId = momentId;
-        currentImageIndex = index;
-        updateLightboxImage();
-        lightbox.classList.add('active');
-    };
-
-    function updateLightboxImage() {
-        const moment = momentsData.find(m => m.id === currentGalleryId);
-        lightboxImg.src = moment.content.images[currentImageIndex].src;
-    }
-
-    window.navigateLightbox = (direction) => {
-        const moment = momentsData.find(m => m.id === currentGalleryId);
-        const newIndex = currentImageIndex + direction;
-        if (newIndex >= 0 && newIndex < moment.content.images.length) {
-            currentImageIndex = newIndex;
-            updateLightboxImage();
-        }
-    };
-    lightbox.onclick = (e) => { if (e.target === lightbox) lightbox.classList.remove('active'); };
-
-    // 手機轉盤
-    function initRotaryDial() {
-        const dial = document.getElementById('rotary-dial');
-        const items = dial.querySelectorAll('.rotary-item');
-        const angleStep = 30;
-        let startAngle = 0;
-        let currentAngle = 0;
-        let lastVibratedIndex = 0;
-
-        dial.addEventListener('touchstart', e => {
-            const touch = e.touches[0];
-            const rect = dial.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            startAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * (180 / Math.PI) - currentAngle;
-        }, { passive: true });
-
-        dial.addEventListener('touchmove', e => {
-            const touch = e.touches[0];
-            const rect = dial.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const moveAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * (180 / Math.PI);
-            currentAngle = moveAngle - startAngle;
-            dial.style.transform = `translateX(-50%) rotate(${currentAngle}deg)`;
+        // 3. 滾動監聽 (高亮 PC 目錄 & 最後一頁檢測)
+        let isAtEnd = false;
+        let endHintShown = false;
+        
+        scrollContainer.addEventListener('scroll', () => {
+            const scrollY = scrollContainer.scrollTop;
+            const height = window.innerHeight;
+            const index = Math.round(scrollY / height);
             
-            // 實時更新高亮和震動
-            const activeIndex = Math.round(-currentAngle / angleStep + momentsData.length) % momentsData.length;
-            items.forEach((item, i) => item.classList.toggle('active', i === activeIndex));
-            if (activeIndex !== lastVibratedIndex && navigator.vibrate) {
-                navigator.vibrate(10);
-                lastVibratedIndex = activeIndex;
+            // 更新 PC 目錄高亮
+            document.querySelectorAll('.pc-toc-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            // 手機轉盤文字更新 (簡單版)
+            if (window.innerWidth <= 768 && momentsData[index]) {
+                const wheelText = document.getElementById('wheel-text');
+                wheelText.innerText = momentsData[index].title;
+                wheelText.classList.add('visible');
+                clearTimeout(window.wheelTextTimer);
+                window.wheelTextTimer = setTimeout(() => wheelText.classList.remove('visible'), 2000);
             }
 
-        }, { passive: true });
-
-        dial.addEventListener('touchend', () => {
-            const snapIndex = Math.round(-currentAngle / angleStep);
-            const targetAngle = -snapIndex * angleStep;
-            dial.style.transition = 'transform 0.3s ease-out';
-            dial.style.transform = `translateX(-50%) rotate(${targetAngle}deg)`;
-            currentAngle = targetAngle;
-            
-            // 滾動到目標
-            const finalIndex = (snapIndex % momentsData.length + momentsData.length) % momentsData.length;
-            const targetId = items[finalIndex].dataset.targetId;
-            document.getElementById(targetId).scrollIntoView({ behavior: 'smooth' });
-            
-            setTimeout(() => dial.style.transition = '', 300);
+            // 檢測是否到底部
+            if (scrollY + height >= scrollContainer.scrollHeight - 10) {
+                isAtEnd = true;
+                if (!endHintShown) {
+                    document.getElementById('end-hint').style.opacity = '1';
+                    endHintShown = true;
+                }
+            } else {
+                isAtEnd = false;
+                document.getElementById('end-hint').style.opacity = '0';
+                endHintShown = false;
+            }
         });
+
+        // 4. 最後一頁跳轉邏輯
+        let touchStartY = 0;
+        scrollContainer.addEventListener('wheel', (e) => {
+            if (isAtEnd && e.deltaY > 0) goHome();
+        });
+        scrollContainer.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
+        scrollContainer.addEventListener('touchmove', e => {
+            let touchY = e.touches[0].clientY;
+            if (isAtEnd && touchStartY - touchY > 50) goHome(); // 向上滑動 (手指向下)
+        });
+
+        // 5. 手機轉盤邏輯 (Haptic Wheel)
+        const wheel = document.getElementById('mobile-wheel');
+        let wheelStartY = 0;
+        let lastIndex = 0;
+
+        wheel.addEventListener('touchstart', e => {
+            wheelStartY = e.touches[0].clientY;
+            wheel.style.transform = 'translateX(-50%) scale(1.1)'; // 按下效果
+        }, {passive: false});
+
+        wheel.addEventListener('touchmove', e => {
+            e.preventDefault(); // 防止頁面滾動
+            const deltaY = wheelStartY - e.touches[0].clientY;
+            // 模擬旋轉：每20px 切換一個
+            const step = 30; 
+            const indexChange = Math.floor(deltaY / step);
+            
+            // 獲取當前 index
+            const currentIndex = Math.round(scrollContainer.scrollTop / window.innerHeight);
+            let targetIndex = currentIndex + (deltaY > 0 ? 1 : -1);
+            
+            // 限制範圍
+            if (targetIndex < 0) targetIndex = 0;
+            if (targetIndex >= momentsData.length) targetIndex = momentsData.length - 1;
+
+            if (targetIndex !== lastIndex && Math.abs(deltaY) > 10) {
+                // 觸發震動
+                if (navigator.vibrate) navigator.vibrate(10);
+                // 滾動頁面
+                document.getElementById(`sec-${targetIndex}`).scrollIntoView({ behavior: 'smooth' });
+                wheelStartY = e.touches[0].clientY; // 重置起點，實現連續滾動
+                lastIndex = targetIndex;
+            }
+        }, {passive: false});
+
+        wheel.addEventListener('touchend', () => {
+            wheel.style.transform = 'translateX(-50%) scale(1)';
+        });
+
+        bindCursorEvents();
+    });
+
+    // --- 輔助函數 ---
+    function togglePcToc() {
+        document.querySelector('.pc-toc-panel').classList.toggle('hidden');
+        document.querySelector('.pc-toc-toggle').classList.toggle('active');
+    }
+    
+    function goHome() {
+        document.body.style.animation = 'fadeOut 0.5s ease forwards';
+        setTimeout(() => window.location.href = 'home.html', 500);
     }
 
-    // 鼠標
+    function goBack() { goHome(); }
+
+    async function copyText(el) {
+        try { await navigator.clipboard.writeText(el.innerText); showToast('Copied'); } catch(e){}
+    }
+    function showToast(msg) {
+        const t = document.getElementById('toast-msg');
+        t.innerText = msg; t.style.opacity = '1';
+        setTimeout(() => t.style.opacity = '0', 1000);
+    }
+
+    // --- 燈箱邏輯 ---
+    let activeGallery = [];
+    function openLightbox(momentId, index) {
+        const sec = document.getElementById(momentId);
+        if (sec.dataset.gallery) {
+            activeGallery = JSON.parse(sec.dataset.gallery);
+            currentLbIndex = index;
+            updateLightbox();
+            document.getElementById('lightbox').classList.add('active');
+        }
+    }
+    function closeLightbox() { document.getElementById('lightbox').classList.remove('active'); }
+    function changeLightbox(dir) {
+        currentLbIndex = (currentLbIndex + dir + activeGallery.length) % activeGallery.length;
+        updateLightbox();
+    }
+    function updateLightbox() {
+        const img = document.getElementById('lb-img');
+        img.style.opacity = 0;
+        setTimeout(() => {
+            img.src = activeGallery[currentLbIndex];
+            img.onload = () => img.style.opacity = 1;
+        }, 100);
+    }
+
+    // 鼠標邏輯
     const cursor = document.getElementById('custom-cursor');
-    function bindCursorEvents() { /* ... 同上 ... */ }
-    // ... (其他輔助函數)
+    document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
+    document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+    function bindCursorEvents() {
+        document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+        });
+    }
     </script>
 </body>
 </html>
