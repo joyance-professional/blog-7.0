@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
 
     <style>
-        /* 1. 變量定義：處理深色/淺色模式 */
+        /* 1. 變量定義 */
         :root {
             --bg-color: #ffffff;
             --text-color: #1a1a1a;
@@ -37,13 +37,15 @@
         body, html {
             height: 100%;
             width: 100%;
-            overflow: hidden; /* 禁止默認滾動條，由 JS 接管 */
-            font-family: 'Noto Serif TC', serif; /* 應用宋體 */
+            overflow: hidden;
+            font-family: 'Noto Serif TC', serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             transition: background-color 0.5s ease, color 0.5s ease;
+            /* 默認隱藏系統鼠標 (PC) */
+            cursor: none;
         }
-
+        
         /* 3. 介紹頁容器 */
         #intro-page {
             height: 100vh;
@@ -63,9 +65,9 @@
             font-size: 2.5rem;
             font-weight: 500;
             margin-bottom: 1.5rem;
-            letter-spacing: 0.2em; /* 增加字間距，更顯文藝 */
+            letter-spacing: 0.2em;
             opacity: 0;
-            animation: fadeIn 1.5s ease forwards 0.5s; /* 進場動畫 */
+            animation: fadeIn 1.5s ease forwards 0.5s;
         }
 
         .subtitle {
@@ -112,28 +114,60 @@
             50% { transform: translateY(10px); }
         }
 
-        /* 4. 被觸發離場時的樣式類 */
+        /* 被觸發離場時的樣式類 */
         .slide-out {
             transform: translateY(-100%) !important;
             opacity: 0 !important;
+        }
+        
+        /* --- 4. 自定義鼠標樣式 --- */
+        #custom-cursor {
+            display: none; /* 默認隱藏，由媒體查詢在 PC 上開啟 */
+            position: fixed;
+            top: 0; left: 0;
+            width: 12px; height: 12px;
+            background-color: var(--cursor-color);
+            transform: rotate(45deg); /* 菱形 */
+            pointer-events: none; /* 穿透鼠標事件 */
+            z-index: 99999;
+            transition: transform 0.1s, background-color 0.2s;
+            mix-blend-mode: difference; /* 反色效果，確保可見性 */
+        }
+        
+        /* 點擊瞬間 (快門效果) */
+        #custom-cursor.clicking {
+            transform: rotate(45deg) scale(0.6);
+            background-color: var(--cursor-color);
+        }
+        
+        /* PC 端顯示自定義鼠標 */
+        @media (min-width: 769px) {
+             #custom-cursor {
+                display: block;
+            }
+        }
+        
+        /* 手機端恢復默認鼠標 */
+        @media (max-width: 768px) {
+            body, html {
+                cursor: auto;
+            }
         }
 
     </style>
 </head>
 <body>
 
+    <!-- 自定義鼠標元素 -->
+    <div id="custom-cursor"></div>
+
     <!-- 介紹頁面區塊 -->
     <section id="intro-page">
-        <!-- 這裡放你的名字或標題 -->
         <h1 class="title">Joyance</h1>
-        
-        <!-- 這裡放簡短介紹 -->
         <p class="subtitle">
             會逝去的 不是時間<br>
             而是人
         </p>
-
-        <!-- 底部提示 -->
         <div class="scroll-hint">
             <span class="scroll-text">SCROLL</span>
             <span class="scroll-line"></span>
@@ -141,42 +175,51 @@
     </section>
 
     <script>
-        // 簡單的交互邏輯
-        let isNavigating = false;
-        const introPage = document.getElementById('intro-page');
+        document.addEventListener('DOMContentLoaded', () => {
+            const introPage = document.getElementById('intro-page');
+            let isNavigating = false;
 
-        function goToHome() {
-            if (isNavigating) return;
-            isNavigating = true;
+            // --- 頁面跳轉邏輯 ---
+            function goToHome() {
+                if (isNavigating) return;
+                isNavigating = true;
 
-            // 1. 添加離場 CSS 類 (向上滑動消失)
-            introPage.classList.add('slide-out');
+                introPage.classList.add('slide-out');
 
-            // 2. 800ms 動畫結束後跳轉
-            setTimeout(() => {
-                window.location.href = './home.html';
-            }, 800);
-        }
-
-        // 監聽滾輪事件 (PC)
-        window.addEventListener('wheel', (e) => {
-            // deltaY > 0 代表向下滾動（手勢上滑）
-            if (e.deltaY > 0) {
-                goToHome();
+                setTimeout(() => {
+                    window.location.href = './home.html';
+                }, 800);
             }
-        });
 
-        // 監聽觸摸事件 (手機/平板)
-        let touchStartY = 0;
-        window.addEventListener('touchstart', (e) => {
-            touchStartY = e.changedTouches[0].screenY;
-        });
+            // --- 監聽滾動和觸摸事件 ---
+            window.addEventListener('wheel', (e) => {
+                if (e.deltaY > 0) goToHome();
+            }, { passive: true });
 
-        window.addEventListener('touchend', (e) => {
-            let touchEndY = e.changedTouches[0].screenY;
-            // 如果結束點比開始點小，說明是向上滑動手指
-            if (touchStartY - touchEndY > 50) { 
-                goToHome();
+            let touchStartY = 0;
+            window.addEventListener('touchstart', (e) => {
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            window.addEventListener('touchend', (e) => {
+                let touchEndY = e.changedTouches[0].screenY;
+                if (touchStartY - touchEndY > 50) goToHome();
+            }, { passive: true });
+
+            // --- 自定義鼠標邏輯 (僅在PC端生效) ---
+            const isMobile = window.innerWidth <= 768;
+            if (!isMobile) {
+                const cursor = document.getElementById('custom-cursor');
+                
+                // 鼠標移動跟隨
+                document.addEventListener('mousemove', (e) => {
+                    cursor.style.left = e.clientX + 'px';
+                    cursor.style.top = e.clientY + 'px';
+                });
+
+                // 鼠標點擊動畫
+                document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+                document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
             }
         });
     </script>
