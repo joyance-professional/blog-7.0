@@ -9,7 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* --- 1. 全局配置 --- */
+        /* --- 1. 全局變量 --- */
         :root {
             --bg-color: #ffffff;
             --text-color: #1a1a1a;
@@ -17,10 +17,12 @@
             --secondary-text: #666666;
             
             /* 
-               核心角度變量: +15deg
-               修改這裡可以一鍵改變整個網站的傾斜角度
+               幾何設置:
+               skewX(-15deg) -> 形狀呈現 \ (頂部在左，底部在右)
+               如果你想要 / 形狀，改成 15deg
             */
-            --skew-angle: 15deg; 
+            --skew-angle: -15deg; 
+            --content-angle: 15deg; /* 用來抵消內容傾斜 */
         }
 
         @media (prefers-color-scheme: dark) {
@@ -42,357 +44,424 @@
             width: 100vw;
             overflow: hidden; 
             display: flex;
+            opacity: 0; 
+            animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
-        /* 進場動畫 */
-        body { opacity: 0; animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
         @keyframes pageFadeIn {
-            0% { opacity: 0; transform: translateY(30px); }
+            0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- 左側區域 --- */
+        /* --- 2. 左側區域 (豎排佈局) --- */
         .left-section {
-            width: 35%;
+            width: 30%;
             height: 100%;
-            padding: 80px 60px;
+            padding: 60px 40px;
             display: flex;
-            flex-direction: column;
+            flex-direction: row; /* 名字和格言並排 */
             justify-content: center;
-            z-index: 10;
-            background: var(--bg-color);
+            align-items: center;
+            z-index: 50; /* 確保在最上層 */
+            background: transparent;
+            gap: 40px; /* 名字和格言之間的間距 */
+        }
+
+        /* 豎排文字通用設置 */
+        .vertical-text {
+            writing-mode: vertical-rl; /* 從上到下，從右到左 */
+            text-orientation: upright; /* 文字直立 */
+            letter-spacing: 0.3em;
+            user-select: none;
         }
 
         .my-name {
-            font-size: 3.5rem;
+            font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 50px;
-            letter-spacing: 0.05em;
+            height: 60%; /* 控制線條長度 */
+            border-left: 2px solid var(--accent-color); /* 線條在名字左側 */
+            padding-left: 20px;
+            display: flex;
+            align-items: center; /* 豎向居中 */
+        }
+
+        /* 格言容器 */
+        .quote-wrapper {
+            height: 60%;
             position: relative;
-            display: inline-block;
-        }
-        .my-name::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background-color: var(--accent-color);
-        }
-
-        .quote-container {
-            font-size: 1.2rem;
-            line-height: 1.8;
-            font-weight: 300;
-            min-height: 120px;
             cursor: pointer;
-            user-select: none;
-        }
-        .quote-hint {
-            margin-top: 20px;
-            font-size: 0.75rem;
-            color: var(--secondary-text);
-            letter-spacing: 0.1em;
-            opacity: 0.5;
+            width: 60px; /* 限制寬度 */
         }
 
-        /* --- 右側幾何區域 (核心邏輯) --- */
+        .quote-text {
+            font-size: 1.1rem;
+            font-weight: 300;
+            line-height: 1.5;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            right: 0; /* 靠右對齊 */
+            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            opacity: 1;
+            /* 豎排 */
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+
+        /* 格言切換動畫狀態 */
+        .quote-enter { opacity: 0; transform: translateX(20px); } /* 從右邊進來 */
+        .quote-active { opacity: 1; transform: translateX(0); }
+        .quote-exit { opacity: 0; transform: translateX(-20px); } /* 往左邊出去 */
+
+        .quote-hint {
+            position: absolute;
+            bottom: -40px;
+            right: 0;
+            font-size: 0.7rem;
+            color: var(--secondary-text);
+            writing-mode: horizontal-tb; /* 提示文字橫排 */
+            opacity: 0.5;
+            white-space: nowrap;
+        }
+
+
+        /* --- 3. 右側幾何區域 --- */
         .right-section {
-            width: 65%;
+            width: 70%;
             height: 100%;
             position: relative;
         }
 
-        /* 
-           LAYER 1: 視窗 (Viewport)
-           形狀：平行四邊形 (SkewX +15deg)
-           作用：裁切內容，定義邊框
-        */
+        /* 平行四邊形視窗 */
         .geo-viewport {
             position: absolute;
             background: var(--bg-color);
             border: 1.5px solid var(--accent-color);
-            transform: skewX(var(--skew-angle) * -1); /* 形成 \ 形狀 */
+            transform: skewX(var(--skew-angle)); /* \ 形狀 */
             overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: transform 0.4s ease, z-index 0s; /* z-index 瞬變 */
+            /* 默認陰影 */
+            box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
         }
 
-        .geo-viewport:hover {
-            /* 懸停時輕微浮起 */
-            transform: skewX(var(--skew-angle)) translate(-5px, -5px);
-            box-shadow: 10px 10px 0px rgba(128, 128, 128, 0.1);
-            z-index: 20 !important;
+        /* 激活/懸停狀態 */
+        .geo-viewport.active, .geo-viewport:hover {
+            transform: skewX(var(--skew-angle)) scale(1.02);
+            box-shadow: -15px 15px 40px rgba(0,0,0,0.15);
+            border-color: var(--text-color);
         }
 
-        /* 
-           LAYER 2: 軌道 (Track)
-           變換：先抵消父級Skew，再旋轉Rotate
-           作用：創造斜向坐標系。Flex Item 會沿著旋轉後的 Y 軸排列。
+        /* 內部滾動軌道 (Vertical Scroll) 
+           因為外框斜了，為了讓內容「反向」或者說「正常」顯示，
+           我們只需要簡單的反向 Skew 內容即可。
+           這裡為了視覺上的「錯位感」，我們保持列表是垂直滑動的，
+           這樣它會與斜邊框形成交叉 (Opposite Direction)。
         */
-        .geo-track {
-            width: 200%; /* 寬度必須大，覆蓋旋轉後的死角 */
-            height: 200%;
-            margin-left: -50%;
-            margin-top: -25%; /* 定位修正 */
+        .geo-scroller {
+            width: 150%; /* 補償寬度 */
+            height: 100%;
+            margin-left: -25%; /* 居中 */
+            transform: skewX(var(--content-angle)); /* 反向擺正內容 */
             
-            /* 
-               公式：skewX(-15deg) 抵消外框 -> 變回矩形
-               公式：rotate(15deg) 旋轉整個軌道
-            */
-            transform: skewX(calc(var(--skew-angle) * -1)) rotate(var(--skew-angle));
-            
-            overflow-y: auto; /* 開啟滾動 */
+            overflow-y: auto;
             overflow-x: hidden;
-            display: flex;
-            flex-direction: column; /* 沿著斜線堆疊！ */
-            align-items: center;    /* 內容在軌道中居中 */
-            padding-top: 150px;     /* 視覺頂部補償 */
-            padding-bottom: 150px;
+            padding: 60px 100px; /* 增加內邊距防止文字切邊 */
             
             /* 隱藏滾動條 */
             scrollbar-width: none;
             -ms-overflow-style: none;
-            scroll-behavior: smooth;
         }
-        .geo-track::-webkit-scrollbar { display: none; }
+        .geo-scroller::-webkit-scrollbar { display: none; }
 
-        /* 
-           LAYER 3: 內容單元 (Item)
-           變換：無 (跟隨軌道傾斜排列)
-           佈局：這裡每一行已經是斜著排了
-        */
-        .geo-item-wrapper {
-            width: 50%; /* 控制內容寬度 */
-            margin-bottom: 40px; /* 行間距 */
-            /* 這裡不需要旋轉，因為我們要讓它沿著軌道斜著走 */
-        }
-
-        /* 
-           LAYER 4: 內容修正 (Content)
-           變換：rotate(-15deg)
-           作用：讓文字變回水平，方便閱讀
-        */
-        .geo-content {
-            transform: rotate(calc(var(--skew-angle) * -1));
-            transform-origin: center center;
-            transition: opacity 0.3s;
-        }
-
-        /* --- 板塊具體定位 --- */
-        #moments-box {
-            width: 45%;
-            height: 45%;
-            top: 10%;
-            left: 15%;
-            z-index: 5;
-        }
-
-        #articles-box {
-            width: 55%;
-            height: 55%;
-            bottom: 0;
-            right: 10%;
-            border-bottom: none;
-            z-index: 4;
-        }
-
-        /* --- 內容樣式設計 --- */
+        /* 內容佈局 */
         .box-title {
-            font-size: 1.2rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            letter-spacing: 0.1em;
+            margin-bottom: 30px;
             display: block;
-            margin-bottom: 20px;
-            border-bottom: 1px dashed var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
             padding-bottom: 10px;
         }
 
-        /* 動態樣式 */
+        /* 動態 (MOMENTS) */
+        .moment-item {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed rgba(128,128,128,0.3);
+        }
         .moment-img {
             width: 100%;
-            height: 140px;
+            height: 180px;
             object-fit: cover;
             filter: grayscale(100%);
-            transition: filter 0.3s;
-            margin-bottom: 10px;
-            background: #333;
+            transition: filter 0.4s;
+            margin-bottom: 15px;
+            cursor: pointer;
         }
         .geo-viewport:hover .moment-img { filter: grayscale(0%); }
         
         .moment-text {
-            font-size: 0.9rem;
-            line-height: 1.6;
+            font-size: 0.95rem;
+            line-height: 1.8;
             cursor: pointer;
+            position: relative;
+        }
+        /* 呼吸效果 */
+        @keyframes breathe {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .moment-text:hover {
+            animation: breathe 2s infinite ease-in-out;
+            color: var(--secondary-text);
         }
 
-        /* 文章樣式 */
-        .article-row {
+        /* 文章 (ARTICLES) */
+        .article-item {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(128,128,128,0.1);
             cursor: pointer;
-            padding: 10px;
-            border-bottom: 1px solid rgba(128,128,128, 0.1);
-            transition: background 0.3s;
+            transition: padding 0.3s;
         }
-        .article-row:hover { background: rgba(128,128,128, 0.05); }
-        .article-title { font-weight: 500; font-size: 1.05rem; }
-        .article-date { font-size: 0.8rem; color: var(--secondary-text); font-family: monospace; }
+        .article-item:hover { padding-left: 10px; padding-right: 10px; background: rgba(128,128,128,0.05); }
+        .article-title { font-size: 1.1rem; font-weight: 500; }
+        .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
+
+
+        /* --- 定位與默認層級 --- */
+        /* Moments 在左上方 */
+        #moments-box {
+            width: 45%;
+            height: 50%;
+            top: 10%;
+            left: 10%;
+            z-index: 10; 
+        }
+
+        /* Articles 在右下方 */
+        #articles-box {
+            width: 55%;
+            height: 60%;
+            bottom: 5%;
+            right: 5%;
+            z-index: 9;
+        }
+
+        /* 手機適配簡單處理 */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow: auto; }
+            .left-section { width: 100%; height: auto; flex-direction: column; padding: 40px; }
+            .right-section { width: 100%; height: 80vh; }
+            .my-name, .quote-wrapper { writing-mode: horizontal-tb; height: auto; width: auto; border: none; }
+            .geo-viewport { transform: none !important; border: 1px solid var(--accent-color); }
+            .geo-scroller { transform: none; width: 100%; margin: 0; padding: 20px; }
+        }
 
     </style>
 </head>
 <body>
 
+    <!-- 左側：豎排名字與格言 -->
     <section class="left-section">
-        <div class="my-name">Your Name</div>
-        <div class="quote-container" onclick="nextQuote()">
-            <div id="quote-text">Loading...</div>
+        <div class="my-name">
+            你的名字
+        </div>
+        
+        <!-- 格言區域：點擊或滑動切換 -->
+        <div class="quote-wrapper" id="quote-area">
+            <div class="quote-text quote-active" id="current-quote">
+                <!-- 文字由 JS 填充 -->
+            </div>
+            <div class="quote-hint">← SLIDE / CLICK →</div>
         </div>
     </section>
 
+    <!-- 右側：幾何板塊 -->
     <section class="right-section">
         
-        <!-- 動態板塊 -->
-        <div class="geo-viewport" id="moments-box">
-            <!-- 軌道：沿著斜線的傳送帶 -->
-            <div class="geo-track">
+        <!-- 1. MOMENTS 動態板塊 -->
+        <div class="geo-viewport" id="moments-box" data-id="moments">
+            <div class="geo-scroller">
+                <span class="box-title">MOMENTS</span>
                 
-                <!-- 每一項 (Item Wrapper) 都是傳送帶上的一個箱子 -->
-                <div class="geo-item-wrapper">
-                    <!-- 內容修正：把箱子裡的東西擺正 -->
-                    <div class="geo-content">
-                        <span class="box-title">MOMENTS</span>
-                    </div>
+                <div class="moment-item">
+                    <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80" class="moment-img">
+                    <p class="moment-text copy-target" onclick="copyText(this)">
+                        生活不是等待風暴過去，而是學會在雨中跳舞。（點擊複製我）
+                    </p>
+                </div>
+                
+                <div class="moment-item">
+                    <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80" class="moment-img">
+                    <p class="moment-text copy-target" onclick="copyText(this)">
+                        仰望星空，腳踏實地。
+                    </p>
                 </div>
 
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80" class="moment-img">
-                        <p class="moment-text copy-able" onclick="copyText(this)">
-                            星空之所以美麗，是因為它在無邊的黑暗中燃燒。（點擊複製）
-                        </p>
-                    </div>
+                <div class="moment-item">
+                    <p class="moment-text copy-target" onclick="copyText(this)">
+                        純粹的文字記錄，有時候比圖像更有力量。
+                    </p>
                 </div>
 
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <img src="https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=600&q=80" class="moment-img">
-                        <p class="moment-text copy-able" onclick="copyText(this)">
-                            樹林深處有兩條路，我選擇了人跡罕至的那一條。
-                        </p>
-                    </div>
-                </div>
-
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <p class="moment-text copy-able" onclick="copyText(this)">
-                            純文字的記錄，是思維的切片。
-                        </p>
-                    </div>
-                </div>
-
+                <!-- 佔位，防止底部遮擋 -->
+                <div style="height: 50px;"></div>
             </div>
         </div>
 
-        <!-- 文章板塊 -->
-        <div class="geo-viewport" id="articles-box">
-            <div class="geo-track">
+        <!-- 2. ARTICLES 文章板塊 -->
+        <div class="geo-viewport" id="articles-box" data-id="articles">
+            <div class="geo-scroller">
+                <span class="box-title">ARTICLES</span>
                 
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <span class="box-title">ARTICLES</span>
-                    </div>
+                <div class="article-item" onclick="openLink('post-1')">
+                    <span class="article-title">幾何美學的構建</span>
+                    <span class="article-date">2023.11.02</span>
                 </div>
-
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <div class="article-row" onclick="openPage('article-1')">
-                            <span class="article-title">斜軸佈局的實現藝術</span>
-                            <span class="article-date">10.27</span>
-                        </div>
-                    </div>
+                <div class="article-item" onclick="openLink('post-2')">
+                    <span class="article-title">CSS Skew 的反向邏輯</span>
+                    <span class="article-date">2023.10.15</span>
                 </div>
-
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <div class="article-row" onclick="openPage('article-2')">
-                            <span class="article-title">呼吸效果與交互設計</span>
-                            <span class="article-date">10.15</span>
-                        </div>
-                    </div>
+                <div class="article-item" onclick="openLink('post-3')">
+                    <span class="article-title">垂直排版的藝術</span>
+                    <span class="article-date">2023.09.28</span>
                 </div>
-
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <div class="article-row" onclick="openPage('article-3')">
-                            <span class="article-title">Astro 框架極速入門</span>
-                            <span class="article-date">09.20</span>
-                        </div>
-                    </div>
+                <div class="article-item" onclick="openLink('post-4')">
+                    <span class="article-title">呼吸效果與交互</span>
+                    <span class="article-date">2023.08.12</span>
                 </div>
-
-                <div class="geo-item-wrapper">
-                    <div class="geo-content">
-                        <div class="article-row" onclick="openPage('article-4')">
-                            <span class="article-title">Cloudflare Pages 部署</span>
-                            <span class="article-date">08.05</span>
-                        </div>
-                    </div>
+                <div class="article-item" onclick="openLink('post-5')">
+                    <span class="article-title">舊日時光</span>
+                    <span class="article-date">2023.07.01</span>
                 </div>
                 
-                <!-- 底部佔位，保證最後一條能滑到中間 -->
-                <div class="geo-item-wrapper" style="height: 100px;"></div>
-
+                <div style="height: 50px;"></div>
             </div>
         </div>
 
     </section>
 
     <script>
-        // --- 格言邏輯 ---
+        // --- 1. 格言系統 (順序播放 + 左右滑動) ---
         const quotes = [
             "於無聲處聽驚雷，於無色處見繁花。",
             "Stay hungry, stay foolish.",
             "人的一切痛苦，本質上都是對自己無能的憤怒。",
             "知行合一。",
-            "優雅不是引人注目，而是被人記住。",
-            "Less is More."
+            "代碼是寫給人看的，順便給機器運行。",
+            "簡單是終極的複雜。"
         ];
-        const quoteEl = document.getElementById('quote-text');
-        function nextQuote() {
-            quoteEl.style.opacity = 0;
-            setTimeout(() => {
-                quoteEl.innerText = quotes[Math.floor(Math.random() * quotes.length)];
-                quoteEl.style.opacity = 1;
-            }, 300);
-        }
-        nextQuote();
+        
+        let quoteIndex = 0;
+        const quoteEl = document.getElementById('current-quote');
+        const quoteArea = document.getElementById('quote-area');
+        
+        // 初始化第一條
+        quoteEl.innerText = quotes[0];
 
-        // --- 點擊複製功能 (Breath & Copy) ---
-        async function copyText(element) {
-            const text = element.innerText;
+        function updateQuote(direction) {
+            // 1. 舊文字離場
+            quoteEl.classList.remove('quote-active');
+            quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter'); // 這裡可以根據方向做動畫區分，這裡簡化為統一淡出
+            
+            setTimeout(() => {
+                // 2. 計算新索引 (循環)
+                if (direction === 'next') {
+                    quoteIndex = (quoteIndex + 1) % quotes.length;
+                } else {
+                    quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
+                }
+                
+                // 3. 更新文字
+                quoteEl.innerText = quotes[quoteIndex];
+                
+                // 4. 重置狀態準備進場
+                quoteEl.classList.remove('quote-exit', 'quote-enter');
+                // 強制重繪 (Reflow) 以觸發動畫
+                void quoteEl.offsetWidth;
+                
+                // 5. 新文字進場
+                quoteEl.classList.add('quote-active');
+            }, 300); // 等待 CSS transition 0.3s (這裡用 JS 配合 CSS 時間)
+        }
+
+        // 點擊切換
+        quoteArea.addEventListener('click', () => updateQuote('next'));
+
+        // 左右滑動切換 (Wheel or Touch)
+        let isScrolling = false;
+        quoteArea.addEventListener('wheel', (e) => {
+            if (isScrolling) return;
+            // 橫向滾動 deltaX，或者豎向滾動 deltaY 都可以觸發，方便操作
+            if (Math.abs(e.deltaY) > 20 || Math.abs(e.deltaX) > 20) {
+                isScrolling = true;
+                const dir = (e.deltaY > 0 || e.deltaX > 0) ? 'next' : 'prev';
+                updateQuote(dir);
+                setTimeout(() => isScrolling = false, 800); // 冷卻時間
+            }
+        });
+
+
+        // --- 2. 複製功能 (Copy) ---
+        async function copyText(el) {
+            const text = el.innerText.replace('（點擊複製我）', '').trim();
             try {
                 await navigator.clipboard.writeText(text);
-                
-                // 視覺反饋：文字瞬間變灰，然後恢復
-                const originalColor = element.style.color;
-                element.style.color = '#ccc';
-                // 也可以加一個臨時的提示
-                console.log('Copied:', text);
-                
-                setTimeout(() => {
-                    element.style.color = originalColor;
-                }, 200);
+                // 視覺反饋
+                const originalColor = el.style.color;
+                el.style.color = '#ccc'; 
+                el.style.transition = 'color 0.2s';
+                setTimeout(() => el.style.color = originalColor, 200);
             } catch (err) {
                 console.error('Copy failed', err);
             }
         }
 
-        // --- 跳轉 ---
-        function openPage(slug) {
-            console.log("Go to:", slug);
+
+        // --- 3. 板塊層級管理 (Z-Index Persistence) ---
+        const momentsBox = document.getElementById('moments-box');
+        const articlesBox = document.getElementById('articles-box');
+        const boxes = [momentsBox, articlesBox];
+        const STORAGE_KEY = 'blog_active_box';
+
+        function bringToFront(activeId) {
+            boxes.forEach(box => {
+                if (box.id === activeId) {
+                    box.style.zIndex = 20; // 提昇層級
+                    box.classList.add('active');
+                } else {
+                    box.style.zIndex = 10; // 降低層級
+                    box.classList.remove('active');
+                }
+            });
+            // 保存狀態
+            localStorage.setItem(STORAGE_KEY, activeId);
         }
+
+        // 綁定事件：移入或點擊時觸發
+        boxes.forEach(box => {
+            box.addEventListener('mouseenter', () => bringToFront(box.id));
+            box.addEventListener('click', () => bringToFront(box.id));
+        });
+
+        // 初始化：讀取上次狀態，如果沒有則默認 moments 在前
+        const savedId = localStorage.getItem(STORAGE_KEY);
+        if (savedId) {
+            bringToFront(savedId);
+        } else {
+            bringToFront('moments-box'); // 默認
+        }
+
+
+        // --- 4. 頁面跳轉 ---
+        function openLink(slug) {
+            console.log("Opening:", slug);
+            // window.location.href = `/posts/${slug}`;
+        }
+
     </script>
 </body>
 </html>
