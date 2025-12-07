@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <!-- 保持字體一致 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. 全局變量 (與 index.html 保持一致) --- */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #000000; /* 線條顏色 */
+            --hover-bg: #f5f5f5;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --accent-color: #ffffff;
+                --hover-bg: #1a1a1a;
+            }
+        }
+
+        /* --- 2. 基礎設置 --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* 防止主頁面滾動，只允許板塊內部滾動 */
+            display: flex;
+            transition: background-color 0.5s ease;
+        }
+
+        /* --- 3. 進場動畫 (關鍵：模擬被揭開的效果) --- */
+        body {
+            animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            opacity: 0;
+        }
+
+        @keyframes pageFadeIn {
+            0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* --- 4. 佈局 --- */
+        
+        /* 左側區域：名字與格言 */
+        .left-section {
+            width: 40%;
+            height: 100%;
+            padding: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            z-index: 10;
+        }
+
+        .my-name {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            letter-spacing: 0.1em;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        .quote-container {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            font-weight: 300;
+            max-width: 400px;
+            min-height: 100px; /* 防止切換時跳動 */
+            cursor: pointer;
+            position: relative;
+        }
+
+        .quote-text {
+            display: inline-block;
+            transition: opacity 0.3s ease;
+        }
+
+        .quote-hint {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 15px;
+            opacity: 0.6;
+        }
+
+        /* 右側區域：傾斜板塊 */
+        .right-section {
+            width: 60%;
+            height: 100%;
+            position: relative;
+            overflow: visible; /* 允許傾斜元素延伸 */
+        }
+
+        /* 傾斜容器公共樣式 */
+        .skew-box {
+            position: absolute;
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            transform: skewX(-15deg); /* 向右傾斜 */
+            overflow: hidden; /* 內容超出隱藏 */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: var(--bg-color); /* 確保不透明，遮擋背景 */
+        }
+
+        .skew-box:hover {
+            transform: skewX(-15deg) translateY(-5px);
+            box-shadow: 10px 10px 30px rgba(0,0,0,0.1);
+            border-width: 2px;
+        }
+
+        /* 內部內容反向修正，使其看起來是直的 */
+        .unskew-content {
+            transform: skewX(15deg); 
+            height: 100%;
+            width: 130%; /* 補償傾斜導致的寬度不足 */
+            margin-left: -15%; /* 修正位置 */
+            overflow-y: auto; /* 內部允許滑動 */
+            padding: 30px 60px;
+            /* 隱藏滾動條但保留功能 */
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE */
+        }
+        .unskew-content::-webkit-scrollbar { 
+            display: none; /* Chrome/Safari */
+        }
+
+        /* 板塊定位 */
+        
+        /* 1. 動態板塊 (Moments) - 上方 */
+        #moments-box {
+            width: 50%;
+            height: 45%;
+            top: 10%;
+            left: 10%;
+            z-index: 2;
+        }
+
+        /* 2. 文章板塊 (Articles) - 下方 */
+        #articles-box {
+            width: 60%;
+            height: 55%;
+            bottom: -5%; /* 延伸出屏幕一點點，增加設計感 */
+            right: 15%;
+            z-index: 1;
+        }
+
+        /* 內容樣式 */
+        .box-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: block;
+            border-bottom: 1px dashed var(--accent-color);
+            padding-bottom: 10px;
+        }
+
+        /* 動態樣式 (類似朋友圈) */
+        .moment-item {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .moment-img {
+            width: 100%;
+            height: 120px;
+            background-color: #333;
+            object-fit: cover;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .moment-text { font-size: 0.9rem; }
+
+        /* 文章列表樣式 */
+        .article-item {
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: padding-left 0.2s;
+        }
+        .article-item:hover {
+            padding-left: 10px;
+            color: #888;
+        }
+        .article-date {
+            font-size: 0.8rem;
+            color: #888;
+            display: block;
+        }
+        .article-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .skew-box:hover { box-shadow: 10px 10px 30px rgba(255,255,255,0.1); }
+            .moment-item { border-bottom: 1px solid #333; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 左側：個人信息區 -->
+    <section class="left-section">
+        <div class="my-name">Your Name</div>
+        
+        <div class="quote-container" onclick="changeQuote()">
+            <div class="quote-text" id="quote-display">
+                <!-- JS 將在這裡插入文字 -->
+            </div>
+            <div class="quote-hint">● 點擊切換格言</div>
+        </div>
+    </section>
+
+    <!-- 右側：傾斜板塊區 -->
+    <section class="right-section">
+        
+        <!-- 動態板塊 -->
+        <div class="skew-box" id="moments-box" onclick="expandSection('moments')">
+            <div class="unskew-content">
+                <span class="box-title">MOMENTS / 動態</span>
+                
+                <!-- 示例內容 -->
+                <div class="moment-item">
+                    <div class="moment-img" style="background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80');"></div>
+                    <p class="moment-text">今日天氣晴好，適合寫代碼。</p>
+                </div>
+                <div class="moment-item">
+                    <div class="moment-img" style="background: linear-gradient(45deg, #333, #666);"></div>
+                    <p class="moment-text">設計是一門關於捨棄的藝術。</p>
+                </div>
+                 <div class="moment-item">
+                    <p class="moment-text">純文字的動態也是可以的。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 文章板塊 -->
+        <div class="skew-box" id="articles-box" onclick="expandSection('articles')">
+            <div class="unskew-content">
+                <span class="box-title">ARTICLES / 文章</span>
+                
+                <!-- 示例文章 -->
+                <div class="article-item">
+                    <span class="article-date">2023.10.27</span>
+                    <h3 class="article-title">論極簡主義在Web設計中的應用</h3>
+                </div>
+                <div class="article-item">
+                    <span class="article-date">2023.09.15</span>
+                    <h3 class="article-title">如何構建一個靜態博客</h3>
+                </div>
+                <div class="article-item">
+                    <span class="article-date">2023.08.01</span>
+                    <h3 class="article-title">Hello World</h3>
+                </div>
+                <div class="article-item">
+                    <span class="article-date">2023.07.20</span>
+                    <h3 class="article-title">舊日時光</h3>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <script>
+        // --- 1. 格言系統 ---
+        const quotes = [
+            "於無聲處聽驚雷，於無色處見繁花。",
+            "Stay hungry, stay foolish.",
+            "人的一切痛苦，本質上都是對自己無能的憤怒。",
+            "知行合一。",
+            "代碼是寫給人看的，順便給機器運行。",
+            "優雅不是引人注目，而是被人記住。",
+            "Less is More."
+        ];
+
+        const quoteDisplay = document.getElementById('quote-display');
+        
+        function changeQuote() {
+            // 淡出
+            quoteDisplay.style.opacity = 0;
+            
+            setTimeout(() => {
+                // 隨機選取（避免重複）
+                let newQuote;
+                do {
+                    newQuote = quotes[Math.floor(Math.random() * quotes.length)];
+                } while (newQuote === quoteDisplay.innerText && quotes.length > 1);
+                
+                quoteDisplay.innerText = newQuote;
+                // 淡入
+                quoteDisplay.style.opacity = 1;
+            }, 300);
+        }
+
+        // 初始化一條格言
+        changeQuote();
+
+
+        // --- 2. 點擊板塊跳轉邏輯 ---
+        function expandSection(type) {
+            // 這裡為了效果，暫時做一個簡單的放大跳轉
+            // 在未來的開發中，這裡將跳轉到具體的 /moments.html 或 /blog.html
+            
+            console.log("Opening " + type);
+            // 暫時用 alert 示意，實際項目請替換為 window.location.href = '...';
+            // alert("正在前往 " + type + " 完整頁面...");
+            
+            // 實際跳轉代碼示例（等你做好下一頁後取消註釋）：
+            // window.location.href = type === 'moments' ? '/moments.html' : '/blog.html';
+        }
+    </script>
+</body>
+</html>
