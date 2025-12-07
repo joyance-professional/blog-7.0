@@ -17,7 +17,6 @@
             :root { 
                 --bg-color: #000000; --text-color: #e5e5e5;
                 --toc-bg-pc: linear-gradient(to left, var(--bg-color) 70%, rgba(0,0,0,0));
-                --accent-color: #ffffff;
             } 
         }
         
@@ -56,24 +55,19 @@
         .poem-scroll-wrapper { width: 100%; height: 100%; overflow-x: auto; overflow-y: hidden; }
         .poem-scroll-wrapper::-webkit-scrollbar { height: 4px; }
         .poem-scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(125,125,125,0.3); border-radius: 2px; }
-        .poem-container { position: relative; display: flex; writing-mode: vertical-rl; text-orientation: upright; height: 100%; align-items: center; padding-left: 50vw; /* Crucial for centering */ }
+        .poem-container { position: relative; display: flex; writing-mode: vertical-rl; text-orientation: upright; height: 100%; align-items: center; padding-left: 50vw; /* Crucial: pushes content start to center */ }
         .poem-content { display: flex; flex-direction: column; flex-wrap: wrap; align-content: flex-start; gap: 0 60px; height: 80vh; }
         .poem-line { font-size: 1.4rem; letter-spacing: 0.3em; line-height: 2; white-space: nowrap; }
 
-        /* --- PC Table of Contents --- */
+        /* --- PC Table of Contents (Single Column Scroll) --- */
         .pc-toc-toggle { display: none; position: fixed; top: 30px; right: 30px; z-index: 200; width: 40px; height: 40px; flex-direction: column; justify-content: center; align-items: flex-end; gap: 6px; opacity: 0.6; transition: 0.3s; }
         .pc-toc-toggle:hover { opacity: 1; }
         .pc-toc-toggle span { width: 24px; height: 2px; background: var(--text-color); transition: 0.3s; display: block; }
-        .pc-toc-panel { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 80px; background: var(--toc-bg-pc); z-index: 150; flex-direction: column; justify-content: center; align-items: center; gap: 30px; writing-mode: vertical-rl; text-orientation: upright; transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .pc-toc-panel { display: none; position: fixed; top: 0; right: 0; bottom: 0; width: 80px; background: var(--toc-bg-pc); z-index: 150; writing-mode: vertical-rl; text-orientation: upright; transform: translateX(0); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); padding: 80px 0; overflow-y: auto; }
         .pc-toc-panel.hidden { transform: translateX(100%); }
-        .pc-toc-item { font-size: 0.9rem; color: var(--text-color); opacity: 0.5; cursor: none; transition: 0.3s; letter-spacing: 0.2em; }
+        .pc-toc-panel::-webkit-scrollbar { display: none; }
+        .pc-toc-item { font-size: 0.9rem; color: var(--text-color); opacity: 0.5; cursor: none; transition: 0.3s; letter-spacing: 0.2em; padding: 20px 0; }
         .pc-toc-item:hover, .pc-toc-item.active { opacity: 1; letter-spacing: 0.3em; }
-
-        /* --- Mobile Wheel --- */
-        .mobile-wheel { display: none; position: fixed; bottom: -125px; left: 50%; transform: translateX(-50%); width: 250px; height: 250px; border-radius: 50%; z-index: 150; touch-action: none; }
-        .wheel-container { width: 100%; height: 100%; position: relative; transition: transform 0.05s linear; }
-        .wheel-item { position: absolute; top: 50%; left: 50%; transform-origin: 0 0; writing-mode: vertical-rl; text-orientation: upright; font-size: 0.8rem; letter-spacing: 0.1em; opacity: 0.6; }
-        .wheel-indicator { position: fixed; bottom: 120px; left: 50%; transform: translateX(-50%); width: 2px; height: 15px; background: var(--accent-color); z-index: 151; }
 
         /* --- UI Messages --- */
         .toast-msg { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 0.8rem; opacity: 0; pointer-events: none; transition: 0.3s; z-index: 300; }
@@ -90,7 +84,6 @@
         @media (max-width: 768px) {
             body, html, a, button, img { cursor: auto !important; }
             #custom-cursor { display: none; }
-            .mobile-wheel { display: block; }
             .gallery-item { width: 65vw; height: 80vw; }
         }
 
@@ -106,8 +99,6 @@
     </div>
     <div class="pc-toc-toggle interactable" onclick="togglePcToc()"><span></span><span></span><span></span></div>
     <div class="pc-toc-panel" id="pc-toc-list"></div>
-    <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
-    <div class="wheel-indicator"></div>
     <div class="toast-msg" id="toast-msg"></div>
     <div class="end-hint" id="end-hint"></div>
     <div class="snap-container" id="main-scroll"></div>
@@ -115,12 +106,12 @@
 
     <script defer>
     document.addEventListener('DOMContentLoaded', () => {
-        if (typeof momentsData === 'undefined') return;
+        if (typeof momentsData === 'undefined') { console.error('Data not loaded!'); return; }
 
         const scrollContainer = document.getElementById('main-scroll');
         const pcTocList = document.getElementById('pc-toc-list');
-        const wheelContainer = document.getElementById('wheel-container');
-
+        
+        // --- 1. Render Content & Nav ---
         momentsData.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
@@ -130,7 +121,7 @@
                 section.innerHTML = `<img data-src="${moment.content.imageSrc}" class="img-bg lazy-img"><div class="bg-overlay"></div><div class="text-overlay"><p class="moment-text interactable-text" onclick="copyText(this)">${moment.content.text}</p></div>`;
             } else if (moment.type === 'gallery') {
                 section.classList.add('gallery-mode');
-                const imgsHtml = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox('${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
+                const imgsHtml = moment.content.images.map((src, i) => `<div class="gallery-item interactable" onclick="openLightbox(this, '${moment.id}', ${i})"><img data-src="${src}" class="lazy-img"></div>`).join('');
                 section.innerHTML = `<div class="gallery-text">${moment.content.text}</div><div class="gallery-scroll">${imgsHtml}</div>`;
                 section.dataset.galleryId = moment.id;
             } else if (moment.type === 'poem') {
@@ -147,28 +138,17 @@
             pcTocList.appendChild(tocItem);
         });
 
-        // --- Center first line of poems ---
+        // --- 2. Center Poem Start ---
         document.querySelectorAll('.poem-scroll-wrapper').forEach(wrapper => {
             const firstLine = wrapper.querySelector('.poem-line');
             if(firstLine) {
-                const offset = (firstLine.clientWidth / 2);
-                wrapper.scrollLeft = wrapper.querySelector('.poem-container').offsetLeft - (wrapper.clientWidth / 2) + offset;
+                const offset = (firstLine.getBoundingClientRect().width / 2);
+                const containerStart = wrapper.querySelector('.poem-container').offsetLeft;
+                wrapper.scrollLeft = containerStart - (wrapper.clientWidth / 2) + offset;
             }
         });
 
-        // --- Mobile Wheel Setup ---
-        const radius = 125;
-        momentsData.forEach((moment, index) => {
-            const angleRad = (index / momentsData.length) * 2 * Math.PI - Math.PI / 2;
-            const x = radius * Math.cos(angleRad);
-            const y = radius * Math.sin(angleRad);
-            const item = document.createElement('div');
-            item.className = 'wheel-item';
-            item.innerText = moment.title;
-            item.style.transform = `translate(${x}px, ${y}px) rotate(${angleRad * 180 / Math.PI + 90}deg)`;
-            wheelContainer.appendChild(item);
-        });
-
+        // --- 3. Lazy Load Images ---
         const imgObserver = new IntersectionObserver(entries => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
@@ -181,7 +161,7 @@
         }, { threshold: 0.1 });
         document.querySelectorAll('.lazy-img').forEach(img => imgObserver.observe(img));
 
-        // --- Event Listeners ---
+        // --- 4. Event Listeners & State Management ---
         let isAtEnd = false, isHomePromptActive = false;
         const endHint = document.getElementById('end-hint');
 
@@ -199,70 +179,40 @@
         });
         
         const handleEndScroll = (deltaY) => {
-            if (isAtEnd && deltaY > 10) { // Scroll Down
+            if (isAtEnd && deltaY > 10) { // Scrolling DOWN at the end
                 if (!isHomePromptActive) {
                     isHomePromptActive = true;
                     endHint.innerText = "向上滑動以返回 / Swipe up to return";
                     endHint.style.opacity = '1';
                 }
             }
-            if (isHomePromptActive && deltaY < -10) { // Scroll Up
+            if (isHomePromptActive && deltaY < -10) { // Scrolling UP while prompt is active
                 goHome();
             }
         };
 
-        let lastWheelY = 0;
+        // Prevent default scroll bounce at the end
         scrollContainer.addEventListener('wheel', e => {
-            if (isAtEnd || isHomePromptActive) e.preventDefault();
+            if ((isAtEnd && e.deltaY > 0) || (isHomePromptActive && e.deltaY < 0)) {
+                e.preventDefault();
+            }
             handleEndScroll(e.deltaY);
-            lastWheelY = e.deltaY;
         }, { passive: false });
         
         let touchStartY = 0;
         scrollContainer.addEventListener('touchstart', e => touchStartY = e.touches[0].clientY);
         scrollContainer.addEventListener('touchend', e => {
-            const deltaY = touchStartY - e.changedTouches[0].clientY;
-            handleEndScroll(-deltaY); // Invert delta for touch
-        });
-
-        // Mobile wheel interaction
-        let startAngle = 0, initialTouchAngle = 0, currentRotation = 0, lastVibratedAngle = 0;
-        const wheel = document.getElementById('mobile-wheel');
-        wheel.addEventListener('touchstart', e => {
-            const rect = wheel.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            initialTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
-            startAngle = currentRotation;
-        }, { passive: true });
-
-        wheel.addEventListener('touchmove', e => {
-            e.preventDefault();
-            const rect = wheel.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            const currentTouchAngle = Math.atan2(e.touches[0].clientY - centerY, e.touches[0].clientX - centerX);
-            const angleDiff = currentTouchAngle - initialTouchAngle;
-            currentRotation = startAngle + angleDiff * (180 / Math.PI);
-            wheelContainer.style.transform = `rotate(${currentRotation}deg)`;
-
-            if (Math.abs(currentRotation - lastVibratedAngle) > (360 / momentsData.length)) {
-                if (navigator.vibrate) navigator.vibrate(10);
-                lastVibratedAngle = currentRotation;
-            }
-        }, { passive: false });
-
-        wheel.addEventListener('touchend', () => {
-            const anglePerItem = 360 / momentsData.length;
-            const activeIndex = Math.round(-currentRotation / anglePerItem + momentsData.length) % momentsData.length;
-            document.getElementById(`sec-${activeIndex}`).scrollIntoView({ behavior: 'smooth' });
+            const deltaY = touchStartY - e.changedTouches[0].clientY; // Upward swipe is positive
+            handleEndScroll(deltaY);
         });
         
-        bindCursorEvents();
-        if (window.innerWidth > 769) {
+        // --- 5. PC TOC Default State ---
+        if (window.innerWidth > 768) {
             document.querySelector('.pc-toc-panel').classList.add('active');
             document.querySelector('.pc-toc-toggle').classList.add('active');
         }
+        
+        bindCursorEvents();
     });
 
     // --- Helper Functions ---
@@ -283,6 +233,7 @@
     }
     function closeLightbox() { lightbox.classList.remove('active'); }
 
+    // Cursor Logic
     const cursor = document.getElementById('custom-cursor');
     document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
