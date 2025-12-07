@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Articles | Joyance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- 1. 樣式變量 --- */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #000000;
+            --secondary-text: #555555;
+            --hover-bg: rgba(0,0,0,0.03);
+            --skew-angle: -15deg; 
+            --content-angle: 15deg; 
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --accent-color: #ffffff;
+                --secondary-text: #aaaaaa;
+                --hover-bg: rgba(255,255,255,0.1);
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; 
+            display: flex;
+        }
+
+        /* --- 2. 佈局結構 (左側與Home一致) --- */
+        .left-section {
+            width: 30%;
+            height: 100%;
+            padding: 60px 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px; 
+            z-index: 50;
+        }
+
+        .my-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            border-left: 2px solid var(--accent-color); 
+            padding-left: 20px;
+            letter-spacing: 0.2em;
+            writing-mode: vertical-rl;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .quote-wrapper {
+            height: 60%; width: 60px;
+            position: relative; cursor: pointer;
+        }
+
+        .quote-text {
+            font-size: 1.1rem; font-weight: 300; line-height: 1.5;
+            height: 100%; position: absolute; top: 0; right: 0; 
+            writing-mode: vertical-rl; text-orientation: upright;
+            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+        .quote-enter { opacity: 0; transform: translateX(20px); } 
+        .quote-active { opacity: 1; transform: translateX(0); }
+        .quote-exit { opacity: 0; transform: translateX(-20px); } 
+
+        /* --- 3. 右側內容 (閱讀模式) --- */
+        .right-section {
+            width: 70%;
+            height: 100%;
+            position: relative;
+            opacity: 0;
+            animation: fadeInPage 0.8s ease forwards 0.2s;
+        }
+        @keyframes fadeInPage { from { opacity: 0; } to { opacity: 1; } }
+
+        .geo-viewport {
+            position: absolute;
+            top: 0; bottom: 0; right: 0; left: -10%; 
+            background: var(--bg-color);
+            border-left: 1.5px solid var(--accent-color);
+            transform: skewX(var(--skew-angle)); 
+            overflow: hidden;
+            z-index: 10;
+        }
+
+        .geo-scroller {
+            width: 120%; height: 100%; margin-left: -10%; 
+            transform: skewX(var(--content-angle)); 
+            overflow-y: auto; overflow-x: hidden;
+            padding: 80px 150px 150px 180px; 
+            scrollbar-width: none;
+            scroll-behavior: smooth;
+        }
+        .geo-scroller::-webkit-scrollbar { display: none; }
+
+        .back-btn {
+            position: fixed; top: 40px; left: 32%; z-index: 100;
+            font-size: 2rem; cursor: pointer; opacity: 0.5;
+            transition: 0.3s;
+        }
+        .back-btn:hover { opacity: 1; transform: translateX(-5px); }
+
+        /* --- 4. 文章內容樣式 --- */
+        .article-container {
+            max-width: 750px;
+            margin-bottom: 120px;
+            animation: slideUp 0.8s ease forwards;
+            opacity: 0;
+        }
+        .article-container:nth-child(2) { animation-delay: 0.2s; }
+        .article-container:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .article-header {
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .article-title {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+
+        .article-meta {
+            font-family: monospace;
+            color: var(--secondary-text);
+            font-size: 0.9rem;
+        }
+
+        /* --- 核心交互段落樣式 --- */
+        .article-body p {
+            font-size: 1.1rem;
+            line-height: 2;
+            margin-bottom: 25px;
+            text-align: justify;
+            padding: 10px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: copy; /* 鼠標變為複製圖標 */
+            position: relative;
+        }
+
+        /* 呼吸效果：鼠標懸停時，透明度在 0.6 到 1 之間波動 */
+        .article-body p:hover {
+            animation: breatheEffect 2s infinite ease-in-out;
+            background-color: var(--hover-bg);
+        }
+
+        @keyframes breatheEffect {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        /* 點擊瞬間的效果 */
+        .article-body p:active {
+            transform: scale(0.98);
+            background-color: var(--accent-color);
+            color: var(--bg-color);
+            opacity: 1 !important;
+            animation: none;
+        }
+
+        /* 裝飾用的分隔符 */
+        .divider {
+            text-align: center;
+            margin: 80px 0;
+            font-size: 1.5rem;
+            opacity: 0.3;
+            letter-spacing: 10px;
+        }
+
+        .toast-msg {
+            position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
+            background: var(--text-color); color: var(--bg-color);
+            padding: 8px 16px; border-radius: 4px; font-size: 0.9rem;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 1000;
+        }
+        .toast-msg.visible { opacity: 1; }
+
+        /* --- 5. 手機適配 --- */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow-y: auto; height: auto; }
+            .left-section {
+                width: 100%; height: auto; padding: 20px;
+                position: relative; border-bottom: 1px solid var(--border-color);
+                flex-direction: row; justify-content: space-between;
+            }
+            .my-name { writing-mode: horizontal-tb; border: none; font-size: 1.8rem; padding: 0; }
+            .quote-wrapper { display: none; }
+            .back-btn { display: none; }
+
+            .right-section { width: 100%; height: auto; opacity: 1; animation: none; }
+            .geo-viewport {
+                position: relative; width: 100%; height: auto;
+                left: 0; transform: none; border: none; overflow: visible;
+            }
+            .geo-scroller {
+                width: 100%; margin: 0; padding: 40px 20px;
+                transform: none;
+            }
+            .article-title { font-size: 1.6rem; }
+            .article-body p { font-size: 1rem; padding: 0; margin-bottom: 20px; }
+            .article-body p:hover { background: transparent; animation: none; } /* 手機取消hover效果 */
+            .article-body p:active { background: rgba(0,0,0,0.1); }
+        }
+    </style>
+</head>
+<body>
+    
+    <div id="copy-toast" class="toast-msg">已複製段落 / Paragraph Copied</div>
+
+    <!-- 左側導航 -->
+    <section class="left-section">
+        <div class="my-name" onclick="window.location.href='./home.html'">Joyance</div>
+        <div class="quote-wrapper" id="quote-area">
+            <div class="quote-text quote-active" id="current-quote"></div>
+        </div>
+    </section>
+
+    <div class="back-btn" onclick="window.location.href='./home.html'">←</div>
+
+    <!-- 右側文章列表 -->
+    <section class="right-section">
+        <div class="geo-viewport">
+            <div class="geo-scroller">
+                
+                <!-- 文章 1 -->
+                <article class="article-container">
+                    <header class="article-header">
+                        <h1 class="article-title">關於幾何美學的構建</h1>
+                        <div class="article-meta">2023.11.02 / Design Note</div>
+                    </header>
+                    <div class="article-body">
+                        <p>設計不僅僅是視覺的堆砌，更是邏輯的幾何化表達。在二維屏幕上模擬空間感，傾斜線條（Skew）是一種極具張力的手段。</p>
+                        <p>它打破了傳統網頁佈局橫平豎直的沈悶，像是一把刀切開了平靜的水面。每一個區塊都不再是獨立的孤島，而是通過角度相互指向，形成視覺流動。</p>
+                        <p>在這個項目中，我們試圖用純粹的黑白與線條，去構建一個「呼吸」的空間。沒有繁雜的裝飾，只有內容本身在與邊界對話。</p>
+                        <p>（嘗試點擊這些段落，它們會被複製到你的剪貼板。）</p>
+                    </div>
+                </article>
+
+                <div class="divider">///</div>
+
+                <!-- 文章 2 -->
+                <article class="article-container">
+                    <header class="article-header">
+                        <h1 class="article-title">時間的虛無與實體</h1>
+                        <div class="article-meta">2023.10.15 / Philosophy</div>
+                    </header>
+                    <div class="article-body">
+                        <p>我們常說時間如流水，但在某些瞬間，時間是凝固的。比如按下快門的那一刻，或者寫下這行文字的瞬間。</p>
+                        <p>互聯網記憶是短暫的，像金魚一樣只有七秒。但靜態博客（Static Blog）有一種墓碑般的永恆感。它不依賴數據庫的動態吞吐，它就是文件本身。</p>
+                        <p>只要服務器還在，這些 HTML 文件就會以最初的樣子存在。這是一種對抗算法流的笨拙方式，卻也是最浪漫的方式。</p>
+                    </div>
+                </article>
+
+                <div class="divider">///</div>
+
+                <!-- 底部空間 -->
+                <div style="height: 100px;"></div>
+
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // --- 1. 格言 JS ---
+        const quotes = [
+            "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
+            "在顫抖的楓葉上 寫滿春天的謊言",
+            "風起的時候，我們一起回家",
+            "沈默是另一種大聲的喧嘩"
+        ];
+        
+        let quoteIndex = 0;
+        const quoteEl = document.getElementById('current-quote');
+        const quoteArea = document.getElementById('quote-area');
+        quoteEl.innerText = quotes[0];
+
+        function updateQuote() {
+            quoteEl.classList.remove('quote-active');
+            quoteEl.classList.add('quote-exit');
+            setTimeout(() => {
+                quoteIndex = (quoteIndex + 1) % quotes.length;
+                quoteEl.innerText = quotes[quoteIndex];
+                quoteEl.classList.remove('quote-exit');
+                quoteEl.classList.add('quote-enter');
+                requestAnimationFrame(() => {
+                    quoteEl.classList.remove('quote-enter');
+                    quoteEl.classList.add('quote-active');
+                });
+            }, 300);
+        }
+        quoteArea.addEventListener('click', updateQuote);
+
+        // --- 2. 點擊段落複製邏輯 ---
+        const paragraphs = document.querySelectorAll('.article-body p');
+        const toast = document.getElementById('copy-toast');
+
+        paragraphs.forEach(p => {
+            p.addEventListener('click', async () => {
+                const text = p.innerText;
+                try {
+                    await navigator.clipboard.writeText(text);
+                    
+                    // 顯示 Toast
+                    toast.classList.add('visible');
+                    setTimeout(() => toast.classList.remove('visible'), 2000);
+
+                    // 視覺反饋 (手機震動)
+                    if (navigator.vibrate) navigator.vibrate(30);
+
+                } catch (err) {
+                    console.error('Failed to copy', err);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
