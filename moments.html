@@ -3,383 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Moments | Joyance</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <title>Moments</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
-
     <style>
-        /* --- 1. 核心樣式 (與首頁一致) --- */
-        :root {
-            --bg-color: #ffffff;
-            --text-color: #1a1a1a;
-            --accent-color: #000000;
-            --secondary-text: #666666;
-            --border-color: #e0e0e0;
-            --skew-angle: -15deg; 
-            --content-angle: 15deg; 
-        }
-
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg-color: #000000;
-                --text-color: #e5e5e5;
-                --accent-color: #ffffff;
-                --secondary-text: #888888;
-                --border-color: #333333;
-            }
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        :root { --bg-color: #ffffff; --text-color: #1a1a1a; }
+        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; } }
         
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
+            background: var(--bg-color); color: var(--text-color);
             font-family: 'Noto Serif TC', serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            height: 100vh;
-            width: 100vw;
-            overflow: hidden; 
-            display: flex;
+            height: 100vh; overflow: hidden; /* 禁止默認滾動，由容器接管 */
+            opacity: 0; animation: fadeIn 0.8s ease forwards;
         }
 
-        /* --- 2. 左側邊欄 (保持一致) --- */
-        .left-section {
-            width: 30%;
-            height: 100%;
-            padding: 60px 40px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 40px; 
-            z-index: 50;
+        /* 統一返回按鈕 */
+        .back-arrow {
+            position: fixed; top: 30px; left: 30px; z-index: 100;
+            width: 40px; height: 40px; cursor: pointer;
+            opacity: 0.6; transition: opacity 0.3s;
+            display: flex; align-items: center; justify-content: center;
         }
+        .back-arrow:hover { opacity: 1; }
+        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        .my-name {
-            font-size: 2.5rem;
-            font-weight: 700;
-            border-left: 2px solid var(--accent-color); 
-            padding-left: 20px;
-            letter-spacing: 0.2em;
-            writing-mode: vertical-rl;
-            user-select: none;
-            cursor: pointer;
+        /* 核心滾動容器 */
+        .snap-container {
+            height: 100vh; width: 100vw;
+            overflow-y: scroll; scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
         }
+        /* 隱藏滾動條 */
+        .snap-container::-webkit-scrollbar { display: none; }
 
-        .quote-wrapper {
-            height: 60%;
-            width: 60px;
+        /* 單個 Moment 屏 */
+        .moment-section {
+            height: 100vh; width: 100vw;
+            scroll-snap-align: start;
             position: relative;
-            cursor: pointer;
-        }
-
-        .quote-text {
-            font-size: 1.1rem;
-            font-weight: 300;
-            line-height: 1.5;
-            height: 100%;
-            position: absolute;
-            top: 0; right: 0; 
-            writing-mode: vertical-rl;
-            text-orientation: upright;
-            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
-        }
-        .quote-enter { opacity: 0; transform: translateX(20px); } 
-        .quote-active { opacity: 1; transform: translateX(0); }
-        .quote-exit { opacity: 0; transform: translateX(-20px); } 
-
-        /* --- 3. 右側內容區 (展開狀態) --- */
-        .right-section {
-            width: 70%;
-            height: 100%;
-            position: relative;
-            /* 進場動畫 */
-            opacity: 0;
-            animation: fadeInPage 0.8s ease forwards 0.2s;
-        }
-
-        @keyframes fadeInPage {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .geo-viewport {
-            position: absolute;
-            top: 0; bottom: 0; right: 0; left: -10%; /* 向左延伸覆蓋 */
-            background: var(--bg-color);
-            border-left: 1.5px solid var(--accent-color);
-            transform: skewX(var(--skew-angle)); 
+            display: flex; justify-content: center; align-items: center;
             overflow: hidden;
-            z-index: 10;
         }
 
-        .geo-scroller {
-            width: 120%; 
-            height: 100%;
-            margin-left: -10%; 
-            transform: skewX(var(--content-angle)); /* 反向修正內容 */
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 80px 120px 100px 150px; /* 增加內邊距 */
-            scrollbar-width: none; /* Firefox Hidden */
+        /* 1. 圖片+文字模式 */
+        .img-mode { flex-direction: column; }
+        .img-bg {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            object-fit: cover; opacity: 0.3; filter: grayscale(100%);
+            z-index: 1; transition: opacity 1s, filter 1s;
         }
-        .geo-scroller::-webkit-scrollbar { display: none; } /* Chrome Hidden */
-
-        /* --- 4. Back 按鈕 --- */
-        .back-btn {
-            position: fixed;
-            top: 40px;
-            left: 32%; /* 位於左側邊欄右邊 */
-            z-index: 100;
-            font-size: 2rem;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: opacity 0.3s, transform 0.3s;
+        /* 圖片呼吸 */
+        .moment-section:hover .img-bg { opacity: 0.5; filter: grayscale(0%); }
+        
+        .text-overlay {
+            z-index: 2; position: relative; padding: 40px; max-width: 600px;
+            text-align: center;
         }
-        .back-btn:hover { opacity: 1; transform: translateX(-5px); }
-
-        /* --- 5. Moments 內容樣式 --- */
-        .page-title {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 60px;
-            letter-spacing: 0.1em;
-            border-bottom: 4px solid var(--accent-color);
-            display: inline-block;
-            padding-bottom: 10px;
-        }
-
-        .moment-card {
-            margin-bottom: 80px;
-            max-width: 700px;
-            animation: itemFadeIn 0.8s ease forwards;
-            opacity: 0;
-        }
-
-        /* 讓每個元素依次進場 */
-        .moment-card:nth-child(1) { animation-delay: 0.3s; }
-        .moment-card:nth-child(2) { animation-delay: 0.4s; }
-        .moment-card:nth-child(3) { animation-delay: 0.5s; }
-        .moment-card:nth-child(n+4) { animation-delay: 0.6s; }
-
-        @keyframes itemFadeIn {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .moment-date {
-            font-family: monospace;
-            font-size: 0.9rem;
-            color: var(--secondary-text);
-            margin-bottom: 15px;
-            display: block;
-            position: relative;
-        }
-        .moment-date::before {
-            content: '';
-            position: absolute;
-            left: -20px; top: 50%;
-            width: 10px; height: 1px;
-            background: var(--accent-color);
-        }
-
-        .moment-img {
-            width: 100%;
-            height: auto;
-            border-radius: 2px;
-            margin-bottom: 20px;
-            filter: grayscale(100%);
-            transition: filter 0.5s ease;
-            cursor: zoom-in;
-        }
-        .moment-img:hover { filter: grayscale(0%); }
-
         .moment-text {
-            font-size: 1.05rem;
-            line-height: 1.8;
-            text-align: justify;
-            cursor: pointer;
-            position: relative;
-            padding: 5px;
-            border-radius: 4px;
-            transition: background 0.3s;
+            font-size: 1.2rem; line-height: 1.8; margin-bottom: 20px;
+            text-shadow: 0 2px 10px var(--bg-color);
         }
 
-        /* 呼吸效果與複製樣式 */
-        .moment-text:hover {
-            animation: breathe 2s infinite ease-in-out;
-            background: rgba(128, 128, 128, 0.05);
+        /* 2. 詩歌模式 (豎排) */
+        .poem-mode {
+            background: var(--bg-color);
+            writing-mode: vertical-rl; /* 豎排核心 */
+            text-orientation: upright;
+        }
+        .poem-content {
+            font-size: 1.4rem; letter-spacing: 0.3em; line-height: 3;
+            height: 60vh; /* 限制高度讓文字換行 */
+            display: flex; flex-wrap: wrap; align-content: center;
+        }
+        .poem-author {
+            margin-top: 40px; font-size: 0.9rem; opacity: 0.6;
         }
 
-        @keyframes breathe {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
+        /* 底部提示 */
+        .scroll-hint {
+            position: absolute; bottom: 20px; width: 100%; text-align: center;
+            opacity: 0.3; font-size: 0.8rem; z-index: 10; animation: float 2s infinite;
         }
 
-        /* 複製成功的提示樣式 */
-        .copied-tip {
-            position: fixed;
-            top: 20px; right: 20px;
-            background: var(--accent-color);
-            color: var(--bg-color);
-            padding: 10px 20px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.3s;
-            z-index: 999;
-        }
-        .copied-tip.show { opacity: 1; transform: translateY(0); }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 
-        /* --- 6. 手機版適配 --- */
-        @media (max-width: 768px) {
-            body { flex-direction: column; overflow-y: auto; height: auto; }
-            
-            .left-section {
-                width: 100%; height: auto;
-                padding: 40px 20px 10px 20px;
-                flex-direction: row; justify-content: space-between; align-items: flex-start;
-                position: sticky; top: 0; z-index: 200;
-                background: var(--bg-color);
-                border-bottom: 1px solid var(--border-color);
-            }
-            .my-name { writing-mode: horizontal-tb; border: none; font-size: 1.5rem; padding: 0; }
-            .quote-wrapper { display: none; } /* 手機版內頁隱藏格言以節省空間 */
-
-            .right-section { width: 100%; height: auto; opacity: 1; animation: none; }
-            
-            .geo-viewport {
-                position: relative; top: auto; left: auto; right: auto; bottom: auto;
-                width: 100%; height: auto;
-                transform: none; border: none;
-                overflow: visible;
-            }
-            .geo-scroller {
-                width: 100%; height: auto; margin: 0; padding: 30px 20px 80px 20px;
-                transform: none;
-            }
-            
-            .back-btn { display: none; } /* 手機使用瀏覽器返回或點名字 */
-            .page-title { font-size: 2rem; margin-bottom: 40px; }
-            .moment-card { margin-bottom: 50px; }
-            .moment-img { filter: none; } /* 手機不置灰 */
-        }
     </style>
 </head>
 <body>
+    <!-- 返回箭頭 -->
+    <div class="back-arrow" onclick="goBack()">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </div>
 
-    <!-- 複製提示 -->
-    <div id="toast" class="copied-tip">已複製 Text Copied</div>
-
-    <!-- 左側 (點擊名字回首頁) -->
-    <section class="left-section">
-        <div class="my-name" onclick="window.location.href='./home.html'">Joyance</div>
-        <div class="quote-wrapper" id="quote-area">
-            <div class="quote-text quote-active" id="current-quote"></div>
-        </div>
-    </section>
-
-    <!-- PC 返回按鈕 -->
-    <div class="back-btn" onclick="window.location.href='./home.html'">←</div>
-
-    <!-- 右側內容 -->
-    <section class="right-section">
-        <div class="geo-viewport">
-            <div class="geo-scroller">
-                <h1 class="page-title">MOMENTS</h1>
-
-                <!-- 動態 1 -->
-                <div class="moment-card">
-                    <span class="moment-date">2023.11.05 / Late Night</span>
-                    <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80" class="moment-img" loading="lazy">
-                    <p class="moment-text" onclick="copyText(this)">
-                        我們總是在尋找一個地方，可以安放靈魂。後來才發現，靈魂是流動的，它不需要安放，它需要的是方向。<br>
-                        （點擊這段文字可以複製）
-                    </p>
-                </div>
-
-                <!-- 動態 2 -->
-                <div class="moment-card">
-                    <span class="moment-date">2023.10.24 / Coffee</span>
-                    <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=800&q=80" class="moment-img" loading="lazy">
-                    <p class="moment-text" onclick="copyText(this)">
-                        這裡的咖啡有點苦，像極了這週二的午後。陽光斜切進來的時候，灰塵在光束裡跳舞。那是微觀宇宙的狂歡。
-                    </p>
-                </div>
-
-                <!-- 動態 3 (純文字) -->
-                <div class="moment-card">
-                    <span class="moment-date">2023.09.15 / Thought</span>
-                    <p class="moment-text" onclick="copyText(this)">
-                        這世界太吵了，我想按下靜音鍵。只剩下鍵盤敲擊的聲音，和心跳的回聲。這就是我想要的「純粹」。
-                    </p>
-                </div>
-
-                <!-- 更多動態佔位 -->
-                <div class="moment-card">
-                    <span class="moment-date">2023.08.01</span>
-                    <img src="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=800&q=80" class="moment-img" loading="lazy">
-                    <p class="moment-text" onclick="copyText(this)">
-                         霧氣散去之後，山還是山。
-                    </p>
-                </div>
-                
-                <div style="height: 100px;"></div> <!-- 底部留白 -->
+    <div class="snap-container">
+        
+        <!-- 第一屏：圖片+文字 -->
+        <section class="moment-section img-mode">
+            <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80" class="img-bg" loading="lazy">
+            <div class="text-overlay">
+                <p class="moment-text">風暴過後，我們在廢墟上種花。<br>生活不是等待，而是創造。</p>
             </div>
-        </div>
-    </section>
+            <div class="scroll-hint">SCROLL</div>
+        </section>
+
+        <!-- 第二屏：詩歌 (豎排) -->
+        <section class="moment-section poem-mode">
+            <div class="poem-content">
+                <p>如霧起時</p>
+                <p>敲打著窗櫺的</p>
+                <p>不是風</p>
+                <p>是經年的沈默</p>
+            </div>
+            <div class="poem-author">—— Joyance</div>
+        </section>
+
+        <!-- 第三屏：純文字/短句 -->
+        <section class="moment-section">
+            <div class="text-overlay">
+                <p class="moment-text" style="font-size: 1.5rem;">"所有的相遇，都是久別重逢。"</p>
+                <p style="font-size: 0.9rem; margin-top: 20px; opacity: 0.6;">2023.12.07</p>
+            </div>
+        </section>
+
+        <!-- 方便後期添加：只需複製一個 section 標籤即可 -->
+
+    </div>
 
     <script>
-        // --- 格言系統 (與 Home 保持一致) ---
-        const quotes = [
-            "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
-            "在顫抖的楓葉上 寫滿春天的謊言",
-            "風起的時候，我們一起回家",
-            "沈默是另一種大聲的喧嘩",
-            "文字是凝固的時間"
-        ];
-        
-        let quoteIndex = 0;
-        const quoteEl = document.getElementById('current-quote');
-        const quoteArea = document.getElementById('quote-area');
-        quoteEl.innerText = quotes[0];
-
-        function updateQuote() {
-            quoteEl.classList.remove('quote-active');
-            quoteEl.classList.add('quote-exit');
-            setTimeout(() => {
-                quoteIndex = (quoteIndex + 1) % quotes.length;
-                quoteEl.innerText = quotes[quoteIndex];
-                quoteEl.classList.remove('quote-exit');
-                quoteEl.classList.add('quote-enter');
-                requestAnimationFrame(() => {
-                    quoteEl.classList.remove('quote-enter');
-                    quoteEl.classList.add('quote-active');
-                });
-            }, 300);
-        }
-        quoteArea.addEventListener('click', updateQuote);
-
-        // --- 複製功能 ---
-        async function copyText(el) {
-            const text = el.innerText;
-            try {
-                await navigator.clipboard.writeText(text);
-                showToast();
-                // 點擊反饋：閃爍一下
-                el.style.opacity = '0.3';
-                setTimeout(() => el.style.opacity = '1', 200);
-            } catch (err) {
-                console.error('Copy failed', err);
-            }
-        }
-
-        function showToast() {
-            const toast = document.getElementById('toast');
-            toast.classList.add('show');
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 2000);
+        function goBack() {
+            document.body.style.animation = 'fadeOut 0.5s ease forwards';
+            setTimeout(() => { window.location.href = 'home.html'; }, 500);
         }
     </script>
 </body>
