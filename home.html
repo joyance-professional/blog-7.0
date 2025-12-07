@@ -449,27 +449,19 @@
                     ARTICLES
                 </span>
                 
-                <div class="article-item interactable" onclick="openLink('post-1')">
-                    <span class="article-title">幾何美學的構建</span>
+                <div class="article-item interactable" onclick="openLink('diary-2')">
+                    <span class="article-title">四萬步，與一座城重逢</span>
                     <span class="article-date">11.02</span>
                 </div>
-                <div class="article-item interactable" onclick="openLink('post-2')">
-                    <span class="article-title">CSS Skew 的反向邏輯</span>
+                <div class="article-item interactable" onclick="openLink('diary-1')">
+                    <span class="article-title">《什麼樣的故事啊》日記part-1</span>
                     <span class="article-date">10.15</span>
                 </div>
-                <div class="article-item interactable" onclick="openLink('post-3')">
-                    <span class="article-title">垂直排版的藝術</span>
+                <div class="article-item interactable" onclick="openLink('the-frigging-life')">
+                    <span class="article-title">麻痺的生活 the frigging life</span>
                     <span class="article-date">09.28</span>
                 </div>
                 
-                <div class="article-item interactable" onclick="openLink('post-4')">
-                    <span class="article-title">移動端適配指南</span>
-                    <span class="article-date">08.12</span>
-                </div>
-                 <div class="article-item interactable" onclick="openLink('post-5')">
-                    <span class="article-title">關於時間的思考</span>
-                    <span class="article-date">07.01</span>
-                </div>
             </div>
         </div>
 
@@ -605,7 +597,7 @@
         }
 
         function openLink(slug) {
-            handleTransition('articles-box', 'article/' + slug + '/');
+            handleTransition('articles-box', 'reader?id=' + slug + '/');
         }
 
     </script>
