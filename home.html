@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 禁止縮放，提升App質感 -->
     <title>主頁 | Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -40,7 +39,7 @@
             color: var(--text-color);
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* PC端隱藏，手機端在 media query 覆蓋 */
+            overflow: hidden; /* PC 鎖定，手機解鎖 */
             display: flex;
             opacity: 0; 
             animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
@@ -51,7 +50,7 @@
             100% { opacity: 1; transform: translateY(0); }
         }
 
-        /* --- 2. 左側區域 (PC: 豎排) --- */
+        /* --- 2. PC端默認樣式 (保持幾何風格) --- */
         .left-section {
             width: 30%;
             height: 100%;
@@ -95,13 +94,10 @@
             text-orientation: upright;
             white-space: nowrap;
         }
-
         .quote-enter { opacity: 0; transform: translateX(20px); } 
         .quote-active { opacity: 1; transform: translateX(0); }
         .quote-exit { opacity: 0; transform: translateX(-20px); } 
 
-
-        /* --- 3. 右側區域 (PC: 幾何傾斜) --- */
         .right-section {
             width: 70%;
             height: 100%;
@@ -118,7 +114,7 @@
             box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
         }
 
-        /* PC端懸停效果 */
+        /* PC端懸停與定位 */
         @media (min-width: 769px) {
             .geo-viewport.active, .geo-viewport:hover {
                 transform: skewX(var(--skew-angle)) scale(1.02);
@@ -129,6 +125,12 @@
             .geo-viewport:not(.active):not(:hover) {
                 z-index: 10;
             }
+            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; }
+            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; }
+            
+            .box-title { border-bottom: 2px solid var(--accent-color); }
+            .moment-item { border-bottom: 1px dashed var(--border-color); }
+            .article-item { border-bottom: 1px solid var(--border-color); }
         }
 
         .geo-scroller {
@@ -140,8 +142,6 @@
             overflow-x: hidden;
             padding: 60px 100px; 
             scrollbar-width: none;
-            -ms-overflow-style: none;
-            /* 平滑滾動 */
             scroll-behavior: smooth;
         }
         .geo-scroller::-webkit-scrollbar { display: none; }
@@ -151,17 +151,14 @@
             font-weight: 700;
             margin-bottom: 30px;
             display: inline-block;
-            border-bottom: 2px solid var(--accent-color);
             padding-bottom: 10px;
             cursor: pointer;
             transition: transform 0.2s, color 0.2s;
         }
 
-        /* MOMENTS */
         .moment-item {
             margin-bottom: 40px;
             padding-bottom: 20px;
-            border-bottom: 1px dashed var(--border-color);
         }
         .moment-img {
             width: 100%;
@@ -173,21 +170,18 @@
             border-radius: 2px;
         }
         .geo-viewport:hover .moment-img { filter: grayscale(0%); }
-        
         .moment-text {
             font-size: 0.95rem;
             line-height: 1.8;
-            word-break: break-all; /* 防止長單詞撐開 */
+            word-break: break-all;
             text-align: justify;
         }
 
-        /* ARTICLES */
         .article-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px 0; /* 增加點擊區域 */
-            border-bottom: 1px solid var(--border-color);
+            padding: 18px 0;
             cursor: pointer;
             transition: background-color 0.2s;
         }
@@ -201,172 +195,166 @@
         }
         .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
 
-        /* PC定位 */
-        #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; }
-        #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; }
-
-        /* --- 4. 展開動畫 (通用) --- */
-        .geo-viewport.expanding {
-            position: fixed !important;
-            top: 0 !important; left: 0 !important; bottom: 0 !important; right: 0 !important;
-            width: 100vw !important; height: 100vh !important;
-            transform: none !important; /* 無論PC手機都歸正 */
-            z-index: 9999 !important;
-            border: none !important;
-            background-color: var(--bg-color);
-            transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
-            box-shadow: none !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
-        }
-        .geo-viewport.expanding .geo-scroller {
-            transform: none !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 80px 20px;
-            max-width: 800px;
-            margin: 0 auto !important;
-        }
-
 
         /* ========================================= */
-        /* --- 5. 手機版深度適配 (Mobile Optimized) --- */
+        /* --- 3. 手機版極簡適配 (No Borders, Top 3) --- */
         /* ========================================= */
         @media (max-width: 768px) {
             body { 
                 flex-direction: column; 
-                overflow-y: auto; /* 允許垂直滾動 */
+                overflow-y: auto; 
                 overflow-x: hidden;
-                height: auto; /* 高度隨內容 */
-                padding-bottom: 50px; /* 底部留白 */
-                -webkit-overflow-scrolling: touch; /* iOS 慣性滾動 */
+                height: auto; 
+                padding-bottom: 80px; /* 底部留白 */
+                -webkit-overflow-scrolling: touch;
             }
 
-            /* 1. 頭部重構 */
             .left-section {
                 width: 100%;
                 height: auto;
-                padding: 50px 25px 20px 25px; /* 上方留出空間 */
-                flex-direction: column; /* 改為上下排列 */
-                align-items: flex-start; /* 左對齊 */
-                gap: 15px;
+                padding: 60px 25px 20px 25px; 
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 20px;
                 background: var(--bg-color);
-                position: relative;
             }
 
             .my-name {
-                writing-mode: horizontal-tb; /* 橫排 */
-                border-left: none;
-                border-bottom: 2px solid var(--accent-color);
-                width: fit-content;
+                writing-mode: horizontal-tb;
+                border: none !important; /* 去除邊框 */
+                width: 100%;
                 padding-left: 0;
-                padding-bottom: 5px;
-                font-size: 2rem;
+                font-size: 2.2rem;
+                letter-spacing: 0.1em;
             }
 
             .quote-wrapper {
                 width: 100%;
                 height: auto;
-                min-height: 30px; /* 防止高度坍塌 */
+                min-height: 24px;
             }
 
             .quote-text {
                 writing-mode: horizontal-tb;
                 position: relative;
                 width: 100%;
-                white-space: normal; /* 允許換行 */
+                white-space: normal;
                 text-align: left;
-                font-size: 0.95rem;
+                font-size: 0.9rem;
                 color: var(--secondary-text);
             }
             
-            /* 修正手機版動畫方向 */
+            /* 手機版格言動畫方向調整 */
             .quote-enter { opacity: 0; transform: translateY(10px); } 
             .quote-active { opacity: 1; transform: translateY(0); }
             .quote-exit { opacity: 0; transform: translateY(-10px); }
 
-            /* 2. 內容區域重構 */
             .right-section {
                 width: 100%;
                 height: auto;
                 display: flex;
                 flex-direction: column;
-                gap: 25px;
-                padding: 10px 20px;
+                gap: 50px; /* 增加板塊間距，因為沒有邊框了，靠間距區分 */
+                padding: 0 25px;
             }
 
             .geo-viewport {
-                position: relative !important; /* 取消絕對定位 */
-                top: auto !important; left: auto !important; 
-                bottom: auto !important; right: auto !important;
+                position: relative !important;
+                top: auto !important; left: auto !important;
                 width: 100% !important;
-                height: 45vh; /* 每個板塊佔據屏幕一半不到，方便滑動 */
-                transform: none !important; /* 取消傾斜 */
-                border: 1px solid var(--accent-color);
-                border-radius: 8px; /* 輕微圓角 */
-                box-shadow: 0 4px 15px rgba(0,0,0,0.03); /* 柔和陰影 */
-                z-index: 1 !important; /* 固定層級 */
+                height: auto !important; /* 高度自適應，不再內部滾動 */
+                transform: none !important;
+                border: none !important; /* 去除所有邊框 */
+                box-shadow: none !important; /* 去除陰影 */
+                z-index: 1 !important;
             }
-            
-            /* 手機版展開時不需要改變 z-index 邏輯，expanding類已經處理了 */
 
             .geo-scroller {
                 transform: none !important;
                 width: 100% !important;
                 margin-left: 0 !important;
-                padding: 25px 20px;
+                padding: 0; /* 去除內部Padding */
+                overflow: visible; /* 允許內容撐開 */
             }
 
-            /* 圖片去色在手機上效果不好，直接顯示原色 */
-            .moment-img { filter: none; height: 160px; }
-
-            /* 3. 交互優化 */
             .box-title {
-                display: block;
-                width: 100%;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                border: none !important; /* 去除標題下劃線 */
+                margin-bottom: 20px;
+                font-size: 1.2rem; /* 稍微減小標題字號，更精緻 */
+                opacity: 0.8;
             }
-            /* 增加箭頭提示 */
+            
             .box-title::after {
                 content: '→';
                 font-size: 1.2rem;
-                opacity: 0.5;
-                transform: none;
-                transition: transform 0.3s;
-            }
-            
-            /* 觸摸反饋 (Active State) - 絲滑關鍵 */
-            .box-title:active {
-                opacity: 0.6;
-                transform: scale(0.98); /* 按下縮小 */
-            }
-            
-            .article-item:active {
-                background-color: rgba(128,128,128,0.1);
+                opacity: 0.3;
             }
 
-            /* 確保點擊區域夠大 */
-            .copy-target { padding: 5px 0; }
+            /* --- 關鍵：只顯示前三個項目 --- */
+            /* n+4 代表選擇第4個及之後的兄弟元素 */
+            .moment-item:nth-of-type(n+4),
+            .article-item:nth-of-type(n+4) {
+                display: none !important;
+            }
+
+            /* 列表樣式微調 */
+            .moment-item {
+                border: none !important;
+                margin-bottom: 30px;
+                padding-bottom: 0;
+            }
+            .moment-img {
+                filter: none;
+                height: auto; 
+                max-height: 200px;
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+
+            .article-item {
+                border: none !important;
+                padding: 12px 0;
+            }
+            .article-title {
+                font-weight: 400; /* 字體稍細，更優雅 */
+            }
+            
+            /* 點擊反饋 */
+            .box-title:active { opacity: 0.5; }
+            .article-item:active .article-title { opacity: 0.6; }
         }
 
-        /* 正在跳轉時的過度樣式 */
-        body.is-transitioning .left-section {
-            opacity: 0;
-            pointer-events: none;
+        /* --- 展開動畫 (通用) --- */
+        .geo-viewport.expanding {
+            position: fixed !important;
+            top: 0 !important; left: 0 !important; bottom: 0 !important; right: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            transform: none !important; 
+            z-index: 9999 !important;
+            background-color: var(--bg-color);
+            transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
+            margin: 0 !important;
+            padding: 0 !important;
         }
-        /* 手機上隱藏另一個未展開的盒子 */
-        body.is-transitioning .geo-viewport:not(.expanding) {
-            opacity: 0;
-            transform: scale(0.95);
+        
+        /* 展開時隱藏內容，防止閃爍，只展示純白背景過渡 */
+        .geo-viewport.expanding .geo-scroller {
+            opacity: 0; 
+            transition: opacity 0.2s;
         }
+
+        /* 過渡狀態 */
+        body.is-transitioning .left-section { opacity: 0; pointer-events: none; }
+        body.is-transitioning .geo-viewport:not(.expanding) { opacity: 0; }
 
     </style>
 </head>
 <body>
 
-    <!-- 左側區域 -->
+    <!-- 左側區 -->
     <section class="left-section">
         <div class="my-name">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
@@ -374,17 +362,17 @@
         </div>
     </section>
 
-    <!-- 右側/下方區域 -->
+    <!-- 右側內容區 -->
     <section class="right-section">
         
-        <!-- MOMENTS -->
+        <!-- MOMENTS (顯示前3) -->
         <div class="geo-viewport" id="moments-box">
             <div class="geo-scroller">
-                <!-- onclick 觸發展開 -->
                 <span class="box-title" onclick="expandSection('moments', event)">
                     MOMENTS
                 </span>
                 
+                <!-- 1 -->
                 <div class="moment-item">
                     <img src="https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy">
                     <p class="moment-text copy-target" onclick="copyText(this)">
@@ -392,6 +380,7 @@
                     </p>
                 </div>
                 
+                <!-- 2 -->
                 <div class="moment-item">
                     <img src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80" class="moment-img" loading="lazy">
                     <p class="moment-text copy-target" onclick="copyText(this)">
@@ -399,52 +388,62 @@
                     </p>
                 </div>
 
+                <!-- 3 -->
                 <div class="moment-item">
                      <p class="moment-text copy-target" onclick="copyText(this)">
-                        保持熱愛，奔赴山海。
+                        保持熱愛，奔赴山海。純粹的文字記錄，有時候比圖像更有力量。
                     </p>
                 </div>
-                
-                <div style="height: 60px;"></div>
+
+                <!-- 4 (手機上會被CSS隱藏) -->
+                <div class="moment-item">
+                     <p class="moment-text copy-target" onclick="copyText(this)">
+                        這是一條被隱藏的動態，只有電腦版或者點擊標題進入詳情頁才能看到。
+                    </p>
+                </div>
             </div>
         </div>
 
-        <!-- ARTICLES -->
+        <!-- ARTICLES (顯示前3) -->
         <div class="geo-viewport" id="articles-box">
             <div class="geo-scroller">
                 <span class="box-title" onclick="expandSection('articles', event)">
                     ARTICLES
                 </span>
                 
+                <!-- 1 -->
                 <div class="article-item" onclick="openLink('post-1')">
                     <span class="article-title">幾何美學的構建</span>
                     <span class="article-date">11.02</span>
                 </div>
+                <!-- 2 -->
                 <div class="article-item" onclick="openLink('post-2')">
                     <span class="article-title">CSS Skew 的反向邏輯</span>
                     <span class="article-date">10.15</span>
                 </div>
+                <!-- 3 -->
                 <div class="article-item" onclick="openLink('post-3')">
                     <span class="article-title">垂直排版的藝術</span>
                     <span class="article-date">09.28</span>
                 </div>
+                
+                <!-- 4 (手機隱藏) -->
                 <div class="article-item" onclick="openLink('post-4')">
                     <span class="article-title">移動端適配指南</span>
                     <span class="article-date">08.12</span>
                 </div>
+                 <!-- 5 (手機隱藏) -->
                  <div class="article-item" onclick="openLink('post-5')">
                     <span class="article-title">關於時間的思考</span>
                     <span class="article-date">07.01</span>
                 </div>
-
-                <div style="height: 60px;"></div>
             </div>
         </div>
 
     </section>
 
     <script>
-        // --- 1. 格言系統 (增加手機觸摸滑動支持) ---
+        // --- 1. 格言系統 ---
         const quotes = [
             "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
             "在顫抖的楓葉上 寫滿春天的謊言",
@@ -474,10 +473,8 @@
             }, 300);
         }
 
-        // 點擊切換
         quoteArea.addEventListener('click', () => updateQuote('next'));
 
-        // 手機觸摸滑動切換
         let touchStartX = 0;
         quoteArea.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
@@ -485,87 +482,59 @@
         
         quoteArea.addEventListener('touchend', e => {
             let touchEndX = e.changedTouches[0].screenX;
-            if (touchStartX - touchEndX > 30) updateQuote('next'); // 左滑
-            if (touchEndX - touchStartX > 30) updateQuote('prev'); // 右滑
+            if (touchStartX - touchEndX > 30) updateQuote('next'); 
+            if (touchEndX - touchStartX > 30) updateQuote('prev'); 
         }, {passive: true});
 
 
-        // --- 2. 複製功能 (增加震動反饋) ---
+        // --- 2. 複製功能 ---
         async function copyText(el) {
-            // 阻止冒泡，防止觸發父級點擊
             if(window.event) window.event.stopPropagation();
-
             const text = el.innerText.replace('（點擊複製）', '').trim();
             try {
                 await navigator.clipboard.writeText(text);
-                
-                // 視覺反饋
-                const originalColor = el.style.color;
-                el.style.color = 'var(--secondary-text)';
                 el.style.opacity = '0.5';
-                
-                // 手機震動反饋 (如果支持)
                 if (navigator.vibrate) navigator.vibrate(50);
-
-                setTimeout(() => {
-                    el.style.color = originalColor;
-                    el.style.opacity = '1';
-                }, 300);
-            } catch (err) {
-                console.error('Copy failed');
-            }
+                setTimeout(() => el.style.opacity = '1', 300);
+            } catch (err) { console.error('Copy failed'); }
         }
 
-        // --- 3. 展開邏輯 (PC/Mobile 通用) ---
+        // --- 3. 展開邏輯 ---
         function expandSection(type, event) {
             if(event) event.stopPropagation();
-
             const box = document.getElementById(type + '-box');
-            
-            // 1. 添加過渡狀態標記
             document.body.classList.add('is-transitioning');
-            
-            // 2. 展開當前板塊
             box.classList.add('expanding');
-
-            // 3. 延遲跳轉
             setTimeout(() => {
                 window.location.href = './' + type + '.html';
-            }, 600); // 稍微縮短時間讓動畫更緊湊
+            }, 600);
         }
 
         // --- 4. 鏈接跳轉 ---
         function openLink(slug) {
-            // 手機上點擊文章增加輕微延遲，顯示點擊態
             setTimeout(() => {
                 console.log("Opening:", slug);
                 // window.location.href = slug + '.html';
             }, 100);
         }
 
-        // --- 5. PC端 Z-Index 邏輯 (手機端禁用) ---
-        // 只有在屏幕寬度大於 768px 時才啟用複雜的層級切換
+        // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
         if (window.innerWidth > 768) {
             const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
-            
             function bringToFront(activeId) {
                 if (document.body.classList.contains('is-transitioning')) return;
                 boxes.forEach(box => {
                     if (box.id === activeId) {
-                        box.classList.add('active');
-                        box.style.zIndex = 20;
+                        box.classList.add('active'); box.style.zIndex = 20;
                     } else {
-                        box.classList.remove('active');
-                        box.style.zIndex = 10;
+                        box.classList.remove('active'); box.style.zIndex = 10;
                     }
                 });
             }
-
             boxes.forEach(box => {
                 box.addEventListener('mouseenter', () => bringToFront(box.id));
             });
         }
-
     </script>
 </body>
 </html>
