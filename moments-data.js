@@ -10,13 +10,13 @@ const momentsData = [
         // PC目錄不顯示縮略圖，但手機轉盤可能會用到標題
         content: {
             imageSrc: "medias/IMG_3719.png",
-            text: "磚塊"
+            text: "美好總是易逝，因為 /n 填充生活的大多是 /n 城市的白噪音"
         }
     },
     {
         id: "moment-gallery-1",
-        type: "gallery", // --- 新增：多圖畫廊類型 ---
-        title: "城市碎片 (組圖)",
+        type: "gallery", 
+        title: "城市",
         content: {
             text: "光影的切片，記錄時間的流逝。",
             images: [
@@ -59,6 +59,33 @@ const momentsData = [
     "author": "Joyance"
   }
 },
+
+    {
+        id: "moment-gallery-2",
+        type: "gallery", 
+        title: "光影設計",
+        content: {
+            text: "在建築的角落找到片刻寧靜",
+            images: [
+                "/medias/IMG_4011.png",
+                "/medias/IMG_4006.png",
+                "/medias/IMG_3959.png"
+            ]
+        }
+    },
+
+    {
+        id: "moment-gallery-3",
+        type: "gallery", 
+        title: "日夜",
+        content: {
+            text: "在陽光還沒醒時",
+            images: [
+                "/medias/IMG_4143.png",
+                "/medias/IMG_4752.png"
+            ]
+        }
+    },
 
     {
         id: "moment-3",
