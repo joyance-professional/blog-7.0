@@ -10,7 +10,7 @@ const momentsData = [
         // PC目錄不顯示縮略圖，但手機轉盤可能會用到標題
         content: {
             imageSrc: "medias/IMG_3719.png",
-            text: "美好總是易逝，因為 /n 填充生活的大多是 /n 城市的白噪音"
+            text: "美好總是易逝，因為 / 填充生活的大多是 / 城市的白噪音"
         }
     },
     {
