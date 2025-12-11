@@ -13,13 +13,13 @@
             --text-color: #1a1a1a; 
             --accent-color: #000000; 
             --placeholder-bg: #f0f0f0; 
-            --toc-width: 300px;
+            --toc-width: 260px; /* 目錄寬度 */
         }
         @media (prefers-color-scheme: dark) { 
             :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
         }
 
-        /* 基礎設定 */
+        /* --- 核心基礎設定 --- */
         body.js-loading { opacity: 0; visibility: hidden; }
         body { 
             background-color: var(--bg-color); 
@@ -30,17 +30,20 @@
             transition: opacity 0.8s ease;
         }
         
-        /* 全局隱藏系統鼠標 */
-        * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        @media (hover: none) or (max-width: 1024px) { * { cursor: auto !important; } }
+        /* --- 強制隱藏系統鼠標 (核彈級 CSS) --- */
+        html, body, *, *::before, *::after, button, a, input, p, img { 
+            cursor: none !important; 
+            box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
 
-        /* 自定義鼠標 (層級最高) */
+        /* 自定義鼠標 (最高層級) */
         #custom-cursor { 
             position: fixed; top: 0; left: 0; width: 12px; height: 12px; 
             background-color: var(--accent-color); 
             transform: translate(-50%, -50%) rotate(45deg); 
             pointer-events: none; 
-            z-index: 9999999; /* 確保在所有元素之上 */
+            z-index: 2147483647; /* Max Z-Index */
             transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; 
             mix-blend-mode: difference; 
         }
@@ -48,22 +51,23 @@
         #custom-cursor.clicking { transform: translate(-50%, -50%) rotate(45deg) scale(0.8); background: var(--accent-color); }
 
         /* 佈局容器 */
-        #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
+        #app-container { display: flex; width: 100%; height: 100%; }
         
         /* 主內容區 */
         .main-content { 
             flex: 1; position: relative; height: 100%; 
             display: flex; flex-direction: column; 
             overflow: hidden; 
-            /* 關鍵：過渡邊距以適應目錄 */
             transition: margin-right 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
         }
 
-        /* 頂部按鈕 */
+        /* 按鈕與圖標 */
         .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
         .desktop-toc-trigger { position: fixed; top: 30px; right: 30px; z-index: 100; pointer-events: none; }
+        
         .icon-btn { 
-            pointer-events: auto; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; 
+            pointer-events: auto; opacity: 0.5; transition: 0.3s; 
+            border: none; background: none; padding: 10px; 
             display: flex; align-items: center; justify-content: center; 
         }
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
@@ -72,7 +76,7 @@
         /* 閱讀視口 */
         .reader-viewport { 
             flex: 1; width: 100%; max-width: 800px; 
-            margin: 40px auto; /* 上下留白縮小 */
+            margin: 40px auto; 
             position: relative; touch-action: pan-y; 
         }
         
@@ -84,12 +88,16 @@
         }
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
 
-        /* 文本排版 */
+        /* 文本樣式與互動 */
         p { 
             font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; margin: 0;
-            font-weight: 400; /* 強制不粗體 */
-            overflow-wrap: break-word; word-break: break-word; /* 防止電腦端溢出 */
+            font-weight: 400;
+            overflow-wrap: break-word; word-break: break-word;
+            transition: transform 0.1s; transform-origin: left center;
         }
+        /* 點擊複製的動畫 */
+        p:active { transform: scale(0.98); opacity: 0.8; }
+        
         h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.4; }
         .article-heading[data-level="1"] { font-size: 1.8rem; border-left: 4px solid var(--accent-color); padding-left: 15px; font-weight: 700; margin: 15px 0; }
         .article-heading[data-level="2"] { font-size: 1.4rem; opacity: 0.9; padding-left: 5px; font-weight: 600; margin: 10px 0; }
@@ -97,31 +105,31 @@
         /* 圖片 */
         figure img { 
             max-width: 100%; max-height: 65vh; height: auto; border-radius: 4px; 
-            opacity: 0; transition: 0.5s; cursor: none; 
+            opacity: 0; transition: opacity 0.5s, transform 0.3s; 
         }
         figure img.loaded { opacity: 1; }
-        figure img:hover { transform: scale(1.02); }
+        figure img:hover { transform: scale(1.01); }
 
         /* Lightbox */
         #lightbox {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 2000;
+            background: rgba(0,0,0,0.85); z-index: 2000;
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(8px);
+            opacity: 0; visibility: hidden; transition: 0.3s; backdrop-filter: blur(5px);
         }
         #lightbox.active { opacity: 1; visibility: visible; }
-        #lightbox img { max-width: 90vw; max-height: 90vh; transform: scale(0.9); transition: 0.3s; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        #lightbox img { max-width: 95vw; max-height: 95vh; transform: scale(0.9); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         #lightbox.active img { transform: scale(1); }
 
         /* 底部導航 */
         .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; gap: 40px; font-size: 0.9rem; pointer-events: none; z-index: 50; }
-        .nav-btn { pointer-events: auto; opacity: 0.3; border: none; background: none; color: inherit; padding: 10px; cursor: none; }
+        .nav-btn { pointer-events: auto; opacity: 0.3; border: none; background: none; color: inherit; padding: 10px; }
         .nav-btn:hover { opacity: 1; }
 
-        /* --- 電腦版目錄側邊欄 --- */
+        /* --- 電腦版目錄 (無邊框) --- */
         #toc-sidebar {
             width: var(--toc-width); height: 100%; background: var(--bg-color);
-            border-left: 1px solid var(--placeholder-bg);
+            /* border-left: 1px solid var(--placeholder-bg); 已移除邊框 */
             position: fixed; right: 0; top: 0;
             transform: translateX(100%); 
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -130,63 +138,59 @@
         }
         #toc-sidebar.open { transform: translateX(0); }
         .toc-item { 
-            padding: 10px 0; opacity: 0.5; transition: 0.2s; font-size: 0.95rem; cursor: none; display: block; 
+            padding: 10px 0; opacity: 0.5; transition: 0.2s; font-size: 0.95rem; display: block; 
         }
         .toc-item:hover { opacity: 1; transform: translateX(-5px); color: var(--accent-color); }
         .toc-item.active-chapter { opacity: 1; font-weight: 600; color: var(--accent-color); }
 
-        /* --- 手機版扇形目錄 (Fan Wheel) --- */
-        /* 觸發按鈕 */
+        /* --- 手機版目錄按鈕與扇形 (Bottom 3/4) --- */
         #mobile-toc-btn {
-            position: fixed; bottom: 50px; right: 30px;
-            width: 50px; height: 50px; border-radius: 50%;
-            background: var(--text-color); color: var(--bg-color);
-            z-index: 3000; /* 高於 overlay */
+            position: fixed; 
+            top: 75%; right: 0; /* 下 3/4 處 (距頂部 75%) */
+            transform: translateY(-50%);
+            width: 40px; height: 60px; 
+            border-radius: 30px 0 0 30px;
+            background: rgba(128, 128, 128, 0.1);
+            backdrop-filter: blur(5px);
+            z-index: 3000;
             display: none; align-items: center; justify-content: center;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(128,128,128,0.2); border-right: none;
+            transition: width 0.3s;
         }
-        #mobile-toc-btn svg { width: 24px; height: 24px; fill: var(--bg-color); }
-        #mobile-toc-btn:active { transform: scale(0.9); }
-        #mobile-toc-btn.active { transform: rotate(90deg); }
+        #mobile-toc-btn::after { content: "≡"; font-size: 20px; opacity: 0.6; }
+        #mobile-toc-btn.active { width: 50px; background: rgba(128, 128, 128, 0.2); }
 
-        /* 模糊遮罩 */
         #mobile-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(var(--bg-rgb), 0.1);
-            backdrop-filter: blur(0px);
             z-index: 2500;
             visibility: hidden; opacity: 0;
-            transition: 0.4s;
-            touch-action: none;
+            transition: 0.4s; touch-action: none;
         }
-        #mobile-overlay.active { visibility: visible; opacity: 1; backdrop-filter: blur(12px); }
+        #mobile-overlay.active { visibility: visible; opacity: 1; backdrop-filter: blur(10px); }
 
-        /* 扇形容器 */
         #fan-container {
             position: absolute;
-            bottom: 75px; right: 55px; /* 對齊按鈕中心 */
+            top: 75%; right: 0; /* 與按鈕位置一致 */
             width: 0; height: 0;
-            pointer-events: none; /* 事件由 overlay 處理 */
+            pointer-events: none;
         }
         
         .fan-item {
             position: absolute;
             top: 0; left: 0;
             width: 250px; 
-            transform-origin: 0 0; /* 以按鈕為圓心 */
+            transform-origin: 0 0; 
             display: flex; align-items: center;
             opacity: 0; visibility: hidden;
-            transition: opacity 0.2s, transform 0.1s; /* Transform 由 JS 驅動 */
+            transition: opacity 0.2s; /* 移除 transform transition 以保證旋轉流暢 */
             font-size: 1.1rem; color: var(--text-color);
-            white-space: nowrap;
-            padding-left: 60px; /* 距離圓心的半徑 */
+            white-space: nowrap; padding-left: 60px;
         }
         .fan-item.visible { opacity: 0.4; visibility: visible; }
-        .fan-item.highlight { opacity: 1; font-size: 1.4rem; font-weight: 700; color: var(--accent-color); z-index: 10; }
-        .fan-item span { display: block; transition: 0.2s; }
+        .fan-item.highlight { opacity: 1; font-size: 1.3rem; font-weight: 700; color: var(--accent-color); z-index: 10; }
 
-        /* 退出與提示 */
+        /* 退出提示 */
         .toast-msg {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
             background: var(--accent-color); color: var(--bg-color); padding: 8px 16px; border-radius: 20px;
@@ -196,20 +200,23 @@
         #exit-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg-color); display: flex; align-items: center; justify-content: center;
-            z-index: 4000; opacity: 0; visibility: hidden; transition: 0.5s;
+            z-index: 4000; opacity: 0; visibility: hidden; transition: 0.3s; /* 加快顯示速度 */
         }
         #exit-overlay.active { opacity: 1; visibility: visible; }
-        #exit-overlay span { font-size: 1.5rem; letter-spacing: 5px; animation: glow 1.5s infinite alternate; }
+        #exit-overlay span { font-size: 1.5rem; letter-spacing: 5px; animation: glow 1s infinite alternate; }
         @keyframes glow { from { text-shadow: 0 0 5px var(--text-color); opacity: 0.5; } to { text-shadow: 0 0 20px var(--text-color); opacity: 1; } }
 
         /* RWD */
         @media (min-width: 1025px) {
             body.has-toc-open .main-content { margin-right: var(--toc-width); }
+            /* 電腦版隱藏手機按鈕 */
+            #mobile-toc-btn { display: none !important; }
         }
         @media (max-width: 1024px) { 
             #custom-cursor { display: none; } 
             .reader-viewport { margin: 60px auto 100px; width: 88%; } 
             .page-slide { padding: 0 5px; gap: 20px; }
+            /* 手機版隱藏桌面側邊欄相關 */
             .desktop-toc-trigger, #toc-sidebar { display: none !important; }
             #mobile-toc-btn { display: flex; }
             .pagination { bottom: 20px; }
@@ -222,13 +229,10 @@
     <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
     <div class="toast-msg" id="swipe-hint">再次滑動以返回列表</div>
 
-    <!-- 燈箱 -->
     <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src=""></div>
 
-    <!-- 手機版目錄組件 -->
-    <div id="mobile-toc-btn" class="interactable" onclick="toggleMobileWheel()">
-        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-    </div>
+    <!-- 手機版目錄按鈕 -->
+    <div id="mobile-toc-btn" class="interactable"></div>
     <div id="mobile-overlay">
         <div id="fan-container"></div>
     </div>
@@ -273,18 +277,16 @@
         const desktopTocList = document.getElementById('desktop-toc-list');
         const desktopTocBtn = document.getElementById('desktop-toc-btn');
         
-        // Mobile Wheel 相關
+        // Mobile 相關
         const mobileBtn = document.getElementById('mobile-toc-btn');
         const mobileOverlay = document.getElementById('mobile-overlay');
         const fanContainer = document.getElementById('fan-container');
         
-        // 狀態
         let currentPage = 0, totalPages = 0, pages = [];
         let tocData = []; 
-        let articleData = null; // 緩存數據用於重排
+        let articleData = null; 
         
-        // --- 核心：初始化與排版 ---
-        
+        // --- 初始化流程 ---
         async function fetchArticleContent(id) {
             if (!id) throw new Error("ID missing");
             const response = await fetch(`./article/${id}.json`);
@@ -295,33 +297,28 @@
         async function layoutArticle(content) {
             articleData = content;
             document.title = content.title;
-            
-            // 暫存當前閱讀進度百分比，以便重排後跳轉到近似位置
             const progress = totalPages > 0 ? currentPage / totalPages : 0;
             
             viewport.innerHTML = `<div class="loading-placeholder pulsing" style="margin: auto;"></div>`;
             pages = []; currentPage = 0; tocData = [];
 
-            // 獲取當前即時的容器寬度 (受側邊欄影響)
             const vH = viewport.clientHeight;
             const vW = viewport.clientWidth; 
             if (vH <= 0) return;
 
-            // 1. 標題頁
+            // 標題頁
             const titlePage = createPageDiv(0);
             titlePage.innerHTML = `<div style="text-align:center;"><h1>${content.title}</h1><div style="margin-top:15px;opacity:0.6;">${content.date}</div></div>`;
             pages.push(titlePage);
 
-            // 2. 內容頁計算
+            // 內容排版
             let contentPageIndex = 1;
             let currentDiv = createPageDiv(1);
             pages.push(currentDiv);
 
-            // 測量工具
             const tempDiv = document.createElement('div');
             const style = getComputedStyle(currentDiv);
             const pGap = parseFloat(style.gap) || 25;
-            // 確保測量寬度與實際容器完全一致
             tempDiv.style.cssText = `visibility:hidden; position:absolute; width:${vW - (parseFloat(style.paddingLeft)*2)}px; left:0; top:0; font-family:${style.fontFamily}; font-size:${style.fontSize}; line-height:${style.lineHeight};`;
             document.body.appendChild(tempDiv);
 
@@ -339,39 +336,33 @@
                     } else if (item.type === 'image') {
                         el = document.createElement('figure');
                         const img = document.createElement('img');
-                        // 初始狀態為透明
                         el.appendChild(img);
-                        // 存儲源數據供 lazyLoad 使用
                         img.dataset.src = item.src;
                         img.className = 'interactable';
                         
                         if (item.caption) {
                             const cap = document.createElement('figcaption');
-                            cap.innerText = item.caption; cap.style.marginTop="10px"; cap.style.opacity="0.7"; cap.style.fontSize="0.9rem"; cap.style.textAlign="center";
+                            cap.innerText = item.caption; cap.style.marginTop="10px"; cap.style.opacity="0.7"; 
                             el.appendChild(cap);
                         }
                     } else if (item.type === 'header') {
                         isHeader = true;
                         el = document.createElement(item.level === 1 ? 'h2' : 'h3');
                         el.className = 'article-heading interactable-text';
-                        el.dataset.level = item.level;
                         el.innerText = item.text;
+                        el.dataset.level = item.level;
                     }
 
                     if (!el) continue;
 
-                    // 測量高度
                     tempDiv.innerHTML = '';
-                    tempDiv.appendChild(el.cloneNode(true)); // Clone 避免引用問題
-                    // 如果是圖片，模擬一個高度佔位 (因為圖片還沒加載，我們給一個預估值或固定佔位)
-                    // 這裡簡化：如果是 figure，假設它佔 250px 或計算其比例
+                    tempDiv.appendChild(el.cloneNode(true));
                     if (item.type === 'image') {
                         tempDiv.querySelector('img').style.height = "250px"; 
                         tempDiv.querySelector('img').style.display = "block";
                     }
                     const elH = tempDiv.clientHeight;
 
-                    // 換頁判斷
                     if (currentH > 0 && (currentH + elH + pGap > vH)) {
                         contentPageIndex++;
                         currentDiv = createPageDiv(contentPageIndex);
@@ -379,12 +370,10 @@
                         currentH = 0;
                     }
 
-                    // 記錄目錄
                     if (isHeader) {
                         tocData.push({ text: item.text, pageIndex: contentPageIndex });
                     }
 
-                    // 實際添加
                     currentDiv.appendChild(el);
                     currentH += (elH + pGap);
                 }
@@ -396,19 +385,18 @@
             pages.forEach(p => viewport.appendChild(p));
             totalPages = pages.length;
 
-            // 恢復進度或跳轉第一頁
             currentPage = Math.floor(progress * totalPages);
             if (currentPage >= totalPages) currentPage = totalPages - 1;
 
             setupDesktopTOC();
             updatePage();
-            bindCursorEvents();
-            lazyLoadImages(); // 觸發圖片加載
+            lazyLoadImages();
+            // 重新綁定鼠標事件
+            setTimeout(bindCursorEvents, 100);
         }
 
-        // --- 圖片加載與燈箱 ---
+        // --- 圖片加載 ---
         function lazyLoadImages() {
-            // 簡單邏輯：加載當前頁及前後頁
             [currentPage-1, currentPage, currentPage+1].forEach(idx => {
                 if (pages[idx]) {
                     pages[idx].querySelectorAll('img[data-src]').forEach(img => {
@@ -429,12 +417,18 @@
             document.getElementById('lightbox').classList.remove('active'); 
         }
 
-        // --- 電腦端目錄 ---
+        // --- 電腦端目錄邏輯 ---
         function setupDesktopTOC() {
+            // 如果沒有目錄，隱藏按鈕和側邊欄
             if (tocData.length === 0) {
                 desktopTocBtn.style.display = 'none';
+                desktopTocSidebar.style.display = 'none';
                 return;
+            } else {
+                desktopTocBtn.style.display = 'flex';
+                desktopTocSidebar.style.display = 'flex';
             }
+
             desktopTocList.innerHTML = '';
             tocData.forEach(item => {
                 const div = document.createElement('div');
@@ -443,48 +437,64 @@
                 div.onclick = () => {
                     currentPage = item.pageIndex;
                     updatePage();
-                    // 電腦版點擊不關閉，保持閱讀體驗
+                    // 點擊後不關閉，保持閱讀狀態
                 };
                 desktopTocList.appendChild(div);
             });
+
+            // 電腦端默認展開
+            if (window.innerWidth > 1024 && !document.body.classList.contains('has-toc-open')) {
+                toggleDesktopTOC(true);
+            }
         }
 
-        function toggleDesktopTOC() {
-            const sidebar = desktopTocSidebar;
-            const isOpen = sidebar.classList.toggle('open');
+        function toggleDesktopTOC(forceOpen) {
+            const isOpen = forceOpen !== undefined ? forceOpen : !desktopTocSidebar.classList.contains('open');
+            desktopTocSidebar.classList.toggle('open', isOpen);
             document.body.classList.toggle('has-toc-open', isOpen);
 
-            // 關鍵修復：等待 CSS transition 結束後，強制重新 layout
-            // 這樣文字才會根據新的寬度重新換行，防止溢出
+            // 強制重排，等待動畫結束
             setTimeout(() => {
                 if (articleData) layoutArticle(articleData);
-            }, 400); // 配合 CSS 0.4s
+            }, 400);
         }
 
-        // --- 手機端扇形目錄 (Fan Wheel Logic) ---
+        // --- 手機端目錄 (直覺式交互) ---
         let isMobileTocOpen = false;
         let fanItems = [];
-        let fanAngle = 0; // 當前旋轉角度
+        let fanAngle = 0;
         let fanVelocity = 0;
         let isDraggingFan = false;
         let lastTouchY = 0;
         let rafId = null;
 
-        const ITEM_ANGLE_GAP = 15; // 每個標題間隔度數
-        const SELECT_ANGLE = -135; // 選中區的角度 (相對於圓心按鈕，左上角約 -135度)
+        const ITEM_ANGLE_GAP = 18; // 間距
+        const SELECT_ANGLE = -135; // 選中區域 (左上方)
 
-        function toggleMobileWheel() {
-            if (isMobileTocOpen) closeMobileWheel();
-            else openMobileWheel();
-        }
+        // 綁定觸發按鈕事件 (支持點擊 和 長按拖動)
+        mobileBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 防止點擊延遲
+            openMobileWheel();
+            isDraggingFan = true;
+            lastTouchY = e.touches[0].clientY;
+            fanVelocity = 0;
+            cancelAnimationFrame(rafId);
+        }, {passive: false});
+
+        // 點擊事件作為備用 (如果 touchstart 沒被攔截)
+        mobileBtn.onclick = () => {
+             if(!isMobileTocOpen) openMobileWheel();
+        };
 
         function openMobileWheel() {
             if(tocData.length === 0) return;
+            if(isMobileTocOpen) return;
+            
             isMobileTocOpen = true;
             mobileBtn.classList.add('active');
             mobileOverlay.classList.add('active');
             
-            // 生成 DOM
+            // 構建扇形
             fanContainer.innerHTML = '';
             fanItems = [];
             
@@ -492,37 +502,24 @@
                 const el = document.createElement('div');
                 el.className = 'fan-item interactable';
                 el.innerHTML = `<span>${data.text}</span>`;
-                el.dataset.index = i;
                 el.dataset.page = data.pageIndex;
-                
-                // 點擊直接跳轉
-                el.onclick = (e) => {
-                    e.stopPropagation();
-                    jumpToPage(data.pageIndex);
-                };
-
                 fanContainer.appendChild(el);
                 fanItems.push(el);
             });
 
-            // 初始化角度：讓當前章節對齊選中區
-            // 找到當前頁面對應的目錄索引
+            // 初始角度對齊當前頁
             let targetIdx = 0;
             for(let i = 0; i < tocData.length; i++) {
                 if (tocData[i].pageIndex <= currentPage) targetIdx = i;
             }
-            
-            // 公式： TargetAngle = SELECT_ANGLE - (Index * GAP)
             fanAngle = SELECT_ANGLE - (targetIdx * ITEM_ANGLE_GAP);
             fanVelocity = 0;
-            
             updateFanVisuals();
             
-            // 綁定事件
-            mobileOverlay.addEventListener('touchstart', onFanTouchStart, {passive:false});
+            // 綁定 Overlay 事件來處理拖動
             mobileOverlay.addEventListener('touchmove', onFanTouchMove, {passive:false});
             mobileOverlay.addEventListener('touchend', onFanTouchEnd);
-            mobileOverlay.addEventListener('click', onOverlayClick);
+            mobileOverlay.addEventListener('click', closeMobileWheel); // 點擊空白關閉
         }
 
         function closeMobileWheel() {
@@ -530,45 +527,20 @@
             mobileBtn.classList.remove('active');
             mobileOverlay.classList.remove('active');
             cancelAnimationFrame(rafId);
-            
-            // 移除事件
-            mobileOverlay.removeEventListener('touchstart', onFanTouchStart);
             mobileOverlay.removeEventListener('touchmove', onFanTouchMove);
             mobileOverlay.removeEventListener('touchend', onFanTouchEnd);
-            mobileOverlay.removeEventListener('click', onOverlayClick);
-        }
-
-        function onOverlayClick(e) {
-            // 點擊空白處關閉
-            // 判斷是否點擊了 item (item 有 stopPropagation 所以這裡只會是空白)
-            closeMobileWheel();
-        }
-
-        function jumpToPage(pageIndex) {
-            currentPage = pageIndex;
-            updatePage();
-            closeMobileWheel();
-        }
-
-        // 觸摸邏輯
-        function onFanTouchStart(e) {
-            isDraggingFan = true;
-            lastTouchY = e.touches[0].clientY;
-            fanVelocity = 0;
-            cancelAnimationFrame(rafId);
+            mobileOverlay.removeEventListener('click', closeMobileWheel);
         }
 
         function onFanTouchMove(e) {
             if (!isDraggingFan) return;
             e.preventDefault();
             const y = e.touches[0].clientY;
-            const delta = lastTouchY - y; // 向上滑為正
+            const delta = lastTouchY - y; // 向上為正
             lastTouchY = y;
             
-            // 靈敏度
-            fanAngle += delta * 0.5;
-            fanVelocity = delta * 0.5;
-            
+            fanAngle += delta * 0.6; // 調整靈敏度
+            fanVelocity = delta * 0.6;
             updateFanVisuals();
         }
 
@@ -580,13 +552,12 @@
         function inertiaLoop() {
             if (isDraggingFan || !isMobileTocOpen) return;
 
-            // 摩擦力
-            fanVelocity *= 0.92;
+            fanVelocity *= 0.92; // 摩擦力
             fanAngle += fanVelocity;
 
-            // 邊界限制 (彈性)
+            // 邊界限制
             const minAngle = SELECT_ANGLE - ((fanItems.length - 1) * ITEM_ANGLE_GAP);
-            const maxAngle = SELECT_ANGLE; // 第一個 item
+            const maxAngle = SELECT_ANGLE;
             
             if (fanAngle > maxAngle + 20) {
                 fanAngle += (maxAngle + 20 - fanAngle) * 0.1;
@@ -596,9 +567,8 @@
                 fanVelocity *= 0.5;
             }
 
-            // 當速度極小，執行吸附
             if (Math.abs(fanVelocity) < 0.1) {
-                snapToNearest();
+                snapAndJump();
                 return;
             }
 
@@ -606,83 +576,73 @@
             rafId = requestAnimationFrame(inertiaLoop);
         }
 
-        function snapToNearest() {
-            // 計算最近的 Item
-            // fanAngle = SELECT - (index * GAP)
-            // index = (SELECT - fanAngle) / GAP
+        function snapAndJump() {
             let exactIdx = (SELECT_ANGLE - fanAngle) / ITEM_ANGLE_GAP;
             let targetIdx = Math.round(exactIdx);
-            
-            // 限制範圍
             targetIdx = Math.max(0, Math.min(fanItems.length - 1, targetIdx));
             
             const targetAngle = SELECT_ANGLE - (targetIdx * ITEM_ANGLE_GAP);
             
-            // 動畫吸附
-            const animateSnap = () => {
+            // 吸附動畫
+            const animate = () => {
                 if (isDraggingFan || !isMobileTocOpen) return;
                 const diff = targetAngle - fanAngle;
                 if (Math.abs(diff) < 0.5) {
                     fanAngle = targetAngle;
                     updateFanVisuals();
-                    // 吸附完成，觸發跳轉
+                    // 跳轉
                     const item = fanItems[targetIdx];
                     if (item) {
-                        item.classList.add('highlight'); // 閃爍確認
-                        setTimeout(() => jumpToPage(parseInt(item.dataset.page)), 300);
+                        item.classList.add('highlight');
+                        setTimeout(() => {
+                            currentPage = parseInt(item.dataset.page);
+                            updatePage();
+                            closeMobileWheel();
+                        }, 200);
                     }
                     return;
                 }
                 fanAngle += diff * 0.2;
                 updateFanVisuals();
-                requestAnimationFrame(animateSnap);
+                requestAnimationFrame(animate);
             };
-            animateSnap();
+            animate();
         }
 
         function updateFanVisuals() {
-            // 渲染每一個 item
             fanItems.forEach((item, index) => {
-                // 每個 item 的絕對角度
                 const itemAngle = fanAngle + (index * ITEM_ANGLE_GAP);
                 
-                // 視覺優化：只顯示在一定範圍內的 (-200 到 -70)
+                // 只顯示扇形範圍內的
                 if (itemAngle > -45 || itemAngle < -225) {
                     item.classList.remove('visible');
-                    return;
-                }
-                item.classList.add('visible');
-
-                // 計算高亮 (距離 SELECT_ANGLE 最近的)
-                const dist = Math.abs(itemAngle - SELECT_ANGLE);
-                if (dist < ITEM_ANGLE_GAP / 2) {
-                    item.classList.add('highlight');
                 } else {
-                    item.classList.remove('highlight');
+                    item.classList.add('visible');
+                    // 計算高亮
+                    const dist = Math.abs(itemAngle - SELECT_ANGLE);
+                    if (dist < ITEM_ANGLE_GAP / 2) {
+                        item.classList.add('highlight');
+                    } else {
+                        item.classList.remove('highlight');
+                    }
+                    item.style.transform = `rotate(${itemAngle}deg)`;
                 }
-
-                item.style.transform = `rotate(${itemAngle}deg)`;
             });
         }
 
-        // --- 基礎功能 ---
-        function createPageDiv(i) { 
-            const d = document.createElement('div'); 
-            d.className='page-slide'; 
-            if(i===currentPage) d.classList.add('active'); 
-            return d; 
-        }
+        // --- 基礎頁面控制 ---
+        function createPageDiv(i) { const d = document.createElement('div'); d.className='page-slide'; if(i===currentPage) d.classList.add('active'); return d; }
         function updatePage() {
             pages.forEach((p,i) => {
                 p.classList.toggle('active', i===currentPage);
-                p.style.transform=''; // Reset swipe
+                p.style.transform=''; 
             });
             pageNum.innerText = `${currentPage+1} / ${totalPages}`;
             prevBtn.disabled = currentPage===0;
             nextBtn.disabled = currentPage===totalPages-1;
             lazyLoadImages();
             
-            // 更新電腦目錄高亮
+            // 更新目錄高亮
             document.querySelectorAll('.toc-item').forEach((el, idx) => {
                 if (tocData[idx] && tocData[idx].pageIndex <= currentPage && 
                     (!tocData[idx+1] || tocData[idx+1].pageIndex > currentPage)) {
@@ -700,7 +660,12 @@
             document.body.style.opacity = '0';
             setTimeout(() => window.location.href = './articles.html', 500);
         }
-        async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
+        async function copyText(el) { 
+            try { 
+                await navigator.clipboard.writeText(el.innerText); 
+                // 這裡 CSS active 會處理動畫，如果需要更強烈的反饋可在此添加
+            } catch {} 
+        }
 
         // --- 初始化 ---
         async function init() {
@@ -710,7 +675,6 @@
                 await document.fonts.ready;
                 await layoutArticle(content);
                 
-                // 視窗大小改變時重排 (防抖)
                 let timer;
                 window.addEventListener('resize', () => {
                     clearTimeout(timer);
@@ -732,7 +696,7 @@
                 if(e.key==='ArrowRight') changePage(1);
             };
 
-            // 手機滑動翻頁
+            // 手機滑動與退出邏輯
             if(window.matchMedia("(max-width:1024px)").matches) {
                 let startX=0, isSwiping=false;
                 viewport.addEventListener('touchstart', e=>{ startX=e.touches[0].clientX; isSwiping=true; }, {passive:true});
@@ -746,16 +710,18 @@
                     isSwiping=false;
                     const delta = e.changedTouches[0].clientX - startX;
                     pages[currentPage].style.transform = '';
-                    if(delta < -50) {
+                    
+                    if(delta < -50) { // 左滑 (下一頁)
                         if(currentPage < totalPages-1) { changePage(1); resetExit(); }
-                        else handleExit();
-                    } else if(delta > 50) {
-                        changePage(-1); resetExit();
+                        else handleExit(); // 最後一頁 -> 退出
+                    } else if(delta > 50) { // 右滑 (上一頁)
+                        if(currentPage > 0) { changePage(-1); resetExit(); }
+                        else handleExit(); // 第一頁 -> 退出
                     }
                 }, {passive:true});
             }
 
-            // 鼠標跟隨
+            // 實時鼠標跟隨
             if(!window.matchMedia("(max-width:1024px)").matches) {
                 document.addEventListener('mousemove', e => {
                     cursor.style.left = e.clientX + 'px';
@@ -768,14 +734,11 @@
 
         function bindCursorEvents() {
             if(window.matchMedia("(max-width:1024px)").matches) return;
-            // 稍微延遲以確保 DOM 渲染完畢
-            setTimeout(() => {
-                const targets = document.querySelectorAll('.interactable, .interactable-text, .toc-item');
-                targets.forEach(el => {
-                    el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
-                    el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
-                });
-            }, 100);
+            const targets = document.querySelectorAll('.interactable, .interactable-text, .toc-item, img');
+            targets.forEach(el => {
+                el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+                el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+            });
         }
 
         let exitCount=0, exitTimer;
@@ -788,7 +751,7 @@
             } else {
                 document.getElementById('swipe-hint').classList.remove('show');
                 document.getElementById('exit-overlay').classList.add('active');
-                setTimeout(goBack, 1000);
+                setTimeout(goBack, 500); // 加速退出
             }
         }
         function resetExit() { exitCount=0; document.getElementById('swipe-hint').classList.remove('show'); }
