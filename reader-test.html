@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Article Reader</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* --- 基礎變量 --- */
+        :root { 
+            --bg-color: #ffffff; 
+            --text-color: #1a1a1a; 
+            --accent-color: #000000; 
+            --placeholder-bg: #f0f0f0; 
+            --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        @media (prefers-color-scheme: dark) { 
+            :root { --bg-color: #121212; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
+        }
+
+        /* --- 全局設定 --- */
+        body.js-loading { opacity: 0; visibility: hidden; }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Noto Serif TC', serif; 
+            margin: 0; height: 100vh; width: 100vw; 
+            overflow: hidden; display: flex; flex-direction: column; 
+            transition: opacity 0.5s ease;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 游標設定 */
+        * { cursor: none !important; }
+        @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference;}
+        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); transform: rotate(45deg) scale(1.5); }
+        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--accent-color); }
+
+        /* UI 按鈕共用 */
+        .icon-btn { position: fixed; z-index: 100; border: none; background: none; padding: 10px; opacity: 0.6; transition: 0.3s; color: var(--text-color); }
+        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+        .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .back-arrow { top: 20px; left: 20px; }
+        .toc-btn { top: 20px; right: 20px; }
+
+        /* --- 閱讀視口 --- */
+        .reader-viewport { 
+            flex: 1; width: 100%; max-width: 800px; 
+            margin: 0 auto; position: relative; 
+            touch-action: pan-y; /* 允許垂直滾動，水平由 JS 接管 */
+        }
+
+        .page-slide { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            padding: 80px 40px 100px 40px; /* 上下留白給 Header/Footer */
+            opacity: 0; pointer-events: none; 
+            transform: translateX(20px); 
+            transition: opacity 0.4s ease, transform 0.4s ease; 
+            display: flex; flex-direction: column; justify-content: flex-start; 
+            gap: 20px; 
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
+        .page-slide.is-swiping { transition: none; }
+
+        /* --- 內容樣式 --- */
+        p { 
+            font-size: clamp(1.1rem, 2.2vmin, 1.25rem); 
+            line-height: 1.8; 
+            text-align: justify; 
+            margin: 0;
+            overflow-wrap: break-word; /* 防止長單詞溢出 */
+            hyphens: auto;
+        }
+        
+        h1 { font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 10px; }
+        h2 { font-size: 1.5rem; font-weight: 500; margin: 15px 0 10px 0; border-bottom: 1px solid var(--accent-color); padding-bottom: 5px; }
+        h3 { font-size: 1.3rem; font-weight: 500; margin: 10px 0; opacity: 0.9; }
+        .meta { text-align: center; font-size: 0.9rem; opacity: 0.6; font-family: var(--ui-font); margin-bottom: 30px; }
+
+        figure { 
+            margin: 0; padding: 0; width: 100%; 
+            display: flex; flex-direction: column; align-items: center;
+        }
+        figure img { 
+            max-width: 100%; 
+            max-height: 50vh; /* 限制高度，避免一張圖佔滿 */
+            height: auto; 
+            display: block; 
+            border-radius: 4px; 
+            transition: transform 0.3s;
+            object-fit: contain;
+        }
+        figure img.clickable:hover { transform: scale(1.01); }
+        figcaption { font-size: 0.85rem; font-family: var(--ui-font); text-align: center; opacity: 0.7; margin-top: 8px; }
+
+        /* 圖片加載相關 */
+        .img-container {
+            width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;
+            background-color: var(--placeholder-bg); border-radius: 4px; position: relative;
+            overflow: hidden;
+        }
+        .img-container.loaded { background: transparent; min-height: auto; }
+        .img-container.error { border: 1px dashed var(--text-color); }
+        
+        .retry-btn {
+            background: none; border: 1px solid var(--text-color); color: var(--text-color);
+            padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;
+            cursor: none; opacity: 0.7; transition: 0.3s;
+        }
+        .retry-btn:hover { opacity: 1; background: var(--text-color); color: var(--bg-color); }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .loading-pulse { animation: pulse 1.5s infinite ease-in-out; }
+
+        /* --- 底部導航 --- */
+        .pagination { 
+            position: fixed; bottom: 0; width: 100%; height: 60px;
+            display: flex; justify-content: center; align-items: center; gap: 40px; 
+            font-family: var(--ui-font); font-size: 0.9rem; 
+            background: linear-gradient(to top, var(--bg-color) 20%, transparent);
+            z-index: 50;
+        }
+        .nav-btn { border: none; background: none; color: inherit; font-family: inherit; opacity: 0.3; padding: 10px; transition: 0.3s; }
+        .nav-btn:hover { opacity: 1; }
+        .nav-btn:disabled { opacity: 0; pointer-events: none; }
+        .page-indicator { opacity: 0.5; font-variant-numeric: tabular-nums; letter-spacing: 1px;}
+
+        /* --- 目錄 (Modal) --- */
+        .toc-modal {
+            position: fixed; top: 0; right: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
+            z-index: 200; opacity: 0; pointer-events: none;
+            transition: 0.3s; display: flex; justify-content: flex-end;
+        }
+        .toc-modal.open { opacity: 1; pointer-events: auto; }
+        .toc-content {
+            width: 300px; max-width: 80%; height: 100%; background: var(--bg-color);
+            padding: 60px 30px; box-sizing: border-box; overflow-y: auto;
+            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .toc-modal.open .toc-content { transform: translateX(0); }
+        .toc-item {
+            font-family: var(--ui-font); font-size: 1rem; opacity: 0.6;
+            padding: 10px 0; border-bottom: 1px solid var(--placeholder-bg);
+            transition: 0.2s;
+        }
+        .toc-item:hover { opacity: 1; padding-left: 10px; }
+        .toc-item.level-2 { padding-left: 20px; font-size: 0.9rem; }
+
+        /* --- Lightbox --- */
+        .lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 500;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        .lightbox.active { opacity: 1; pointer-events: auto; }
+        .lightbox img { max-width: 95%; max-height: 95%; box-shadow: 0 0 20px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s; }
+        .lightbox.active img { transform: scale(1); }
+
+        /* --- 正在返回 提示 --- */
+        .return-hint {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 1.5rem; font-weight: 500; color: var(--text-color);
+            opacity: 0; pointer-events: none; z-index: 300;
+            text-shadow: 0 0 10px var(--accent-color);
+            transition: opacity 0.3s; letter-spacing: 5px;
+            white-space: nowrap;
+        }
+        .return-hint.visible { opacity: 1; animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { text-shadow: 0 0 5px var(--accent-color); } to { text-shadow: 0 0 20px var(--accent-color), 0 0 10px var(--text-color); } }
+
+        /* --- Mobile Tweaks --- */
+        @media (max-width: 768px) { 
+            #custom-cursor { display: none; }
+            .page-slide { padding: 60px 20px 80px 20px; gap: 15px; }
+            p { font-size: 1.15rem; }
+            .toc-content { width: 85%; }
+        }
+    </style>
+</head>
+<body class="js-loading">
+    <div id="custom-cursor"></div>
+    
+    <!-- 返回按鈕 -->
+    <button class="icon-btn back-arrow interactable" onclick="handleBackAction()" aria-label="返回列表">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    
+    <!-- 目錄按鈕 -->
+    <button class="icon-btn toc-btn interactable" onclick="toggleToc()" aria-label="目錄">
+        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </button>
+
+    <!-- 主閱讀區 -->
+    <main class="reader-viewport" id="viewport" aria-live="polite"></main>
+
+    <!-- 分頁導航 -->
+    <nav class="pagination">
+        <button class="nav-btn interactable" id="prev-btn">PREV</button>
+        <div class="page-indicator" id="page-num">Loading...</div>
+        <button class="nav-btn interactable" id="next-btn">NEXT</button>
+    </nav>
+
+    <!-- 目錄 Modal -->
+    <div class="toc-modal" id="toc-modal" onclick="toggleToc()">
+        <div class="toc-content" id="toc-list" onclick="event.stopPropagation()">
+            <!-- JS 生成 -->
+        </div>
+    </div>
+
+    <!-- Lightbox -->
+    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="Zoomed View">
+    </div>
+
+    <!-- 返回提示 -->
+    <div class="return-hint" id="return-hint">正在返回...</div>
+
+<script>
+    // --- 狀態管理 ---
+    const state = {
+        articleId: new URLSearchParams(window.location.search).get('id'),
+        content: null,
+        pages: [], // 存放 DOM 元素
+        tocData: [], // { text, pageIndex, level }
+        currentPage: 0,
+        totalPages: 0,
+        isSwiping: false,
+        touchStartX: 0,
+        touchMoveX: 0,
+        overscrollThreshold: 100, // 觸發返回的滑動距離
+        isLoading: true
+    };
+
+    // --- DOM 元素 ---
+    const el = {
+        viewport: document.getElementById('viewport'),
+        pageNum: document.getElementById('page-num'),
+        prevBtn: document.getElementById('prev-btn'),
+        nextBtn: document.getElementById('next-btn'),
+        tocModal: document.getElementById('toc-modal'),
+        tocList: document.getElementById('toc-list'),
+        lightbox: document.getElementById('lightbox'),
+        lightboxImg: document.getElementById('lightbox-img'),
+        returnHint: document.getElementById('return-hint'),
+        cursor: document.getElementById('custom-cursor'),
+        body: document.body
+    };
+
+    // --- 初始化 ---
+    async function init() {
+        try {
+            if (!state.articleId) throw new Error("Missing Article ID");
+            state.content = await fetchArticleContent(state.articleId);
+            document.title = state.content.title;
+            
+            // 初始佈局計算（異步執行以防卡頓）
+            await layoutArticle(state.content);
+            
+            // 綁定事件
+            bindEvents();
+            
+            // 移除 Loading
+            el.body.classList.remove('js-loading');
+            state.isLoading = false;
+        } catch (err) {
+            console.error(err);
+            el.viewport.innerHTML = `<div style="text-align:center; padding-top:100px;">
+                <h2>載入失敗</h2><p>${err.message}</p>
+                <button class="retry-btn interactable" onclick="location.reload()">重新整理</button>
+            </div>`;
+            el.body.classList.remove('js-loading');
+        }
+    }
+
+    // --- 數據獲取 ---
+    async function fetchArticleContent(id) {
+        // 模擬數據獲取，實際應為 fetch(`./article/${id}.json`)
+        // 這裡為了演示，如果沒有 fetch 到文件，返回測試數據
+        try {
+            const res = await fetch(`./article/${id}.json`);
+            if (!res.ok) throw new Error("File not found");
+            return await res.json();
+        } catch (e) {
+             console.warn("Using mock data due to fetch error:", e);
+             // 如果你是本地測試沒有服務器，這裡會使用 Prompt 提供的 Mock Data
+             return {
+                "title": "幾何美學與影像",
+                "date": "2023.11.02",
+                "paragraphs": [
+                    "這是第一段內容。在數字的荒原裡，我們試圖用線條和角度構建一座燈塔。現在，這個世界也加入了影像的維度。",
+                    { "type": "header", "level": 1, "text": "第一章：光影結構" },
+                    { 
+                        "type": "image", 
+                        "src": "https://images.unsplash.com/photo-1593111985590-3b9c612b7f5e?q=80&w=2592&auto=format&fit=crop", 
+                        "alt": "建築內部", 
+                        "caption": "光線穿過幾何結構，構成空間的詩意。" 
+                    },
+                    "設計不應該喧賓奪主，而應該退居幕後。白色背景，黑色文字，沒有多餘的裝飾。每一個像素的間距都是為了呼吸而留。",
+                    { "type": "header", "level": 2, "text": "1.1 細節的意義" },
+                    "這是第四段測試長文本。當網絡不好的時候，Moment 頁面的圖片會顯示加載動畫，而在文章頁面，所有的文字都是即時渲染的。",
+                    "我們會逝去，但影像與文字會留下來。翻頁閱讀讓思緒有了停頓的間隙，不再是無止盡的滑動。",
+                    "測試超長段落用以觀察分頁效果。這段文字應該足夠長，長到需要換行。我們繼續寫作，繼續記錄，為了那些稍縱即逝的靈感。在響應式設計中，文字的流動性是至關重要的。確保它在任何屏幕上都易於閱讀。",
+                    { "type": "header", "level": 1, "text": "結語" },
+                    "最後一段。保持熱愛，奔赴山海。純粹的記錄，有時候比圖像更有力量。"
+                ]
+            };
+        }
+    }
+
+    // --- 核心排版引擎 (分片處理) ---
+    async function layoutArticle(data) {
+        el.viewport.innerHTML = '';
+        state.pages = [];
+        state.tocData = [];
+        
+        // 1. 創建標題頁
+        const titlePage = createPage(0);
+        titlePage.innerHTML = `<div class="title-slide"><h1>${data.title}</h1><div class="meta">${data.date}</div></div>`;
+        state.pages.push(titlePage);
+        el.viewport.appendChild(titlePage);
+
+        // 2. 準備測量容器
+        let pageIndex = 1;
+        let currentPageDiv = createPage(pageIndex);
+        state.pages.push(currentPageDiv);
+        el.viewport.appendChild(currentPageDiv); // 先掛載以獲取樣式
+        
+        // 獲取實際可用高度 (減去 padding)
+        const computedStyle = getComputedStyle(currentPageDiv);
+        const vHeight = el.viewport.clientHeight;
+        const pTop = parseFloat(computedStyle.paddingTop);
+        const pBottom = parseFloat(computedStyle.paddingBottom);
+        const pGap = parseFloat(computedStyle.gap) || 20;
+        const contentMaxHeight = vHeight - pTop - pBottom;
+
+        // 隱藏的測量 Div，寬度必須嚴格等於 page-slide 的內容寬度
+        const measureDiv = document.createElement('div');
+        measureDiv.style.cssText = `
+            position: absolute; visibility: hidden; pointer-events: none; top:0; left:0;
+            width: ${currentPageDiv.clientWidth - (parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight))}px;
+            font-family: ${computedStyle.fontFamily};
+            font-size: ${computedStyle.fontSize};
+            line-height: ${computedStyle.lineHeight};
+        `;
+        document.body.appendChild(measureDiv);
+
+        let currentH = 0;
+
+        // 3. 遍歷內容
+        for (let i = 0; i < data.paragraphs.length; i++) {
+            const item = data.paragraphs[i];
+            let element = null;
+            let elHeight = 0;
+            let isHeader = false;
+
+            // 構建 DOM 元素
+            if (typeof item === 'string') {
+                element = document.createElement('p');
+                element.className = 'interactable-text';
+                element.innerText = item;
+                element.onclick = () => copyText(element);
+            } else if (item.type === 'header') {
+                element = document.createElement(item.level === 1 ? 'h2' : 'h3');
+                element.innerText = item.text;
+                isHeader = true;
+                // 記錄 TOC
+                state.tocData.push({ text: item.text, pageIndex: pageIndex, level: item.level });
+            } else if (item.type === 'image') {
+                element = createFigure(item);
+            }
+
+            if (!element) continue;
+
+            // 測量高度
+            measureDiv.innerHTML = '';
+            measureDiv.appendChild(element.cloneNode(true));
+            // 對於圖片，需要預設高度或等待（這裡我們給容器預設樣式高度進行估算）
+            // 如果是圖片組件，我們主要依賴 CSS 限制 max-height，這裡取元素 clientHeight
+            elHeight = measureDiv.offsetHeight; 
+            
+            // 修正：如果元素是圖片且還未加載，offsetHeight 可能是 0 或僅 placeholder 高度
+            if (item.type === 'image') elHeight = 250 + 30; // 估算值：placeholder + caption + gap
+
+            // 分頁判斷
+            if (currentH + elHeight > contentMaxHeight && currentH > 0) {
+                // 換頁
+                pageIndex++;
+                currentH = 0;
+                currentPageDiv = createPage(pageIndex);
+                state.pages.push(currentPageDiv);
+                el.viewport.appendChild(currentPageDiv);
+                // 如果剛剛那個 Header 被擠到下一頁了，更新 TOC
+                if (isHeader) {
+                    state.tocData[state.tocData.length - 1].pageIndex = pageIndex;
+                }
+                
+                // 性能優化：每處理幾段稍微讓出線程，讓 UI 響應
+                if (pageIndex % 2 === 0) await new Promise(r => requestAnimationFrame(r));
+            }
+
+            currentPageDiv.appendChild(element);
+            currentH += (elHeight + pGap);
+        }
+
+        document.body.removeChild(measureDiv);
+        state.totalPages = state.pages.length;
+        
+        generateToc();
+        updatePager();
+    }
+
+    // --- 元件生成 ---
+    function createPage(index) {
+        const div = document.createElement('div');
+        div.className = 'page-slide';
+        if (index === 0) div.classList.add('active');
+        return div;
+    }
+
+    function createFigure(item) {
+        const figure = document.createElement('figure');
+        const container = document.createElement('div');
+        container.className = 'img-container loading-pulse interactable';
+        
+        // 創建圖片元素但不立即設置 src (除非在前幾頁)
+        const img = document.createElement('img');
+        img.alt = item.alt || 'image';
+        img.className = 'interactable';
+        img.onclick = () => openLightbox(img.src);
+        
+        // 錯誤處理按鈕
+        const retryBtn = document.createElement('button');
+        retryBtn.className = 'retry-btn interactable';
+        retryBtn.innerText = '重試載入';
+        retryBtn.style.display = 'none';
+        retryBtn.onclick = (e) => {
+            e.stopPropagation();
+            loadImage(img, item.src, container, retryBtn);
+        };
+
+        container.appendChild(img);
+        container.appendChild(retryBtn);
+        figure.appendChild(container);
+
+        if (item.caption) {
+            const cap = document.createElement('figcaption');
+            cap.innerText = item.caption;
+            figure.appendChild(cap);
+        }
+
+        // 立即加載圖片的邏輯
+        loadImage(img, item.src, container, retryBtn);
+
+        return figure;
+    }
+
+    function loadImage(img, src, container, retryBtn) {
+        container.classList.remove('error');
+        container.classList.add('loading-pulse');
+        retryBtn.style.display = 'none';
+        img.style.opacity = '0';
+
+        const temp = new Image();
+        temp.onload = () => {
+            img.src = src;
+            img.style.opacity = '1';
+            container.classList.remove('loading-pulse');
+            container.classList.add('loaded');
+        };
+        temp.onerror = () => {
+            container.classList.remove('loading-pulse');
+            container.classList.add('error');
+            retryBtn.style.display = 'block';
+        };
+        temp.src = src;
+    }
+
+    function generateToc() {
+        el.tocList.innerHTML = `
+            <div style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">目錄</div>
+            <div class="toc-item interactable" onclick="goToPage(0)">首頁</div>
+        `;
+        state.tocData.forEach(item => {
+            const div = document.createElement('div');
+            div.className = `toc-item interactable level-${item.level}`;
+            div.innerText = item.text;
+            div.onclick = () => {
+                goToPage(item.pageIndex);
+                toggleToc();
+            };
+            el.tocList.appendChild(div);
+        });
+        bindCursor(); // Re-bind for new elements
+    }
+
+    // --- 導航控制 ---
+    function goToPage(index) {
+        if (index < 0 || index >= state.totalPages) return;
+        
+        const current = state.pages[state.currentPage];
+        const next = state.pages[index];
+
+        // 簡單切換，可加入方向判斷做滑動動畫
+        current.classList.remove('active');
+        current.style.transform = index > state.currentPage ? 'translateX(-30px)' : 'translateX(30px)';
+        current.style.opacity = '0';
+        
+        next.classList.add('active');
+        next.style.transform = 'translateX(0)';
+        next.style.opacity = '1'; // 確保顯示
+
+        state.currentPage = index;
+        updatePager();
+        
+        // 重置所有非當前頁的樣式
+        setTimeout(() => {
+            state.pages.forEach((p, i) => {
+                if (i !== index) {
+                    p.classList.remove('active');
+                    p.style.opacity = '0';
+                }
+            });
+        }, 400);
+    }
+
+    function updatePager() {
+        el.pageNum.innerText = `${state.currentPage + 1} / ${state.totalPages}`;
+        el.prevBtn.disabled = state.currentPage === 0;
+        el.nextBtn.disabled = state.currentPage === state.totalPages - 1;
+        el.prevBtn.style.opacity = state.currentPage === 0 ? 0.1 : 1;
+        el.nextBtn.style.opacity = state.currentPage === state.totalPages - 1 ? 0.1 : 1;
+    }
+
+    function handleBackAction() {
+        // 顯示正在返回動畫
+        el.returnHint.innerText = "正在返回...";
+        el.returnHint.classList.add('visible');
+        document.body.style.opacity = 0;
+        setTimeout(() => {
+            window.location.href = './articles.html';
+        }, 600);
+    }
+
+    // --- 交互事件綁定 ---
+    function bindEvents() {
+        // 按鈕點擊
+        el.prevBtn.onclick = () => goToPage(state.currentPage - 1);
+        el.nextBtn.onclick = () => goToPage(state.currentPage + 1);
+
+        // 鍵盤
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') goToPage(state.currentPage - 1);
+            if (e.key === 'ArrowRight') goToPage(state.currentPage + 1);
+            if (e.key === 'Escape') {
+                if (el.tocModal.classList.contains('open')) toggleToc();
+                if (el.lightbox.classList.contains('active')) closeLightbox();
+            }
+        });
+
+        // 觸控滑動 & Overscroll
+        let startX = 0, currentX = 0;
+        
+        el.viewport.addEventListener('touchstart', e => {
+            startX = e.touches[0].clientX;
+            state.isSwiping = true;
+            state.pages[state.currentPage].classList.add('is-swiping');
+        }, { passive: true });
+
+        el.viewport.addEventListener('touchmove', e => {
+            if (!state.isSwiping) return;
+            currentX = e.touches[0].clientX;
+            const diff = currentX - startX;
+            const isFirst = state.currentPage === 0;
+            const isLast = state.currentPage === state.totalPages - 1;
+
+            // 正常翻頁預覽
+            if ((!isFirst && diff > 0) || (!isLast && diff < 0)) {
+                 state.pages[state.currentPage].style.transform = `translateX(${diff}px)`;
+            }
+            
+            // Overscroll Logic (邊緣拉動)
+            if ((isFirst && diff > 0) || (isLast && diff < 0)) {
+                // 增加阻尼感
+                const dampened = diff * 0.4; 
+                state.pages[state.currentPage].style.transform = `translateX(${dampened}px)`;
+                
+                // 顯示提示
+                if (Math.abs(diff) > state.overscrollThreshold) {
+                    el.returnHint.classList.add('visible');
+                } else {
+                    el.returnHint.classList.remove('visible');
+                }
+            }
+        }, { passive: true });
+
+        el.viewport.addEventListener('touchend', e => {
+            if (!state.isSwiping) return;
+            state.isSwiping = false;
+            state.pages[state.currentPage].classList.remove('is-swiping');
+            const diff = currentX - startX;
+            const isFirst = state.currentPage === 0;
+            const isLast = state.currentPage === state.totalPages - 1;
+
+            // 觸發返回
+            if (((isFirst && diff > state.overscrollThreshold) || (isLast && diff < -state.overscrollThreshold))) {
+                handleBackAction();
+                return;
+            }
+
+            // 隱藏提示
+            el.returnHint.classList.remove('visible');
+
+            // 翻頁判定
+            if (Math.abs(diff) > 50) {
+                if (diff > 0 && !isFirst) goToPage(state.currentPage - 1);
+                else if (diff < 0 && !isLast) goToPage(state.currentPage + 1);
+                else resetPagePosition();
+            } else {
+                resetPagePosition();
+            }
+        });
+
+        // 鼠標跟隨
+        if (!window.matchMedia("(hover: none)").matches) {
+            document.addEventListener('mousemove', e => {
+                el.cursor.style.left = e.clientX + 'px';
+                el.cursor.style.top = e.clientY + 'px';
+            });
+            document.addEventListener('mousedown', () => el.cursor.classList.add('clicking'));
+            document.addEventListener('mouseup', () => el.cursor.classList.remove('clicking'));
+            bindCursor();
+        }
+    }
+
+    function resetPagePosition() {
+        state.pages[state.currentPage].style.transform = 'translateX(0)';
+    }
+
+    // --- 輔助功能 ---
+    function toggleToc() {
+        el.tocModal.classList.toggle('open');
+    }
+
+    function openLightbox(src) {
+        el.lightboxImg.src = src;
+        el.lightbox.classList.add('active');
+    }
+
+    function closeLightbox() {
+        el.lightbox.classList.remove('active');
+    }
+
+    async function copyText(element) {
+        try {
+            await navigator.clipboard.writeText(element.innerText);
+            // 可選：顯示一個小提示
+            const originalColor = element.style.color;
+            element.style.color = 'var(--accent-color)';
+            setTimeout(() => element.style.color = '', 200);
+        } catch (err) {}
+    }
+
+    function bindCursor() {
+        document.querySelectorAll('.interactable, .interactable-text').forEach(item => {
+            item.onmouseenter = () => el.cursor.classList.add('hollow');
+            item.onmouseleave = () => el.cursor.classList.remove('hollow');
+        });
+    }
+
+    // 啟動
+    window.onload = init;
+
+</script>
+</body>
+</html>
