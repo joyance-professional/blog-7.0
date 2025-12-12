@@ -2,623 +2,204 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Article Reader</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Article</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; --placeholder-bg: #f0f0f0; --menu-bg: rgba(255,255,255,0.95); }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; --menu-bg: rgba(0,0,0,0.9); } }
-        
-        /* 強制全局隱藏系統鼠標，僅顯示自定義游標 */
-        html, body, * { cursor: none !important; box-sizing: border-box; }
-        
-        /* 手機版恢復默認觸控行為 (防止點擊失效)，但依然隱藏游標 */
-        @media (hover: none) or (max-width: 768px) { 
-            html, body, * { cursor: auto !important; } 
-        }
-        
+        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; --placeholder-bg: #f0f0f0; }
+        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } }
         body.js-loading { opacity: 0; visibility: hidden; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; transition: opacity 0.8s ease; user-select: none; -webkit-user-select: none; }
-
-        /* 自定義游標樣式 */
-        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; will-change: transform, left, top; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; transition: opacity 0.8s ease; }
+        * { cursor: none !important; }
+        @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s, border 0.2s; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); transform: rotate(45deg) scale(1.2); }
         #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--accent-color); }
-
-        /* UI 層 */
-        .ui-layer { position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 0; pointer-events: none; }
-        .interactable { pointer-events: auto; }
-        
-        .back-arrow { position: fixed; top: 30px; left: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; }
+        .back-arrow { position: fixed; top: 30px; left: 30px; opacity: 0.5; z-index: 100; transition: 0.3s; border: none; background: none; padding: 0; }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
-        
-        /* 目錄按鈕 (默認 display: none，JS 判斷後顯示) */
-        .toc-btn { position: fixed; top: 30px; right: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; display: none; flex-direction: column; gap: 4px; align-items: flex-end; }
-        .toc-btn:hover { opacity: 1; }
-        .toc-line { height: 2px; background: var(--text-color); transition: 0.3s; }
-        .toc-line:nth-child(1) { width: 24px; } .toc-line:nth-child(2) { width: 16px; } .toc-line:nth-child(3) { width: 20px; }
-
-        /* 閱讀視口 */
         .reader-viewport { flex: 1; width: 100%; max-width: 800px; margin: 80px auto; position: relative; touch-action: pan-y; }
-        .page-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity 0.4s ease, transform 0.4s ease; display: flex; flex-direction: column; justify-content: center; gap: 25px; }
+        .page-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity 0.4s ease, transform 0.4s ease; display: flex; flex-direction: column; justify-content: center; gap: 25px; box-sizing: border-box; }
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
         .page-slide.is-swiping { transition: none; }
-        
-        /* 文本樣式 */
-        p { font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: left center; margin: 0; word-break: break-word; overflow-wrap: break-word; }
+        p { font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: left center; }
         p:hover { transform: scale(1.02); }
         p:active { transform: scale(0.98); }
-        
-        h1 { font-size: 2.2rem; font-weight: 500; text-align: center; margin-bottom: 20px; margin-top: 0; }
-        h2 { font-size: 1.5rem; margin-top: 10px; border-left: 3px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
-        .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; text-align: center; margin-top: 10px; }
-
-        /* 圖片樣式 */
-        figure { margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        .image-wrapper { width: 100%; display: flex; justify-content: center; position: relative; min-height: 100px; }
-        .image-wrapper img { max-width: 100%; max-height: 55vh; width: auto; height: auto; display: block; border-radius: 4px; transition: transform 0.3s; object-fit: contain; }
-        .image-wrapper:hover img { transform: scale(1.01); }
-        figcaption { font-size: 0.9rem; font-family: sans-serif; text-align: center; opacity: 0.7; margin-top: 10px; width: 100%; }
-        
-        /* Loading & Error */
-        .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; display: flex; align-items: center; justify-content: center; }
+        figure { margin: 0; padding: 0; }
+        figure img { max-width: 100%; height: auto; display: block; border-radius: 4px; }
+        figcaption { font-size: 0.9rem; font-family: sans-serif; text-align: center; opacity: 0.7; margin-top: 10px; }
+        .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; margin: auto; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .retry-btn { background: none; border: 1px solid var(--text-color); color: var(--text-color); padding: 8px 16px; font-family: sans-serif; opacity: 0.7; transition: 0.2s; }
-        .retry-btn:hover { opacity: 1; background: var(--text-color); color: var(--bg-color); }
-
-        /* 分頁導航 */
-        .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; z-index: 100; }
+        .title-slide { text-align: center; }
+        .title-slide h1 { font-size: 2.2rem; font-weight: 500; margin-bottom: 20px; }
+        .title-slide .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; }
+        .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; user-select: none; }
         .nav-btn { opacity: 0.3; padding: 10px; transition: 0.3s; border: none; background: none; color: inherit; font-family: inherit; font-size: inherit; }
         .nav-btn:hover, .nav-btn:focus { opacity: 1; outline: none; }
-        .nav-btn:disabled { opacity: 0.05; pointer-events: none; }
-        .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; min-width: 60px; text-align: center; }
-
-        /* 目錄遮罩 */
-        .toc-overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; }
-        .toc-overlay.open { opacity: 1; pointer-events: auto; }
-        .toc-panel { position: absolute; top: 0; right: 0; width: 300px; max-width: 80%; height: 100%; background: var(--menu-bg); transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 80px 30px; overflow-y: auto; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 20px; }
-        .toc-overlay.open .toc-panel { transform: translateX(0); }
-        .toc-item { font-size: 1.1rem; opacity: 0.6; transition: 0.2s; padding: 10px 0; border-bottom: 1px solid var(--placeholder-bg); }
-        .toc-item:hover { opacity: 1; padding-left: 10px; }
-        .toc-item.active { opacity: 1; font-weight: 500; border-left: 2px solid var(--accent-color); padding-left: 10px; border-bottom: none; }
-
-        /* Lightbox */
-        .lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
-        .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 95%; max-height: 95%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s ease; }
-        .lightbox.active img { transform: scale(1); }
-
-        /* 退出提示與動畫 */
-        .exit-hint { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-family: sans-serif; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 500; }
-        .exit-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
-        .exit-overlay.active { opacity: 1; }
-        .exit-text { font-size: 1.5rem; font-weight: 300; letter-spacing: 5px; animation: glow 2s infinite ease-in-out; }
-        @keyframes glow { 0%, 100% { opacity: 0.5; text-shadow: 0 0 5px var(--accent-color); } 50% { opacity: 1; text-shadow: 0 0 20px var(--accent-color); } }
-
-        @media (max-width: 768px) { 
-            #custom-cursor { display: none; } 
-            .reader-viewport { margin: 60px auto 100px; width: 90%; } 
-            .page-slide { padding: 0 10px; gap: 20px; } 
-            .pagination { bottom: 20px; } 
-            h1 { font-size: 1.8rem; }
-            p { text-align: left; } 
-            /* 手機版確保可點擊 */
-            .interactable, .interactable-text, .image-wrapper { cursor: pointer !important; }
-        }
+        .nav-btn:disabled { opacity: 0.1; }
+        .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; }
+        @media (max-width: 768px) { #custom-cursor { display: none; } .reader-viewport { margin: 60px auto 100px; } .page-slide { padding: 0 25px; gap: 20px; } .pagination { bottom: 20px; } }
     </style>
 </head>
 <body class="js-loading">
     <div id="custom-cursor"></div>
-    
-    <div class="ui-layer">
-        <button class="back-arrow interactable" onclick="attemptGoBack(true)" aria-label="返回文章列表">
-            <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-        </button>
-        <button class="toc-btn interactable" id="toc-btn" aria-label="目錄">
-            <div class="toc-line"></div><div class="toc-line"></div><div class="toc-line"></div>
-        </button>
-    </div>
-
-    <main class="reader-viewport" id="viewport" aria-live="polite">
+    <button class="back-arrow interactable" onclick="goBack()" aria-label="返回文章列表">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </button>
+    <main class="reader-viewport" id="viewport" aria-live="polite" aria-atomic="true">
         <div class="loading-placeholder"></div>
     </main>
-
-    <nav class="pagination">
-        <button class="nav-btn interactable" id="prev-btn">PREV</button>
-        <div class="page-indicator" id="page-num">...</div>
-        <button class="nav-btn interactable" id="next-btn">NEXT</button>
+    <nav class="pagination" role="navigation" aria-label="文章分頁">
+        <button class="nav-btn interactable" id="prev-btn" aria-controls="viewport">PREV</button>
+        <div class="page-indicator" id="page-num" aria-live="polite">1 / 1</div>
+        <button class="nav-btn interactable" id="next-btn" aria-controls="viewport">NEXT</button>
     </nav>
 
-    <div class="toc-overlay" id="toc-overlay">
-        <div class="toc-panel" id="toc-list"></div>
-    </div>
+    <script>
+        // --- 核心修改點 1: 此檔案不再包含 articleContent ---
 
-    <div class="lightbox" id="lightbox">
-        <img src="" alt="Zoomed">
-    </div>
+        const viewport = document.getElementById('viewport');
+        const pageNum = document.getElementById('page-num');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const cursor = document.getElementById('custom-cursor');
 
-    <div class="exit-hint" id="exit-hint">再次滑動以返回列表</div>
-    
-    <div class="exit-overlay" id="exit-overlay">
-        <div class="exit-text">RETURNING...</div>
-    </div>
-
-<script>
-    const CONFIG = {
-        paragraphGap: 25,
-        maxImageHeightRatio: 0.55,
-        swipeThreshold: 60,
-        renderChunkSize: 3 // 每次渲染3個元素後暫停，防止卡頓
-    };
-
-    const els = {
-        viewport: document.getElementById('viewport'),
-        pageNum: document.getElementById('page-num'),
-        prevBtn: document.getElementById('prev-btn'),
-        nextBtn: document.getElementById('next-btn'),
-        cursor: document.getElementById('custom-cursor'),
-        tocBtn: document.getElementById('toc-btn'),
-        tocOverlay: document.getElementById('toc-overlay'),
-        tocList: document.getElementById('toc-list'),
-        lightbox: document.getElementById('lightbox'),
-        lightboxImg: document.querySelector('#lightbox img'),
-        exitHint: document.getElementById('exit-hint'),
-        exitOverlay: document.getElementById('exit-overlay')
-    };
-
-    let state = {
-        currentPage: 0,
-        totalPages: 0,
-        pages: [], 
-        toc: [], 
-        isSwiping: false,
-        touchStartX: 0,
-        touchMoveX: 0,
-        exitSwipeStage: 0, // 0:無, 1:提示, 2:退出
-        exitTimer: null,
-        isLayoutComplete: false
-    };
-
-    // --- 數據獲取 ---
-    async function fetchArticleContent(id) {
-        if (!id) {
-            console.warn("無 ID，請確保 URL 包含 ?id=xxx");
-        }
-        try {
-            // 這裡請根據您的實際文件路徑修改
-            const response = await fetch(`./article/${id}.json`);
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return await response.json();
-        } catch (error) {
-            console.error("Fetch error:", error);
-            throw error;
-        }
-    }
-
-    async function initialize() {
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const articleId = params.get('id'); 
-            
-            const content = await fetchArticleContent(articleId);
-            await document.fonts.ready;
-            
-            setupInteraction();
-            await startLayoutEngine(content);
-            
-            // 防抖 Resize
-            window.addEventListener('resize', debounce(() => location.reload(), 500));
-            
-        } catch (error) {
-            console.error(error);
-            els.viewport.innerHTML = `<p style="text-align:center; padding-top:50px;">載入失敗。<br><button class="retry-btn interactable" onclick="location.reload()">點擊重試</button></p>`;
-        } finally {
-            document.body.classList.remove('js-loading');
-        }
-    }
-
-    // --- 排版引擎 ---
-    async function startLayoutEngine(content) {
-        document.title = content.title;
-        els.viewport.innerHTML = '';
-        state.pages = [];
-        state.toc = [];
-        state.currentPage = 0;
+        let currentPage = 0, totalPages = 0, pages = [];
+        let touchStartX = 0, touchMoveX = 0, isSwiping = false;
         
-        // 1. 首頁
-        const titlePage = createPage(0);
-        titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta">${content.date}</div>`;
-        addPage(titlePage);
-
-        // 2. 測量環境 (精確計算寬度以適配圖片)
-        const tempPage = createPage(0);
-        document.body.appendChild(tempPage);
-        const pageStyle = getComputedStyle(tempPage);
-        const contentWidth = els.viewport.clientWidth - (parseFloat(pageStyle.paddingLeft) + parseFloat(pageStyle.paddingRight));
-        const availableHeight = els.viewport.clientHeight - (parseFloat(pageStyle.paddingTop) + parseFloat(pageStyle.paddingBottom));
-        document.body.removeChild(tempPage);
-        
-        const measureBox = document.createElement('div');
-        measureBox.style.cssText = `position:absolute; visibility:hidden; width:${contentWidth}px; top:0; left:0; z-index:-1; padding: 0; word-break: break-word; overflow-wrap: break-word;`;
-        document.body.appendChild(measureBox);
-
-        // 3. 逐段處理
-        let currentPageIdx = 1;
-        let currentPageDiv = createPage(currentPageIdx);
-        let currentHeight = 0;
-        let tempElements = [];
-
-        function commitPage() {
-            if (tempElements.length > 0) {
-                tempElements.forEach(el => currentPageDiv.appendChild(el));
-                addPage(currentPageDiv);
-                tempElements = [];
+        // --- 核心修改點 2: 新增一個函數來獲取文章數據 ---
+        async function fetchArticleContent(id) {
+            if (!id) {
+                viewport.innerHTML = `<p style="text-align: center;">錯誤：未在連結中指定文章 ID。</p>`;
+                throw new Error("Article ID is missing.");
             }
-            currentPageIdx++;
-            currentPageDiv = createPage(currentPageIdx);
-            currentHeight = 0;
-            updateNav(); 
+            try {
+                // 根據 ID 構建 JSON 檔案的路徑
+                const response = await fetch(`./article/${id}.json`);
+                if (!response.ok) {
+                    throw new Error(`找不到文章檔案 (HTTP ${response.status})`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.error("無法載入文章:", error);
+                viewport.innerHTML = `<p style="text-align: center;">載入文章失敗。請檢查文章 ID 是否正確。</p>`;
+                throw error;
+            }
         }
 
-        const items = content.paragraphs;
-        
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            let element = null;
-            let itemHeight = 0;
+        async function layoutArticle(articleContent) {
+            document.title = articleContent.title;
+            viewport.innerHTML = `<div class="loading-placeholder" style="margin: auto;"></div>`;
+            pages = []; currentPage = 0;
+            const viewportHeight = viewport.clientHeight;
+            if (viewportHeight <= 0) return;
 
-            // 異步分塊
-            if (i % CONFIG.renderChunkSize === 0 && i > 0) await new Promise(r => setTimeout(r, 0));
+            const titlePage = createPageDiv(0, true);
+            titlePage.innerHTML = `<h1>${articleContent.title}</h1><div class="meta">${articleContent.date}</div>`;
+            pages.push(titlePage);
 
-            if (typeof item === 'string') {
-                element = document.createElement('p');
-                element.className = 'interactable-text';
-                element.innerText = item;
-                element.onclick = (e) => { e.stopPropagation(); copyText(element); };
-
-                measureBox.appendChild(element);
-                itemHeight = element.offsetHeight;
-                measureBox.removeChild(element);
-                
-                if (currentHeight + itemHeight + CONFIG.paragraphGap > availableHeight) commitPage();
-                
-                tempElements.push(element);
-                currentHeight += itemHeight + CONFIG.paragraphGap;
-
-            } else if (item.type === 'header') {
-                element = document.createElement(`h${Math.min(item.level + 1, 3)}`);
-                element.innerText = item.text;
-                element.className = 'interactable-text';
-                
-                measureBox.appendChild(element);
-                itemHeight = element.offsetHeight;
-                measureBox.removeChild(element);
-
-                if (currentHeight + itemHeight + CONFIG.paragraphGap + 100 > availableHeight) commitPage();
-
-                state.toc.push({ text: item.text, pageIndex: currentPageIdx });
-                tempElements.push(element);
-                currentHeight += itemHeight + CONFIG.paragraphGap;
-
-            } else if (item.type === 'image') {
-                const wrapper = document.createElement('figure');
-                wrapper.className = 'image-wrapper interactable';
-                
-                const placeholder = document.createElement('div');
-                placeholder.className = 'loading-placeholder';
-                wrapper.appendChild(placeholder);
-                
-                // *** 關鍵修復：鎖定當前圖片 Src，防止引用錯誤 ***
-                const currentSrc = item.src;
-
-                // 等待圖片加載以獲取高度
-                const img = new Image();
-                let finalHeight = 250;
-                
-                try {
-                    await new Promise((resolve) => {
-                        img.onload = () => {
-                            const ratio = img.naturalHeight / img.naturalWidth;
-                            let calcHeight = contentWidth * ratio;
-                            const maxH = els.viewport.clientHeight * CONFIG.maxImageHeightRatio;
-                            
-                            if (calcHeight > maxH) {
-                                calcHeight = maxH;
-                                img.style.objectFit = 'contain';
-                                img.style.height = `${maxH}px`;
-                            } else {
-                                img.style.height = 'auto'; // 自適應
-                            }
-                            finalHeight = calcHeight;
-                            resolve();
-                        };
-                        img.onerror = resolve; // 失敗也繼續，避免卡死
-                        img.src = currentSrc;
-                    });
-                    
-                    wrapper.replaceChild(img, placeholder);
-                    if (item.caption) {
-                        const cap = document.createElement('figcaption');
-                        cap.innerText = item.caption;
-                        wrapper.appendChild(cap);
-                        finalHeight += 30;
+            let contentPageIndex = 1, currentPageDiv = createPageDiv(1);
+            pages.push(currentPageDiv);
+            
+            const pageStyle = getComputedStyle(currentPageDiv);
+            const paragraphGap = parseFloat(pageStyle.gap) || 25;
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = `visibility: hidden; position: absolute; width: ${viewport.clientWidth - (parseFloat(pageStyle.paddingLeft) + parseFloat(pageStyle.paddingRight))}px;`;
+            document.body.appendChild(tempDiv);
+            
+            let currentHeight = 0;
+            try {
+                for (const item of articleContent.paragraphs) {
+                    let element;
+                    if (typeof item === 'string') {
+                        element = document.createElement('p');
+                        element.className = 'interactable-text';
+                        element.innerText = item;
+                        element.onclick = () => copyText(element);
+                    } else if (item.type === 'image') {
+                        element = document.createElement('figure');
+                        const img = document.createElement('img');
+                        const placeholder = document.createElement('div');
+                        placeholder.className = 'loading-placeholder';
+                        element.appendChild(placeholder);
+                        try {
+                            await new Promise((resolve, reject) => {
+                                img.onload = resolve; img.onerror = reject;
+                                img.src = item.src; img.alt = item.alt || '';
+                            });
+                            element.replaceChild(img, placeholder);
+                        } catch {
+                            element.innerHTML = '<p style="text-align:center;">圖片載入失敗</p>';
+                        }
+                        if (item.caption) {
+                            const figcaption = document.createElement('figcaption');
+                            figcaption.innerText = item.caption;
+                            element.appendChild(figcaption);
+                        }
                     }
-                    
-                    // 綁定點擊事件
-                    wrapper.onclick = (e) => {
-                        e.stopPropagation();
-                        openLightbox(currentSrc);
-                    };
-
-                } catch (e) {
-                    wrapper.innerHTML = '';
-                    const errBtn = document.createElement('button');
-                    errBtn.className = 'retry-btn interactable';
-                    errBtn.innerText = '圖片載入失敗 - 點擊重試';
-                    errBtn.onclick = (e) => { e.stopPropagation(); location.reload(); };
-                    wrapper.appendChild(errBtn);
-                    wrapper.style.height = '150px';
-                    wrapper.style.display = 'flex';
-                    wrapper.style.alignItems = 'center';
-                    wrapper.style.justifyContent = 'center';
-                    finalHeight = 150;
+                    if (!element) continue;
+                    tempDiv.innerHTML = ''; tempDiv.appendChild(element.cloneNode(true));
+                    const elementHeight = tempDiv.clientHeight;
+                    if (currentHeight > 0 && currentHeight + elementHeight + paragraphGap > viewportHeight) {
+                        contentPageIndex++;
+                        currentPageDiv = createPageDiv(contentPageIndex);
+                        pages.push(currentPageDiv);
+                        currentHeight = 0;
+                    }
+                    currentPageDiv.appendChild(element);
+                    currentHeight += (elementHeight + paragraphGap);
                 }
-
-                if (currentHeight + finalHeight + CONFIG.paragraphGap > availableHeight && currentHeight > 50) {
-                    commitPage();
-                }
-                
-                tempElements.push(wrapper);
-                currentHeight += finalHeight + CONFIG.paragraphGap;
+            } finally {
+                document.body.removeChild(tempDiv);
             }
+            viewport.innerHTML = '';
+            pages.forEach(page => viewport.appendChild(page));
+            totalPages = pages.length;
+            updatePage();
+            bindCursorEvents();
         }
-
-        commitPage();
-        document.body.removeChild(measureBox);
-        state.totalPages = state.pages.length;
-        state.isLayoutComplete = true;
         
-        // 智能顯示目錄按鈕
-        if (state.toc.length > 0) {
-            els.tocBtn.style.display = 'flex';
-            generateTOC();
-        } else {
-            els.tocBtn.style.display = 'none';
+        function goBack() {
+            document.body.style.opacity = '0';
+            // 因為 reader.html 在根目錄，所以直接跳轉到 articles.html
+            setTimeout(() => { window.location.href = './articles.html'; }, 500);
         }
 
-        updateNav();
-        bindCursorEvents();
-    }
-
-    // --- 輔助函數 ---
-
-    function createPage(index) {
-        const div = document.createElement('div');
-        div.className = `page-slide ${index === 0 ? 'active' : ''}`;
-        if (index === 0) div.classList.add('title-slide');
-        div.dataset.index = index;
-        return div;
-    }
-
-    function addPage(pageDiv) {
-        state.pages.push(pageDiv);
-        els.viewport.appendChild(pageDiv);
-        state.totalPages = state.pages.length;
-    }
-
-    function changePage(delta) {
-        const target = state.currentPage + delta;
-        if (target >= 0 && target < state.totalPages) {
-            goToPage(target);
+        async function initialize() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const articleId = params.get('id'); // 從 ?id=... 獲取
+                const articleContent = await fetchArticleContent(articleId);
+                await document.fonts.ready;
+                await layoutArticle(articleContent);
+                let resizeTimer;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => layoutArticle(articleContent), 250);
+                });
+                initNavigation();
+                initSwipeNavigation();
+                initCursor();
+            } catch (error) {
+                console.error("初始化失敗:", error);
+            } finally {
+                document.body.classList.remove('js-loading');
+            }
         }
-    }
-
-    // 跳轉頁面 (會重置退出提示狀態)
-    function goToPage(index) {
-        state.currentPage = index;
-        state.pages.forEach((p, i) => {
-            p.classList.toggle('active', i === index);
-            p.style.transform = ''; 
-        });
-        updateNav();
-        state.exitSwipeStage = 0; 
-        els.exitHint.style.opacity = '0';
-    }
-
-    // 邊緣回彈 (不重置退出提示狀態 - 關鍵修復)
-    function snapBack() {
-        const page = state.pages[state.currentPage];
-        if (page) page.style.transform = '';
-    }
-
-    function updateNav() {
-        els.pageNum.innerText = state.isLayoutComplete 
-            ? `${state.currentPage + 1} / ${state.totalPages}` 
-            : `${state.currentPage + 1} / ...`;
         
-        els.prevBtn.disabled = state.currentPage === 0;
-        els.nextBtn.disabled = state.isLayoutComplete && state.currentPage === state.totalPages - 1;
-        
-        document.querySelectorAll('.toc-item').forEach(item => {
-            const idx = parseInt(item.dataset.page);
-            item.classList.toggle('active', idx === state.currentPage);
-        });
-    }
+        // --- 其他輔助函數 (無需修改) ---
+        function createPageDiv(index, isTitle = false) { const div = document.createElement('div'); div.className = 'page-slide'; if (isTitle) div.classList.add('title-slide'); div.dataset.index = index; return div; }
+        function changePage(dir) { const newPage = currentPage + dir; if (newPage >= 0 && newPage < totalPages) { currentPage = newPage; updatePage(); } }
+        function updatePage() { pages.forEach((page, index) => { page.style.transform = ''; page.classList.remove('is-swiping'); page.classList.toggle('active', index === currentPage); }); pageNum.innerText = `${currentPage + 1} / ${totalPages}`; prevBtn.disabled = (currentPage === 0); nextBtn.disabled = (currentPage === totalPages - 1); }
+        async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch (err) { console.error('Failed to copy text: ', err); } }
+        function initNavigation() { prevBtn.addEventListener('click', () => changePage(-1)); nextBtn.addEventListener('click', () => changePage(1)); document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); } else if (e.key === 'ArrowRight') { e.preventDefault(); nextBtn.click(); } }); }
+        function initSwipeNavigation() { if (!window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; viewport.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchMoveX = touchStartX; isSwiping = true; pages[currentPage]?.classList.add('is-swiping'); }, { passive: true }); viewport.addEventListener('touchmove', (e) => { if (!isSwiping) return; touchMoveX = e.touches[0].clientX; const deltaX = touchMoveX - touchStartX; const activePage = pages[currentPage]; if (!activePage) return; let constrainedDeltaX = deltaX; if ((currentPage === 0 && deltaX > 0) || (currentPage === totalPages - 1 && deltaX < 0)) { constrainedDeltaX *= 0.4; } activePage.style.transform = `translateX(${constrainedDeltaX}px)`; }, { passive: true }); viewport.addEventListener('touchend', () => { if (!isSwiping) return; isSwiping = false; const deltaX = touchMoveX - touchStartX; const swipeThreshold = 50; if (deltaX < -swipeThreshold) { changePage(1); } else if (deltaX > swipeThreshold) { changePage(-1); } else { updatePage(); } pages[currentPage]?.classList.remove('is-swiping'); }, { passive: true }); }
+        function initCursor() { if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; document.addEventListener('mousemove', e => { cursor.style.left = `${e.clientX}px`; cursor.style.top = `${e.clientY}px`; }); document.addEventListener('mousedown', () => cursor.classList.add('clicking')); document.addEventListener('mouseup', () => cursor.classList.remove('clicking')); bindCursorEvents(); }
+        function bindCursorEvents() { if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; document.querySelectorAll('.interactable, .interactable-text').forEach(el => { el.addEventListener('mouseenter', () => cursor.classList.add('hollow')); el.addEventListener('mouseleave', () => cursor.classList.remove('hollow')); }); }
 
-    function generateTOC() {
-        els.tocList.innerHTML = '';
-        const homeLink = document.createElement('div');
-        homeLink.className = 'toc-item interactable';
-        homeLink.innerText = "封面";
-        homeLink.dataset.page = 0;
-        homeLink.onclick = () => { goToPage(0); toggleTOC(); };
-        els.tocList.appendChild(homeLink);
-
-        state.toc.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'toc-item interactable';
-            div.innerText = item.text;
-            div.dataset.page = item.pageIndex;
-            div.onclick = () => { goToPage(item.pageIndex); toggleTOC(); };
-            els.tocList.appendChild(div);
-        });
-    }
-
-    async function copyText(el) {
-        try { await navigator.clipboard.writeText(el.innerText); } 
-        catch (err) { console.error('Copy failed: ', err); }
-    }
-
-    // --- 交互邏輯 ---
-
-    function setupInteraction() {
-        els.prevBtn.onclick = () => attemptGoBack(false);
-        els.nextBtn.onclick = () => changePage(1);
-        els.tocBtn.onclick = toggleTOC;
-        els.tocOverlay.onclick = (e) => { if(e.target === els.tocOverlay) toggleTOC(); };
-        els.lightbox.onclick = closeLightbox;
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') els.prevBtn.click();
-            if (e.key === 'ArrowRight') els.nextBtn.click();
-            if (e.key === 'Escape') {
-                if (els.lightbox.classList.contains('active')) closeLightbox();
-                else if (els.tocOverlay.classList.contains('open')) toggleTOC();
-            }
-        });
-
-        if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) {
-            initSwipe();
-        } else {
-            initCursor();
-        }
-    }
-
-    function toggleTOC() { els.tocOverlay.classList.toggle('open'); }
-    function openLightbox(src) { if(src) { els.lightboxImg.src = src; els.lightbox.classList.add('active'); } }
-    function closeLightbox() { els.lightbox.classList.remove('active'); setTimeout(() => els.lightboxImg.src = '', 300); }
-
-    function attemptGoBack(isUiClick) {
-        if (isUiClick) {
-            triggerExitAnim();
-            return;
-        }
-        if (state.currentPage > 0) {
-            changePage(-1);
-        } else {
-            handleExitIntent();
-        }
-    }
-
-    // --- 滑動邏輯 (修復版) ---
-
-    function initSwipe() {
-        els.viewport.addEventListener('touchstart', (e) => {
-            state.touchStartX = e.touches[0].clientX;
-            state.touchMoveX = state.touchStartX;
-            state.isSwiping = true;
-            if(state.pages[state.currentPage]) state.pages[state.currentPage].classList.add('is-swiping');
-        }, { passive: true });
-
-        els.viewport.addEventListener('touchmove', (e) => {
-            if (!state.isSwiping) return;
-            state.touchMoveX = e.touches[0].clientX;
-            const deltaX = state.touchMoveX - state.touchStartX;
-            
-            let constrainedDeltaX = deltaX;
-            if ((state.currentPage === 0 && deltaX > 0) || (state.currentPage === state.totalPages - 1 && deltaX < 0)) {
-                constrainedDeltaX *= 0.3; 
-            }
-            if(state.pages[state.currentPage]) state.pages[state.currentPage].style.transform = `translateX(${constrainedDeltaX}px)`;
-        }, { passive: true });
-
-        els.viewport.addEventListener('touchend', () => {
-            if (!state.isSwiping) return;
-            state.isSwiping = false;
-            const deltaX = state.touchMoveX - state.touchStartX;
-            
-            if(state.pages[state.currentPage]) state.pages[state.currentPage].classList.remove('is-swiping');
-            
-            // 邏輯判斷
-            if (deltaX < -CONFIG.swipeThreshold) {
-                // 左滑 (下一頁)
-                if (state.currentPage < state.totalPages - 1) {
-                    changePage(1); // 換頁
-                } else {
-                    handleExitIntent(); // 邊緣觸發
-                    snapBack(); // 視覺回彈，不重置狀態
-                }
-            } else if (deltaX > CONFIG.swipeThreshold) {
-                // 右滑 (上一頁)
-                if (state.currentPage > 0) {
-                    changePage(-1); // 換頁
-                } else {
-                    handleExitIntent(); // 邊緣觸發
-                    snapBack(); // 視覺回彈，不重置狀態
-                }
-            } else {
-                snapBack(); // 未過閾值，回彈
-            }
-        }, { passive: true });
-    }
-
-    function handleExitIntent() {
-        if (state.exitSwipeStage === 0) {
-            state.exitSwipeStage = 1;
-            els.exitHint.style.opacity = '1';
-            
-            clearTimeout(state.exitTimer);
-            state.exitTimer = setTimeout(() => {
-                state.exitSwipeStage = 0;
-                els.exitHint.style.opacity = '0';
-            }, 3000);
-        } else if (state.exitSwipeStage === 1) {
-            triggerExitAnim();
-        }
-    }
-
-    function triggerExitAnim() {
-        state.exitSwipeStage = 2;
-        els.exitHint.style.opacity = '0';
-        els.exitOverlay.classList.add('active');
-        setTimeout(() => {
-            window.location.href = './articles.html';
-        }, 1200);
-    }
-
-    // --- 自定義游標 ---
-
-    function initCursor() {
-        document.addEventListener('mousemove', e => {
-            els.cursor.style.left = `${e.clientX}px`;
-            els.cursor.style.top = `${e.clientY}px`;
-        });
-        document.addEventListener('mousedown', () => els.cursor.classList.add('clicking'));
-        document.addEventListener('mouseup', () => els.cursor.classList.remove('clicking'));
-        bindCursorEvents();
-    }
-
-    function bindCursorEvents() {
-        if (window.matchMedia("(hover: none)").matches) return;
-        document.querySelectorAll('.interactable, .interactable-text, .toc-item').forEach(el => {
-            el.addEventListener('mouseenter', () => els.cursor.classList.add('hollow'));
-            el.addEventListener('mouseleave', () => els.cursor.classList.remove('hollow'));
-        });
-    }
-
-    function debounce(func, wait) {
-        let timeout;
-        return function(...args) {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(this, args), wait);
-        };
-    }
-
-    window.addEventListener('load', initialize);
-
-</script>
+        window.addEventListener('load', initialize);
+    </script>
 </body>
 </html>
