@@ -39,26 +39,28 @@
         #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
         .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* --- 自定義鼠標 (修復版) --- */
+        /* --- 自定義鼠標 (重做版) --- */
         #custom-cursor { 
             position: fixed; top: 0; left: 0; 
             width: 12px; height: 12px; 
             background-color: var(--accent-color); 
-            transform: translate(-50%, -50%) rotate(45deg); /* 修正定位中心並旋轉 */
             pointer-events: none; z-index: 999999; 
-            transition: transform 0.1s ease-out, width 0.2s, height 0.2s, background-color 0.2s; 
+            /* 初始隱藏，由 JS 控制顯示與位置 */
+            opacity: 0;
             mix-blend-mode: difference; 
             display: block;
+            will-change: transform, width, height; /* 啟用 GPU 加速 */
+            transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                        height 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                        background-color 0.2s;
         }
+        /* 鼠標狀態樣式 */
+        #custom-cursor.active { opacity: 1; }
         #custom-cursor.hollow { 
             background: transparent; 
             border: 1.5px solid var(--accent-color); 
-            transform: translate(-50%, -50%) rotate(45deg) scale(1.8); 
         }
-        #custom-cursor.clicking { 
-            transform: translate(-50%, -50%) rotate(45deg) scale(0.6); 
-            background: var(--accent-color); 
-        }
+        /* scale 和 rotate 現在由 JS 統一管理以避免衝突，這裡只定義基本外觀變更 */
 
         /* 頂部按鈕 */
         .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
@@ -68,12 +70,11 @@
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
         .icon-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        /* --- 閱讀視口 (高度限制修復) --- */
+        /* --- 閱讀視口 --- */
         .reader-viewport { 
             flex: 1; 
             width: 100%; 
             max-width: 800px; 
-            /* 關鍵修正：固定高度，減去上下邊距和UI空間，防止內容撐出屏幕 */
             height: calc(100vh - 160px); 
             margin: 80px auto; 
             position: relative; 
@@ -86,7 +87,7 @@
             transform: translateX(60px); 
             transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
             display: flex; flex-direction: column; justify-content: center; gap: 25px; 
-            overflow: hidden; /* 防止內部元素溢出 */
+            overflow: hidden; 
         }
         
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
@@ -106,13 +107,21 @@
         .article-heading[data-level="1"] { font-size: 1.8rem; border-left: 4px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
         .article-heading[data-level="2"] { font-size: 1.4rem; opacity: 0.9; padding-left: 5px; font-weight: 600; }
 
-        /* --- 圖片 (修復撐開問題) --- */
-        figure { margin: 0; padding: 0; width: 100%; height: auto; max-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        figure img { 
-            max-width: 100%; 
-            /* 強制圖片高度不超過父容器，防止溢出 */
-            max-height: 100%; 
+        /* --- 圖片 (修復版：不壓縮比例) --- */
+        figure { 
+            margin: 0; padding: 0; 
+            width: 100%; 
+            /* 移除固定高度限制，讓 JS 決定換頁 */
             height: auto; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
+        }
+        figure img { 
+            /* 改為寬度優先或自動，防止強制拉伸 */
+            width: auto;
+            height: auto;
+            max-width: 100%; 
+            /* 限制最大高度不超過視口，但使用 contain 保持比例 */
+            max-height: 100%; 
             object-fit: contain;
             border-radius: 4px; 
             opacity: 0; transition: opacity 0.5s ease, transform 0.3s;
@@ -152,7 +161,6 @@
             display: flex; align-items: center; justify-content: center;
             opacity: 0; visibility: hidden; pointer-events: none;
             transition: opacity 0.3s ease, visibility 0.3s;
-            /* 增加容器背景 blur */
             background: rgba(var(--bg-rgb), 0.1);
             backdrop-filter: blur(10px);
             border-radius: 30px;
@@ -162,7 +170,6 @@
 
         .custom-range {
             -webkit-appearance: none; width: 100%; height: 4px; 
-            /* 漸變軌道 */
             background: linear-gradient(to right, rgba(128,128,128,0.1), rgba(128,128,128,0.5), rgba(128,128,128,0.1));
             border-radius: 2px;
             outline: none; cursor: none;
@@ -173,7 +180,6 @@
             background: var(--accent-color); 
             cursor: none;
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            /* 發光效果 */
             box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(128,128,128,0.5);
             border: 2px solid var(--bg-color);
         }
@@ -189,7 +195,7 @@
         #progress-container.active .progress-float-val { opacity: 1; transform: translateY(0); }
 
 
-        /* --- 側邊欄與目錄 (保持不變) --- */
+        /* --- 側邊欄與目錄 --- */
         #toc-sidebar {
             width: var(--toc-width); height: 100%; background-color: var(--bg-color);
             border-left: 1px solid var(--placeholder-bg);
@@ -244,16 +250,14 @@
         .wheel-item[data-level="2"] { font-size: 0.9rem; }
         .wheel-item span { display: block; }
 
-        /* --- 純文本發光返回提示 (修改版) --- */
+        /* --- 純文本發光返回提示 --- */
         .toast-msg {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            /* 移除膠囊樣式 */
             background: none; padding: 0; border-radius: 0;
             color: var(--text-color);
             font-size: 1.4rem; font-weight: 600; letter-spacing: 2px;
             opacity: 0; transition: opacity 0.3s; pointer-events: none;
             z-index: 200;
-            /* 發光文字 */
             text-shadow: 0 0 10px var(--accent-color), 0 0 20px var(--bg-color);
             text-align: center;
         }
@@ -274,7 +278,7 @@
         }
 
         @media (max-width: 1024px) { 
-            #custom-cursor { display: none !important; } /* 手機完全隱藏 */
+            #custom-cursor { display: none !important; } 
             .reader-viewport { 
                 margin: 60px auto 100px; width: 90%; 
                 height: calc(100vh - 160px); 
@@ -366,7 +370,7 @@
         let currentPage = 0, totalPages = 0, pages = [];
         let tocData = []; 
         let articleData = null;
-        let currentArticleId = null; // 用於儲存進度
+        let currentArticleId = null; 
         let touchStartX = 0, touchMoveX = 0, isSwiping = false;
         let lastPageSwipeCount = 0; 
         let swipeResetTimer;
@@ -374,13 +378,23 @@
         let isWheelOpen = false, wheelItems = [], wheelAngle = 0, wheelVelocity = 0, wheelDragging = false, wheelLastY = 0, wheelRafId = null;
         const WHEEL_RADIUS = 300, ITEM_ANGLE_GAP = 12;
 
-        // --- 1. Fetch & Layout ---
+        // --- 1. Fetch & Layout (Async Image Loading) ---
         async function fetchArticleContent(id) {
             if (!id) throw new Error("ID missing");
-            currentArticleId = id; // 保存 ID
+            currentArticleId = id; 
             const response = await fetch(`./article/${id}.json`);
             if (!response.ok) throw new Error("Fetch failed");
             return await response.json();
+        }
+
+        // 預加載圖片並獲取原始尺寸的輔助函數
+        function getImageMeta(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight, ok: true });
+                img.onerror = () => resolve({ w: 800, h: 600, ok: false }); // Fallback
+                img.src = src;
+            });
         }
 
         async function layoutArticle(content) {
@@ -389,7 +403,6 @@
             viewport.innerHTML = `<div class="loading-placeholder pulsing" style="margin: auto;"></div>`;
             pages = []; currentPage = 0; tocData = [];
 
-            // 獲取視口固定高度 (由 CSS calc 控制)
             const vH = viewport.clientHeight;
             const vW = viewport.clientWidth;
             if (vH <= 0) return;
@@ -397,74 +410,106 @@
             // 標題頁
             const titlePage = createPageDiv(0, true);
             titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta" style="margin-top:10px; opacity:0.6;">${content.date}</div>`;
-            titlePage.dataset.startIndex = 0; // 標題頁從 0 開始
+            titlePage.dataset.startIndex = 0; 
             pages.push(titlePage);
 
             let contentPageIndex = 1;
             let currentDiv = createPageDiv(1);
-            let contentElementIndex = 0; // 用於追蹤全局元素索引
+            let contentElementIndex = 0; 
             pages.push(currentDiv);
 
+            // 隱藏的測量容器
             const tempDiv = document.createElement('div');
             const style = getComputedStyle(currentDiv);
             const pGap = parseFloat(style.gap) || 25;
-            tempDiv.style.cssText = `visibility:hidden; position:absolute; width:${vW - (parseFloat(style.paddingLeft)*2)}px; left:0; top:0;`;
+            const paddingHorizontal = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+            const availableWidth = vW - paddingHorizontal;
+            
+            tempDiv.style.cssText = `visibility:hidden; position:absolute; width:${availableWidth}px; left:0; top:0; z-index:-1;`;
             document.body.appendChild(tempDiv);
 
             let currentH = 0;
 
             try {
-                // 設置第二頁的起始索引
                 if (!currentDiv.dataset.startIndex) currentDiv.dataset.startIndex = 1;
 
                 for (let i = 0; i < content.paragraphs.length; i++) {
                     const item = content.paragraphs[i];
-                    contentElementIndex++; // 每個段落/圖片計數
+                    contentElementIndex++; 
 
                     let el, isHeader = false;
+                    let displayedHeight = 0;
+
                     if (typeof item === 'string') {
                         el = document.createElement('p');
                         el.className = 'interactable-text';
                         el.innerText = item;
                         el.onclick = () => copyText(el);
+                        
+                        // 測量文字高度
+                        tempDiv.innerHTML = '';
+                        tempDiv.appendChild(el.cloneNode(true));
+                        displayedHeight = tempDiv.clientHeight;
+
                     } else if (item.type === 'image') {
+                        // 等待圖片元數據，計算實際渲染高度以避免壓縮
+                        const meta = await getImageMeta(item.src);
+                        const aspectRatio = meta.h / meta.w;
+                        
+                        // 圖片在頁面中會自動填滿寬度（受 max-width: 100% 限制）
+                        // 計算如果寬度填滿，高度會是多少
+                        // 注意：如果圖片原始寬度小於 availableWidth，它可能不會填滿，但為了安全起見，我們假設它可能佔用這些空間
+                        // 這裡使用簡單邏輯：假設寬度為 availableWidth 計算高度
+                        displayedHeight = availableWidth * aspectRatio;
+                        
+                        // 如果圖片本身超級長（比如長圖），限制其計算高度不超過一頁，視覺上由 object-fit: contain 處理
+                        if (displayedHeight > vH) displayedHeight = vH; 
+
                         el = document.createElement('figure');
                         const ph = document.createElement('div');
                         ph.className = 'loading-placeholder pulsing interactable';
                         ph.dataset.src = item.src;
                         ph.dataset.alt = item.alt || '';
+                        // 標記圖片，讓 lazyLoadImages 稍後處理
                         el.appendChild(ph);
+                        
+                        let captionHeight = 0;
                         if (item.caption) {
                             const cap = document.createElement('figcaption');
                             cap.innerText = item.caption;
                             el.appendChild(cap);
+                            // 簡單估算 caption 高度
+                            captionHeight = 30; 
                         }
+                        displayedHeight += captionHeight;
+
                     } else if (item.type === 'header') {
                         isHeader = true;
                         el = document.createElement(item.level === 1 ? 'h2' : 'h3');
                         el.className = 'article-heading interactable-text';
                         el.dataset.level = item.level;
                         el.innerText = item.text;
+                        
+                        tempDiv.innerHTML = '';
+                        tempDiv.appendChild(el.cloneNode(true));
+                        displayedHeight = tempDiv.clientHeight;
                     }
 
                     if (!el) continue;
 
-                    tempDiv.innerHTML = '';
-                    tempDiv.appendChild(el.cloneNode(true));
-                    const elH = tempDiv.clientHeight;
-
-                    // 判斷換頁
-                    if (currentH > 0 && (currentH + elH + pGap > vH)) {
+                    // --- 關鍵邏輯：換頁判斷 ---
+                    // 如果當前已有內容，且加入新元素後會超出高度 -> 換頁
+                    if (currentH > 0 && (currentH + displayedHeight + pGap > vH)) {
                         contentPageIndex++;
                         currentDiv = createPageDiv(contentPageIndex);
-                        currentDiv.dataset.startIndex = contentElementIndex; // 記錄該頁第一個元素的全局索引
+                        currentDiv.dataset.startIndex = contentElementIndex;
                         pages.push(currentDiv);
                         currentH = 0;
                     }
 
                     if (isHeader) tocData.push({ text: item.text, level: item.level, pageIndex: contentPageIndex });
                     currentDiv.appendChild(el);
-                    currentH += (elH + pGap);
+                    currentH += (displayedHeight + pGap);
                 }
             } finally {
                 document.body.removeChild(tempDiv);
@@ -476,15 +521,78 @@
             pageSlider.max = totalPages;
 
             setupTOC();
-            
-            // --- 恢復進度邏輯 ---
             restoreProgress();
-            
             bindCursorEvents();
             lazyLoadImages();
         }
 
-        // --- Progress Persistence ---
+        // --- Custom Cursor Logic (Redone) ---
+        let cursorState = { x: -100, y: -100, scale: 1, rotation: 45, hollow: false };
+        let mousePos = { x: -100, y: -100 };
+        let isCursorVisible = false;
+
+        function initCursor() {
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
+
+            // 使用 RAF 更新位置，比直接在 mousemove 設置 style 效能更好
+            function loop() {
+                // 簡單的平滑處理 (Lerp) - 如果想要完全無延遲可設為 1
+                const ease = 0.2; 
+                cursorState.x += (mousePos.x - cursorState.x) * ease;
+                cursorState.y += (mousePos.y - cursorState.y) * ease;
+
+                // 構建 transform 字符串
+                // translate3d 啟用 GPU 加速
+                // translate(-50%, -50%) 保持中心點對齊
+                let transform = `translate3d(${cursorState.x}px, ${cursorState.y}px, 0) translate(-50%, -50%)`;
+                
+                // 狀態處理
+                if (cursorState.hollow) {
+                    transform += ` rotate(45deg) scale(1.8)`;
+                } else if (cursorState.scale !== 1) { // clicking
+                    transform += ` rotate(45deg) scale(${cursorState.scale})`;
+                } else {
+                    transform += ` rotate(45deg)`;
+                }
+
+                cursor.style.transform = transform;
+                
+                // 首次移動後顯示鼠標
+                if (!isCursorVisible && (mousePos.x > 0 || mousePos.y > 0)) {
+                    isCursorVisible = true;
+                    cursor.classList.add('active');
+                }
+
+                requestAnimationFrame(loop);
+            }
+            loop();
+
+            document.addEventListener('mousemove', e => { 
+                mousePos.x = e.clientX; 
+                mousePos.y = e.clientY; 
+            });
+            document.addEventListener('mousedown', () => { cursorState.scale = 0.6; cursor.classList.add('clicking'); });
+            document.addEventListener('mouseup', () => { cursorState.scale = 1; cursor.classList.remove('clicking'); });
+        }
+
+        // 修改 Hover 事件綁定，不再依賴 CSS 的 hover，改為更新 cursorState 對象
+        function bindCursorEvents() {
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
+            
+            const onEnter = () => { cursorState.hollow = true; cursor.classList.add('hollow'); };
+            const onLeave = () => { cursorState.hollow = false; cursor.classList.remove('hollow'); };
+
+            setTimeout(() => {
+                document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+                    el.removeEventListener('mouseenter', onEnter);
+                    el.removeEventListener('mouseleave', onLeave);
+                    el.addEventListener('mouseenter', onEnter);
+                    el.addEventListener('mouseleave', onLeave);
+                });
+            }, 100);
+        }
+
+        // --- Progress Persistence (Unchanged) ---
         function saveProgress() {
             if (!currentArticleId || !pages[currentPage]) return;
             const idx = pages[currentPage].dataset.startIndex || 0;
@@ -494,25 +602,19 @@
         function restoreProgress() {
             if (!currentArticleId) { updatePage(false); return; }
             const savedIdx = localStorage.getItem(`article_progress_${currentArticleId}`);
-            
             if (savedIdx !== null) {
                 const targetIdx = parseInt(savedIdx);
-                // 尋找 startIndex <= targetIdx 的最大頁碼
                 let bestPage = 0;
                 for (let i = 0; i < pages.length; i++) {
                     const pStart = parseInt(pages[i].dataset.startIndex || 0);
-                    if (pStart <= targetIdx) {
-                        bestPage = i;
-                    } else {
-                        break;
-                    }
+                    if (pStart <= targetIdx) bestPage = i; else break;
                 }
                 currentPage = bestPage;
             }
             updatePage(false);
         }
 
-        // --- Update Page ---
+        // --- Update Page (Unchanged) ---
         function createPageDiv(index, isTitle = false) { 
             const div = document.createElement('div'); 
             div.className = 'page-slide'; 
@@ -536,12 +638,8 @@
             pages.forEach((page, index) => { 
                 page.style.transform = ''; 
                 page.classList.remove('active', 'prev-page'); 
-                
-                if (index === currentPage) {
-                    page.classList.add('active');
-                } else if (index < currentPage) {
-                    page.classList.add('prev-page');
-                }
+                if (index === currentPage) page.classList.add('active');
+                else if (index < currentPage) page.classList.add('prev-page');
             }); 
             
             pageNum.innerText = `${currentPage + 1} / ${totalPages}`; 
@@ -549,12 +647,12 @@
             nextBtn.disabled = (currentPage === totalPages - 1); 
             
             if(!instant) {
-                saveProgress(); // 每次非滑動翻頁時保存
+                saveProgress(); 
                 lazyLoadImages();
             }
         }
 
-        // --- Slider ---
+        // --- Slider (Unchanged) ---
         pageNum.addEventListener('click', (e) => {
             e.stopPropagation();
             progressContainer.classList.add('active');
@@ -577,10 +675,11 @@
             progressContainer.classList.remove('active');
         });
 
-        // --- Image & Copy ---
+        // --- Image & Copy (Unchanged Logic, Updated for new layout) ---
         function openLightbox(src) {
             lightboxImg.src = src;
             lightbox.classList.add('active');
+            cursorState.hollow = false; // Reset cursor state
             cursor.classList.remove('hollow');
         }
         function closeLightbox() {
@@ -613,7 +712,7 @@
 
         async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
 
-        // --- TOC ---
+        // --- TOC (Unchanged) ---
         function setupTOC() {
             if (tocData.length === 0) {
                 desktopTocBtn.parentElement.style.display = 'none';
@@ -752,6 +851,7 @@
                 const articleId = params.get('id');
                 const content = await fetchArticleContent(articleId);
                 await document.fonts.ready;
+                // 注意：這裡直接調用 layoutArticle，其內部現在會等待圖片元數據
                 await layoutArticle(content);
                 
                 let resizeTimer;
@@ -760,6 +860,7 @@
                     resizeTimer = setTimeout(() => { if (articleData && !isWheelOpen) layoutArticle(articleData); }, 250);
                 });
                 initInputs();
+                initCursor(); // Initialize the new cursor logic
             } catch (error) { console.error("Init failed", error); } 
             finally { document.body.classList.remove('js-loading'); }
         }
@@ -810,31 +911,7 @@
                     }
                 }, {passive: true});
             }
-
-            if (!window.matchMedia("(hover: none) or (max-width: 1024px)").matches) {
-                document.addEventListener('mousemove', e => { 
-                    // 使用 translate(-50%, -50%) 在 CSS 中，這裡只需傳遞座標
-                    cursor.style.left = `${e.clientX}px`; 
-                    cursor.style.top = `${e.clientY}px`; 
-                });
-                document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
-                document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
-            }
         }
-        
-        function bindCursorEvents() {
-            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
-            setTimeout(() => {
-                document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
-                    el.removeEventListener('mouseenter', hoverOn);
-                    el.removeEventListener('mouseleave', hoverOff);
-                    el.addEventListener('mouseenter', hoverOn);
-                    el.addEventListener('mouseleave', hoverOff);
-                });
-            }, 100);
-        }
-        const hoverOn = () => cursor.classList.add('hollow');
-        const hoverOff = () => cursor.classList.remove('hollow');
 
         function handleSwipeExit() {
             clearTimeout(swipeResetTimer);
