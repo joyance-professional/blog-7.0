@@ -32,14 +32,13 @@
             transition: opacity 0.8s ease; 
         }
         
-        /* 隱藏原生鼠標 */
         * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         @media (hover: none) or (max-width: 1024px) { * { cursor: auto !important; } }
 
         #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
         .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* --- 鼠標系統 (重寫版) --- */
+        /* --- 鼠標系統 --- */
         #cursor-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 999999; overflow: hidden;
@@ -53,21 +52,12 @@
             pointer-events: none;
             mix-blend-mode: difference; 
             transition: width 0.2s, height 0.2s, background-color 0.2s;
-            opacity: 0; /* JS 控制顯示 */
+            opacity: 0; 
         }
-        
-        /* 鼠標狀態 */
         #custom-cursor.active { opacity: 1; }
-        #custom-cursor.hollow { 
-            background: transparent; 
-            border: 1.5px solid var(--accent-color); 
-            /* scale 在 JS 中處理以避免 transform 覆蓋衝突 */
-        }
-        #custom-cursor.clicking {
-            background: var(--accent-color);
-        }
+        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); }
+        #custom-cursor.clicking { background: var(--accent-color); }
 
-        /* 頂部按鈕 */
         .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
         .desktop-toc-trigger { position: fixed; top: 30px; right: 30px; z-index: 100; pointer-events: none; }
         
@@ -80,7 +70,6 @@
             flex: 1; 
             width: 100%; 
             max-width: 800px; 
-            /* 預留上下空間 */
             height: calc(100vh - 160px); 
             margin: 80px auto; 
             position: relative; 
@@ -93,18 +82,19 @@
             transform: translateX(60px); 
             transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
             display: flex; flex-direction: column; 
-            /* 內容垂直居中，但如果內容很多則靠上 */
             justify-content: center; 
             gap: 25px; 
             overflow: hidden; 
+            /* 優化：未激活的頁面隱藏，避免重繪 */
+            visibility: hidden; 
         }
         
-        /* 當內容撐滿時改為靠上對齊，由 JS 動態判斷或默認 center 即可，這裡保持 center */
-        .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
-        .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; }
+        .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); visibility: visible; z-index: 2; }
+        /* 上一頁保留動畫效果 */
+        .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; visibility: visible; z-index: 1; }
+        
         .reader-viewport.no-anim .page-slide { transition: none !important; }
 
-        /* 文字樣式 */
         p { 
             font-size: clamp(1.1rem, 2.2vmin, 1.35rem); 
             line-height: 1.9; text-align: justify; margin: 0; font-weight: 400; 
@@ -117,25 +107,8 @@
         .article-heading[data-level="1"] { font-size: 1.8rem; border-left: 4px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
         .article-heading[data-level="2"] { font-size: 1.4rem; opacity: 0.9; padding-left: 5px; font-weight: 600; }
 
-        /* --- 圖片 (修復版：不壓縮比例) --- */
-        figure { 
-            margin: 0; padding: 0; 
-            width: 100%; 
-            /* 關鍵：高度自動，不強制 100%，避免拉伸 */
-            height: auto; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        }
-        figure img { 
-            /* 寬度自動，最大不超過容器 */
-            width: auto;
-            max-width: 100%; 
-            /* 高度自動，最大不超過容器高度 */
-            height: auto;
-            max-height: 100%; 
-            object-fit: contain; /* 確保比例正確 */
-            border-radius: 4px; 
-            opacity: 0; transition: opacity 0.5s ease, transform 0.3s;
-        }
+        figure { margin: 0; padding: 0; width: 100%; height: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        figure img { width: auto; max-width: 100%; height: auto; max-height: 100%; object-fit: contain; border-radius: 4px; opacity: 0; transition: opacity 0.5s ease, transform 0.3s; }
         figure img.loaded { opacity: 1; }
         figure img:hover { transform: scale(1.02); }
         
@@ -154,7 +127,6 @@
         .loading-placeholder.pulsing { animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-        /* 底部 UI */
         .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; user-select: none; z-index: 10; pointer-events: none; }
         .pagination > * { pointer-events: auto; }
         .nav-btn { opacity: 0.3; padding: 10px; border: none; background: none; color: inherit; font-size: inherit; }
@@ -163,49 +135,22 @@
         .page-indicator { cursor: none; padding: 5px 10px; transition: 0.3s; opacity: 0.6; }
         .page-indicator:hover { opacity: 1; transform: scale(1.1); }
 
-        /* --- 發光進度條 --- */
         #progress-container {
             position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
             width: 70%; max-width: 320px; height: 50px;
-            z-index: 500; 
-            display: flex; align-items: center; justify-content: center;
+            z-index: 500; display: flex; align-items: center; justify-content: center;
             opacity: 0; visibility: hidden; pointer-events: none;
             transition: opacity 0.3s ease, visibility 0.3s;
-            background: rgba(var(--bg-rgb), 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 30px;
-            padding: 0 20px;
+            background: rgba(var(--bg-rgb), 0.1); backdrop-filter: blur(10px); border-radius: 30px; padding: 0 20px;
         }
         #progress-container.active { opacity: 1; visibility: visible; pointer-events: auto; }
 
-        .custom-range {
-            -webkit-appearance: none; width: 100%; height: 4px; 
-            background: linear-gradient(to right, rgba(128,128,128,0.1), rgba(128,128,128,0.5), rgba(128,128,128,0.1));
-            border-radius: 2px;
-            outline: none; cursor: none;
-        }
-        .custom-range::-webkit-slider-thumb {
-            -webkit-appearance: none; appearance: none;
-            width: 16px; height: 16px; border-radius: 50%;
-            background: var(--accent-color); 
-            cursor: none;
-            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(128,128,128,0.5);
-            border: 2px solid var(--bg-color);
-        }
+        .custom-range { -webkit-appearance: none; width: 100%; height: 4px; background: linear-gradient(to right, rgba(128,128,128,0.1), rgba(128,128,128,0.5), rgba(128,128,128,0.1)); border-radius: 2px; outline: none; cursor: none; }
+        .custom-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent-color); cursor: none; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(128,128,128,0.5); border: 2px solid var(--bg-color); }
         .custom-range::-webkit-slider-thumb:active { transform: scale(1.3); }
-        
-        .progress-float-val {
-            position: absolute; top: -40px; 
-            font-size: 1.4rem; font-weight: 700; color: var(--accent-color);
-            opacity: 0; transition: 0.2s;
-            transform: translateY(10px);
-            text-shadow: 0 0 10px rgba(128,128,128,0.3);
-        }
+        .progress-float-val { position: absolute; top: -40px; font-size: 1.4rem; font-weight: 700; color: var(--accent-color); opacity: 0; transition: 0.2s; transform: translateY(10px); text-shadow: 0 0 10px rgba(128,128,128,0.3); }
         #progress-container.active .progress-float-val { opacity: 1; transform: translateY(0); }
 
-
-        /* --- 側邊欄與目錄 --- */
         #toc-sidebar {
             width: var(--toc-width); height: 100%; background-color: var(--bg-color);
             border-left: 1px solid var(--placeholder-bg);
@@ -216,58 +161,36 @@
         }
         #toc-sidebar.open { transform: translateX(0); }
         .toc-list { list-style: none; padding: 0; margin: 0; }
-        .toc-item { 
-            margin-bottom: 18px; opacity: 0.6; transition: 0.2s; 
-            font-size: 0.95rem; line-height: 1.4; display: block;
-        }
+        .toc-item { margin-bottom: 18px; opacity: 0.6; transition: 0.2s; font-size: 0.95rem; line-height: 1.4; display: block; }
         .toc-item:hover { opacity: 1; transform: translateX(-5px); color: var(--accent-color); }
         .toc-item[data-level="2"] { padding-left: 20px; font-size: 0.85rem; opacity: 0.5; }
         
         #mobile-toc-trigger {
-            position: fixed; bottom: 25%; right: 0;
-            width: 50px; height: 80px;
-            background: rgba(128, 128, 128, 0.1);
-            backdrop-filter: blur(5px);
-            border-radius: 40px 0 0 40px;
-            z-index: 500;
-            display: none; align-items: center; justify-content: center;
-            border: 1px solid rgba(128,128,128,0.2); border-right: none;
-            transition: width 0.3s;
+            position: fixed; bottom: 25%; right: 0; width: 50px; height: 80px;
+            background: rgba(128, 128, 128, 0.1); backdrop-filter: blur(5px);
+            border-radius: 40px 0 0 40px; z-index: 500; display: none; align-items: center; justify-content: center;
+            border: 1px solid rgba(128,128,128,0.2); border-right: none; transition: width 0.3s;
         }
         #mobile-toc-trigger::after { content: "≡"; font-size: 24px; color: var(--text-color); opacity: 0.7; transform: translateX(5px); }
         
         #mobile-wheel-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(var(--bg-rgb), 0.1);
-            z-index: 600;
+            background: rgba(var(--bg-rgb), 0.1); z-index: 600;
             visibility: hidden; transition: backdrop-filter 0.4s, visibility 0.4s;
             overflow: hidden; touch-action: none;
         }
         #mobile-wheel-overlay.active { visibility: visible; backdrop-filter: blur(15px); }
-        #wheel-container {
-            position: absolute; top: 50%; right: -250px; width: 500px; height: 500px;
-            transform: translateY(-50%); pointer-events: none;
-        }
-        .wheel-item {
-            position: absolute; top: 50%; left: 50%; width: 300px; height: 40px;
-            margin-top: -20px; margin-left: -150px;
-            text-align: left; padding-left: 40px;
-            transform-origin: center center; white-space: nowrap;
-            font-size: 1.1rem; color: var(--text-color); opacity: 0; transition: color 0.2s;
-            display: flex; align-items: center;
-        }
+        #wheel-container { position: absolute; top: 50%; right: -250px; width: 500px; height: 500px; transform: translateY(-50%); pointer-events: none; }
+        .wheel-item { position: absolute; top: 50%; left: 50%; width: 300px; height: 40px; margin-top: -20px; margin-left: -150px; text-align: left; padding-left: 40px; transform-origin: center center; white-space: nowrap; font-size: 1.1rem; color: var(--text-color); opacity: 0; transition: color 0.2s; display: flex; align-items: center; }
         .wheel-item.active { color: var(--accent-color); font-weight: bold; }
         .wheel-item[data-level="2"] { font-size: 0.9rem; }
         .wheel-item span { display: block; }
 
-        /* --- 純文本發光返回提示 --- */
         .toast-msg {
             position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-            background: none; padding: 0; border-radius: 0;
-            color: var(--text-color);
+            background: none; padding: 0; border-radius: 0; color: var(--text-color);
             font-size: 1.4rem; font-weight: 600; letter-spacing: 2px;
-            opacity: 0; transition: opacity 0.3s; pointer-events: none;
-            z-index: 200;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200;
             text-shadow: 0 0 10px var(--accent-color), 0 0 20px var(--bg-color);
             text-align: center;
         }
@@ -289,10 +212,7 @@
 
         @media (max-width: 1024px) { 
             #cursor-layer { display: none !important; } 
-            .reader-viewport { 
-                margin: 60px auto 100px; width: 90%; 
-                height: calc(100vh - 160px); 
-            } 
+            .reader-viewport { margin: 60px auto 100px; width: 90%; height: calc(100vh - 160px); } 
             .page-slide { padding: 0 5px; gap: 20px; }
             .pagination { bottom: 20px; }
             .top-controls { top: 20px; left: 20px; }
@@ -303,27 +223,18 @@
     </style>
 </head>
 <body class="js-loading">
-    <div id="cursor-layer">
-        <div id="custom-cursor"></div>
-    </div>
-    
+    <div id="cursor-layer"><div id="custom-cursor"></div></div>
     <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
     <div class="toast-msg" id="swipe-hint">Release to Return</div>
+    <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="preview"></div>
 
-    <div id="lightbox" onclick="closeLightbox()">
-        <img id="lightbox-img" src="" alt="preview">
-    </div>
-
-    <!-- 進度條 -->
     <div id="progress-container">
         <div class="progress-float-val" id="slider-val">1</div>
         <input type="range" min="1" max="1" value="1" class="custom-range interactable" id="page-slider">
     </div>
 
     <div id="mobile-toc-trigger" class="interactable"></div>
-    <div id="mobile-wheel-overlay">
-        <div id="wheel-container"></div>
-    </div>
+    <div id="mobile-wheel-overlay"><div id="wheel-container"></div></div>
 
     <div id="app-container">
         <main class="main-content">
@@ -390,7 +301,6 @@
         let isWheelOpen = false, wheelItems = [], wheelAngle = 0, wheelVelocity = 0, wheelDragging = false, wheelLastY = 0, wheelRafId = null;
         const WHEEL_RADIUS = 300, ITEM_ANGLE_GAP = 12;
 
-        // --- 1. Fetch & Layout (Async Image Loading & Smart Layout) ---
         async function fetchArticleContent(id) {
             if (!id) throw new Error("ID missing");
             currentArticleId = id; 
@@ -428,7 +338,6 @@
             let contentElementIndex = 0; 
             pages.push(currentDiv);
 
-            // 隱藏的測量容器
             const tempDiv = document.createElement('div');
             const style = getComputedStyle(currentDiv);
             const pGap = parseFloat(style.gap) || 25;
@@ -455,26 +364,14 @@
                         el.className = 'interactable-text';
                         el.innerText = item;
                         el.onclick = () => copyText(el);
-                        
                         tempDiv.innerHTML = '';
                         tempDiv.appendChild(el.cloneNode(true));
                         displayedHeight = tempDiv.clientHeight;
-
                     } else if (item.type === 'image') {
-                        // 圖片高度計算邏輯 (不壓縮比例)
                         const meta = await getImageMeta(item.src);
                         const aspectRatio = meta.h / meta.w;
-                        
-                        // 計算在 availableWidth 下的理論高度
                         const theoreticalHeight = availableWidth * aspectRatio;
-                        
-                        // 實際顯示高度：如果理論高度大於剩餘空間，CSS 會自動 resize (object-fit: contain)，
-                        // 但我們需要知道佔據多高來決定是否換頁
-                        // 這裡使用理論高度作為基準，因為 max-width: 100%
                         displayedHeight = theoreticalHeight;
-
-                        // 限制：圖片高度不應超過整個視口的高度 (減去 padding)
-                        // 如果圖片超長，在單頁模式下通常會被縮放以適應
                         if (displayedHeight > vH) displayedHeight = vH;
 
                         el = document.createElement('figure');
@@ -492,14 +389,12 @@
                             captionHeight = 30; 
                         }
                         displayedHeight += captionHeight;
-
                     } else if (item.type === 'header') {
                         isHeader = true;
                         el = document.createElement(item.level === 1 ? 'h2' : 'h3');
                         el.className = 'article-heading interactable-text';
                         el.dataset.level = item.level;
                         el.innerText = item.text;
-                        
                         tempDiv.innerHTML = '';
                         tempDiv.appendChild(el.cloneNode(true));
                         displayedHeight = tempDiv.clientHeight;
@@ -507,10 +402,6 @@
 
                     if (!el) continue;
 
-                    // --- 換頁判斷 ---
-                    // 邏輯：當前高度 + 新元素高度 > 視口高度 => 換頁
-                    // 修正：如果元素能在當前頁面 "顯示得下" (Fit)，就不換頁。
-                    // 這裡的 currentH + displayedHeight 即為放入後的高度
                     if (currentH > 0 && (currentH + displayedHeight + pGap > vH)) {
                         contentPageIndex++;
                         currentDiv = createPageDiv(contentPageIndex);
@@ -527,67 +418,38 @@
                 document.body.removeChild(tempDiv);
             }
 
-            viewport.innerHTML = '';
-            pages.forEach(p => viewport.appendChild(p));
+            // 優化點：不再一次性將所有 pages append 到 viewport
+            viewport.innerHTML = ''; 
             totalPages = pages.length;
             pageSlider.max = totalPages;
 
             setupTOC();
             restoreProgress();
+            // 注意：restoreProgress 會調用 updatePage，從而掛載初始頁面
             bindCursorEvents();
-            lazyLoadImages();
         }
 
-        // --- Custom Cursor Logic (Completely Redone) ---
-        // 使用簡單的 Lerp 邏輯，避免任何不必要的複雜性
-        let mouseX = -100, mouseY = -100;
-        let cursorX = -100, cursorY = -100;
-        let isHovering = false, isClicking = false;
-        let isCursorInited = false;
+        // --- Cursor Logic ---
+        let mouseX = -100, mouseY = -100, cursorX = -100, cursorY = -100;
+        let isHovering = false, isClicking = false, isCursorInited = false;
 
         function initCursor() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
-
             document.addEventListener('mousemove', e => { 
-                mouseX = e.clientX; 
-                mouseY = e.clientY; 
-                if(!isCursorInited) {
-                    cursorX = mouseX; cursorY = mouseY;
-                    isCursorInited = true;
-                    cursor.classList.add('active');
-                }
+                mouseX = e.clientX; mouseY = e.clientY; 
+                if(!isCursorInited) { cursorX = mouseX; cursorY = mouseY; isCursorInited = true; cursor.classList.add('active'); }
             });
-
             document.addEventListener('mousedown', () => isClicking = true);
             document.addEventListener('mouseup', () => isClicking = false);
 
             function loop() {
-                // 平滑移動 (Lerp factor 0.2)
-                const dx = mouseX - cursorX;
-                const dy = mouseY - cursorY;
-                cursorX += dx * 0.2;
-                cursorY += dy * 0.2;
-
-                // 構建 Transform 字符串
-                // translate3d(x,y,0) 處理位置
-                // translate(-50%,-50%) 居中
-                // rotate(45deg) 基礎旋轉
-                let transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(45deg)`;
-                
-                // 狀態縮放邏輯
-                let scale = 1;
-                if (isHovering) scale = 1.8;
-                if (isClicking) scale = 0.6; // 點擊優先級高，或者乘法? 這裡直接覆蓋
-
-                // 應用 hollow 樣式
-                if (isHovering) cursor.classList.add('hollow');
-                else cursor.classList.remove('hollow');
-                
-                if (isClicking) cursor.classList.add('clicking');
-                else cursor.classList.remove('clicking');
-
-                cursor.style.transform = transform + ` scale(${scale})`;
-                
+                cursorX += (mouseX - cursorX) * 0.2;
+                cursorY += (mouseY - cursorY) * 0.2;
+                let scale = isHovering ? 1.8 : 1;
+                if (isClicking) scale = 0.6;
+                if (isHovering) cursor.classList.add('hollow'); else cursor.classList.remove('hollow');
+                if (isClicking) cursor.classList.add('clicking'); else cursor.classList.remove('clicking');
+                cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(45deg) scale(${scale})`;
                 requestAnimationFrame(loop);
             }
             requestAnimationFrame(loop);
@@ -595,11 +457,9 @@
 
         function bindCursorEvents() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
-            
             const onEnter = () => { isHovering = true; };
             const onLeave = () => { isHovering = false; };
-
-            // 稍微延遲以確保 DOM 已渲染
+            // 使用 setTimeout 確保 DOM 變更後能抓到元素
             setTimeout(() => {
                 document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                     el.removeEventListener('mouseenter', onEnter);
@@ -610,11 +470,9 @@
             }, 100);
         }
 
-        // --- Progress Persistence ---
         function saveProgress() {
             if (!currentArticleId || !pages[currentPage]) return;
-            const idx = pages[currentPage].dataset.startIndex || 0;
-            localStorage.setItem(`article_progress_${currentArticleId}`, idx);
+            localStorage.setItem(`article_progress_${currentArticleId}`, pages[currentPage].dataset.startIndex || 0);
         }
 
         function restoreProgress() {
@@ -622,17 +480,13 @@
             const savedIdx = localStorage.getItem(`article_progress_${currentArticleId}`);
             if (savedIdx !== null) {
                 const targetIdx = parseInt(savedIdx);
-                let bestPage = 0;
                 for (let i = 0; i < pages.length; i++) {
-                    const pStart = parseInt(pages[i].dataset.startIndex || 0);
-                    if (pStart <= targetIdx) bestPage = i; else break;
+                    if (parseInt(pages[i].dataset.startIndex || 0) <= targetIdx) currentPage = i; else break;
                 }
-                currentPage = bestPage;
             }
             updatePage(false);
         }
 
-        // --- Update Page ---
         function createPageDiv(index, isTitle = false) { 
             const div = document.createElement('div'); 
             div.className = 'page-slide'; 
@@ -649,16 +503,49 @@
             }
         }
 
+        // --- 核心優化：Update Page 負責掛載 DOM ---
         function updatePage(instant = false) { 
             if (instant) viewport.classList.add('no-anim');
             else viewport.classList.remove('no-anim');
 
-            pages.forEach((page, index) => { 
-                page.style.transform = ''; 
-                page.classList.remove('active', 'prev-page'); 
-                if (index === currentPage) page.classList.add('active');
-                else if (index < currentPage) page.classList.add('prev-page');
-            }); 
+            // 定義緩衝區間：當前頁面 前後各緩衝 2 頁
+            // 這樣在翻頁動畫時，下一頁已經存在於 DOM 中
+            const renderRange = 2;
+            const startIdx = Math.max(0, currentPage - renderRange);
+            const endIdx = Math.min(totalPages - 1, currentPage + renderRange);
+
+            pages.forEach((page, index) => {
+                // 判斷是否應該在 DOM 中
+                const shouldBeInDom = index >= startIdx && index <= endIdx;
+                const isInDom = viewport.contains(page);
+
+                if (shouldBeInDom) {
+                    if (!isInDom) {
+                        viewport.appendChild(page);
+                        // 如果是剛掛載，確保綁定事件
+                        // 這裡可以做簡單優化，因為事件綁定是全局委託或者在 bindCursorEvents 處理的
+                    }
+
+                    // 設置狀態
+                    page.style.transform = ''; 
+                    page.classList.remove('active', 'prev-page'); 
+                    
+                    if (index === currentPage) {
+                        page.classList.add('active');
+                        page.style.zIndex = 10;
+                    } else if (index < currentPage) {
+                        page.classList.add('prev-page');
+                        page.style.zIndex = 5;
+                    } else {
+                        page.style.zIndex = 5;
+                    }
+                } else {
+                    // 為了性能，移除看不見的 DOM 節點
+                    if (isInDom) {
+                        viewport.removeChild(page);
+                    }
+                }
+            });
             
             pageNum.innerText = `${currentPage + 1} / ${totalPages}`; 
             prevBtn.disabled = (currentPage === 0); 
@@ -666,53 +553,29 @@
             
             if(!instant) {
                 saveProgress(); 
-                lazyLoadImages();
+                lazyLoadImages(); // 圖片懶加載
+                bindCursorEvents(); // 重新綁定新掛載頁面的鼠標事件
             }
         }
 
-        // --- Slider & Visibility Fix ---
-        function hideSlider() {
-            progressContainer.classList.remove('active');
-        }
-
-        pageNum.addEventListener('click', (e) => {
-            e.stopPropagation();
-            progressContainer.classList.add('active');
-            pageSlider.value = currentPage + 1;
-            sliderVal.innerText = currentPage + 1;
-        });
-
-        pageSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            sliderVal.innerText = val;
-            const targetPage = val - 1;
-            if (currentPage !== targetPage) {
-                currentPage = targetPage;
-                updatePage(true);
-            }
-        });
-
-        // 修復：確保鬆手後必定消失，無論在哪一頁
+        function hideSlider() { progressContainer.classList.remove('active'); }
+        pageNum.addEventListener('click', (e) => { e.stopPropagation(); progressContainer.classList.add('active'); pageSlider.value = currentPage + 1; sliderVal.innerText = currentPage + 1; });
+        pageSlider.addEventListener('input', (e) => { const val = parseInt(e.target.value); sliderVal.innerText = val; if (currentPage !== val - 1) { currentPage = val - 1; updatePage(true); } });
         pageSlider.addEventListener('change', hideSlider);
         pageSlider.addEventListener('mouseup', hideSlider);
         pageSlider.addEventListener('touchend', hideSlider);
 
-        // --- Image & Copy ---
-        function openLightbox(src) {
-            lightboxImg.src = src;
-            lightbox.classList.add('active');
-            isHovering = false; // Reset hover state
-        }
-        function closeLightbox() {
-            lightbox.classList.remove('active');
-            setTimeout(() => { lightboxImg.src = ''; }, 300);
-        }
+        function openLightbox(src) { lightboxImg.src = src; lightbox.classList.add('active'); isHovering = false; }
+        function closeLightbox() { lightbox.classList.remove('active'); setTimeout(() => { lightboxImg.src = ''; }, 300); }
 
         function lazyLoadImages() {
+            // 這裡依然可以對 pages 數組進行操作，即使它們不在 DOM 裡
+            // 但為了節省網絡，我們只加載附近的
             const range = [currentPage-1, currentPage, currentPage+1, currentPage+2];
             range.forEach(idx => {
                 if (idx < 0 || idx >= totalPages) return;
                 const page = pages[idx];
+                // querySelectorAll 在未掛載的元素上也能工作
                 page.querySelectorAll('.loading-placeholder[data-src]').forEach(ph => {
                     if (ph.dataset.loading === 'true') return;
                     ph.dataset.loading = 'true';
@@ -723,8 +586,7 @@
                     img.onload = () => {
                         img.classList.add('loaded');
                         img.onclick = (e) => { e.stopPropagation(); openLightbox(img.src); };
-                        ph.parentNode.replaceChild(img, ph);
-                        bindCursorEvents();
+                        if(ph.parentNode) ph.parentNode.replaceChild(img, ph);
                     };
                     img.onerror = () => { setTimeout(() => { ph.dataset.loading = 'false'; lazyLoadImages(); }, 2000); };
                 });
@@ -733,13 +595,8 @@
 
         async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
 
-        // --- TOC ---
         function setupTOC() {
-            if (tocData.length === 0) {
-                desktopTocBtn.parentElement.style.display = 'none';
-                mobileTocTrigger.style.display = 'none';
-                return;
-            }
+            if (tocData.length === 0) { desktopTocBtn.parentElement.style.display = 'none'; mobileTocTrigger.style.display = 'none'; return; }
             desktopTocList.innerHTML = '';
             tocData.forEach(item => {
                 const li = document.createElement('li');
@@ -765,24 +622,16 @@
         }
 
         function initMobileWheel() {
-            wheelContainer.innerHTML = '';
-            wheelItems = [];
+            wheelContainer.innerHTML = ''; wheelItems = [];
             tocData.forEach((item, index) => {
                 const div = document.createElement('div');
-                div.className = 'wheel-item';
-                div.dataset.index = index;
+                div.className = 'wheel-item'; div.dataset.index = index;
                 const span = document.createElement('span');
                 span.innerText = item.text;
                 if (item.level > 1) span.style.paddingLeft = "20px";
                 div.appendChild(span);
-                wheelContainer.appendChild(div);
-                wheelItems.push(div);
-                div.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    snapToItem(index, () => {
-                        setTimeout(() => { currentPage = item.pageIndex; updatePage(); closeMobileWheel(); }, 200);
-                    });
-                });
+                wheelContainer.appendChild(div); wheelItems.push(div);
+                div.addEventListener('click', (e) => { e.stopPropagation(); snapToItem(index, () => { setTimeout(() => { currentPage = item.pageIndex; updatePage(); closeMobileWheel(); }, 200); }); });
             });
             mobileTocTrigger.onclick = openMobileWheel;
             mobileOverlay.addEventListener('touchstart', onWheelTouchStart, {passive: false});
@@ -791,80 +640,16 @@
             mobileOverlay.addEventListener('click', (e) => { if (e.clientX < window.innerWidth * 0.4) closeMobileWheel(); });
         }
 
-        function openMobileWheel() {
-            isWheelOpen = true;
-            mobileOverlay.classList.add('active');
-            mobileTocTrigger.style.width = '0px'; 
-            document.body.style.overflow = 'hidden';
-            let targetIdx = 0;
-            for(let i=0; i<tocData.length; i++) { if(tocData[i].pageIndex <= currentPage) targetIdx = i; }
-            wheelAngle = targetIdx * ITEM_ANGLE_GAP;
-            wheelVelocity = 0;
-            requestAnimationFrame(updateWheelVisuals);
-        }
-
-        function closeMobileWheel() {
-            isWheelOpen = false;
-            mobileOverlay.classList.remove('active');
-            mobileTocTrigger.style.width = ''; 
-            document.body.style.overflow = '';
-        }
-
+        function openMobileWheel() { isWheelOpen = true; mobileOverlay.classList.add('active'); mobileTocTrigger.style.width = '0px'; document.body.style.overflow = 'hidden'; let targetIdx = 0; for(let i=0; i<tocData.length; i++) { if(tocData[i].pageIndex <= currentPage) targetIdx = i; } wheelAngle = targetIdx * ITEM_ANGLE_GAP; wheelVelocity = 0; requestAnimationFrame(updateWheelVisuals); }
+        function closeMobileWheel() { isWheelOpen = false; mobileOverlay.classList.remove('active'); mobileTocTrigger.style.width = ''; document.body.style.overflow = ''; }
         function onWheelTouchStart(e) { wheelDragging = true; wheelLastY = e.touches[0].clientY; wheelVelocity = 0; cancelAnimationFrame(wheelRafId); }
-        function onWheelTouchMove(e) {
-            if (!wheelDragging) return;
-            e.preventDefault();
-            const y = e.touches[0].clientY;
-            wheelAngle += (wheelLastY - y) * 0.5; 
-            wheelVelocity = (wheelLastY - y) * 0.5;
-            wheelLastY = y;
-            requestAnimationFrame(updateWheelVisuals);
-        }
+        function onWheelTouchMove(e) { if (!wheelDragging) return; e.preventDefault(); const y = e.touches[0].clientY; wheelAngle += (wheelLastY - y) * 0.5; wheelVelocity = (wheelLastY - y) * 0.5; wheelLastY = y; requestAnimationFrame(updateWheelVisuals); }
         function onWheelTouchEnd(e) { wheelDragging = false; inertiaLoop(); }
+        function inertiaLoop() { if (wheelDragging || !isWheelOpen) return; wheelVelocity *= 0.95; wheelAngle += wheelVelocity; const maxAngle = (wheelItems.length - 1) * ITEM_ANGLE_GAP; if (wheelAngle < -10) { wheelAngle += (-10 - wheelAngle) * 0.1; wheelVelocity = 0; } else if (wheelAngle > maxAngle + 10) { wheelAngle += (maxAngle + 10 - wheelAngle) * 0.1; wheelVelocity = 0; } updateWheelVisuals(); if (Math.abs(wheelVelocity) > 0.1) wheelRafId = requestAnimationFrame(inertiaLoop); }
+        function snapToItem(index, callback) { const targetAngle = index * ITEM_ANGLE_GAP; const animate = () => { const diff = targetAngle - wheelAngle; if (Math.abs(diff) < 0.5) { wheelAngle = targetAngle; updateWheelVisuals(); if (callback) callback(); return; } wheelAngle += diff * 0.1; updateWheelVisuals(); requestAnimationFrame(animate); }; animate(); }
+        function updateWheelVisuals() { wheelItems.forEach((item, index) => { const itemAngle = (index * ITEM_ANGLE_GAP) - wheelAngle; if (itemAngle < -90 || itemAngle > 90) { item.style.visibility = 'hidden'; return; } item.style.visibility = 'visible'; const rad = itemAngle * (Math.PI / 180); const y = Math.sin(rad) * WHEEL_RADIUS; const x = (Math.cos(rad) * WHEEL_RADIUS) - WHEEL_RADIUS; const rotate = itemAngle * 0.5; item.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`; const dist = Math.abs(itemAngle); item.style.opacity = Math.max(0, 1 - (dist / 90)); if (dist < ITEM_ANGLE_GAP / 2) item.classList.add('active'); else item.classList.remove('active'); }); }
 
-        function inertiaLoop() {
-            if (wheelDragging || !isWheelOpen) return;
-            wheelVelocity *= 0.95;
-            wheelAngle += wheelVelocity;
-            const maxAngle = (wheelItems.length - 1) * ITEM_ANGLE_GAP;
-            if (wheelAngle < -10) { wheelAngle += (-10 - wheelAngle) * 0.1; wheelVelocity = 0; }
-            else if (wheelAngle > maxAngle + 10) { wheelAngle += (maxAngle + 10 - wheelAngle) * 0.1; wheelVelocity = 0; }
-            updateWheelVisuals();
-            if (Math.abs(wheelVelocity) > 0.1) wheelRafId = requestAnimationFrame(inertiaLoop);
-        }
-
-        function snapToItem(index, callback) {
-            const targetAngle = index * ITEM_ANGLE_GAP;
-            const animate = () => {
-                const diff = targetAngle - wheelAngle;
-                if (Math.abs(diff) < 0.5) { wheelAngle = targetAngle; updateWheelVisuals(); if (callback) callback(); return; }
-                wheelAngle += diff * 0.1;
-                updateWheelVisuals();
-                requestAnimationFrame(animate);
-            };
-            animate();
-        }
-
-        function updateWheelVisuals() {
-            wheelItems.forEach((item, index) => {
-                const itemAngle = (index * ITEM_ANGLE_GAP) - wheelAngle;
-                if (itemAngle < -90 || itemAngle > 90) { item.style.visibility = 'hidden'; return; }
-                item.style.visibility = 'visible';
-                const rad = itemAngle * (Math.PI / 180);
-                const y = Math.sin(rad) * WHEEL_RADIUS;
-                const x = (Math.cos(rad) * WHEEL_RADIUS) - WHEEL_RADIUS;
-                const rotate = itemAngle * 0.5;
-                item.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
-                const dist = Math.abs(itemAngle);
-                item.style.opacity = Math.max(0, 1 - (dist / 90));
-                if (dist < ITEM_ANGLE_GAP / 2) item.classList.add('active'); else item.classList.remove('active');
-            });
-        }
-
-        function goBack() {
-            document.body.style.opacity = '0';
-            setTimeout(() => { window.location.href = './articles.html'; }, 500);
-        }
+        function goBack() { document.body.style.opacity = '0'; setTimeout(() => { window.location.href = './articles.html'; }, 500); }
 
         async function initialize() {
             try {
@@ -875,10 +660,7 @@
                 await layoutArticle(content);
                 
                 let resizeTimer;
-                window.addEventListener('resize', () => {
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(() => { if (articleData && !isWheelOpen) layoutArticle(articleData); }, 250);
-                });
+                window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (articleData && !isWheelOpen) layoutArticle(articleData); }, 250); });
                 initInputs();
                 initCursor(); 
             } catch (error) { console.error("Init failed", error); } 
@@ -888,64 +670,33 @@
         function initInputs() {
             prevBtn.addEventListener('click', () => changePage(-1)); 
             nextBtn.addEventListener('click', () => changePage(1)); 
-            document.addEventListener('keydown', (e) => { 
-                if (e.key === 'ArrowLeft') { prevBtn.click(); } 
-                else if (e.key === 'ArrowRight') { nextBtn.click(); } 
-            });
+            document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') prevBtn.click(); else if (e.key === 'ArrowRight') nextBtn.click(); });
 
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) {
-                viewport.addEventListener('touchstart', e => {
-                    touchStartX = e.touches[0].clientX;
-                    touchMoveX = touchStartX;
-                    isSwiping = true;
-                    viewport.classList.add('no-anim');
-                }, {passive: true});
-
+                viewport.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchMoveX = touchStartX; isSwiping = true; viewport.classList.add('no-anim'); }, {passive: true});
                 viewport.addEventListener('touchmove', e => {
                     if (!isSwiping) return;
                     touchMoveX = e.touches[0].clientX;
                     const delta = touchMoveX - touchStartX;
                     const page = pages[currentPage];
-                    if (!page) return;
-                    
+                    if (!page || !viewport.contains(page)) return; // 安全檢查
                     let tx = delta;
                     if ((currentPage === 0 && delta > 0) || (currentPage === totalPages-1 && delta < 0)) tx *= 0.4;
                     page.style.transform = `translateX(${tx}px)`;
                 }, {passive: true});
-
                 viewport.addEventListener('touchend', e => {
                     if (!isSwiping) return;
-                    isSwiping = false;
-                    viewport.classList.remove('no-anim');
+                    isSwiping = false; viewport.classList.remove('no-anim');
                     const delta = touchMoveX - touchStartX;
-                    pages[currentPage].style.transform = '';
-
-                    if (delta < -50) { 
-                        if (currentPage < totalPages - 1) { changePage(1); resetSwipeExit(); }
-                        else handleSwipeExit(); 
-                    } else if (delta > 50) { 
-                        if (currentPage > 0) { changePage(-1); resetSwipeExit(); }
-                        else handleSwipeExit();
-                    } else {
-                        updatePage(false);
-                    }
+                    if(pages[currentPage]) pages[currentPage].style.transform = '';
+                    if (delta < -50) { if (currentPage < totalPages - 1) { changePage(1); resetSwipeExit(); } else handleSwipeExit(); } 
+                    else if (delta > 50) { if (currentPage > 0) { changePage(-1); resetSwipeExit(); } else handleSwipeExit(); } 
+                    else { updatePage(false); }
                 }, {passive: true});
             }
         }
 
-        function handleSwipeExit() {
-            clearTimeout(swipeResetTimer);
-            lastPageSwipeCount++;
-            if (lastPageSwipeCount === 1) {
-                swipeHint.classList.add('show');
-                updatePage(false);
-                swipeResetTimer = setTimeout(resetSwipeExit, 3000);
-            } else if (lastPageSwipeCount >= 2) {
-                swipeHint.classList.remove('show');
-                exitOverlay.classList.add('active');
-                setTimeout(goBack, 1000);
-            }
-        }
+        function handleSwipeExit() { clearTimeout(swipeResetTimer); lastPageSwipeCount++; if (lastPageSwipeCount === 1) { swipeHint.classList.add('show'); updatePage(false); swipeResetTimer = setTimeout(resetSwipeExit, 3000); } else if (lastPageSwipeCount >= 2) { swipeHint.classList.remove('show'); exitOverlay.classList.add('active'); setTimeout(goBack, 1000); } }
         function resetSwipeExit() { lastPageSwipeCount = 0; swipeHint.classList.remove('show'); }
 
         window.addEventListener('load', initialize);
