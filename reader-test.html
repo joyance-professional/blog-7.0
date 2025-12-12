@@ -3,682 +3,872 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Article Reader</title>
+    <title>Article</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* --- 基礎變量 --- */
         :root { 
             --bg-color: #ffffff; 
             --text-color: #1a1a1a; 
             --accent-color: #000000; 
             --placeholder-bg: #f0f0f0; 
-            --ui-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --toc-width: 280px;
         }
         @media (prefers-color-scheme: dark) { 
-            :root { --bg-color: #121212; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
+            :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
         }
 
-        /* --- 全局設定 --- */
         body.js-loading { opacity: 0; visibility: hidden; }
         body { 
             background-color: var(--bg-color); 
             color: var(--text-color); 
             font-family: 'Noto Serif TC', serif; 
-            margin: 0; height: 100vh; width: 100vw; 
-            overflow: hidden; display: flex; flex-direction: column; 
-            transition: opacity 0.5s ease;
-            -webkit-font-smoothing: antialiased;
+            margin: 0; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            transition: opacity 0.8s ease; 
         }
         
-        /* 游標設定 */
-        * { cursor: none !important; }
+        * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
-        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference;}
+
+        /* 佈局容器 */
+        #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
+        .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* 自定義鼠標 */
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; mix-blend-mode: difference; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); transform: rotate(45deg) scale(1.5); }
         #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--accent-color); }
 
-        /* UI 按鈕共用 */
-        .icon-btn { position: fixed; z-index: 100; border: none; background: none; padding: 10px; opacity: 0.6; transition: 0.3s; color: var(--text-color); }
+        /* 頂部按鈕 (桌面: 目錄在右上; 手機: 目錄隱藏用滾輪) */
+        .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
+        .desktop-toc-trigger { position: fixed; top: 30px; right: 30px; z-index: 100; pointer-events: none; }
+        
+        .icon-btn { opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-        .icon-btn svg { width: 24px; height: 24px; fill: currentColor; }
+        .icon-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        .back-arrow { top: 20px; left: 20px; }
-        .toc-btn { top: 20px; right: 20px; }
-
-        /* --- 閱讀視口 --- */
+        /* 閱讀視口 */
         .reader-viewport { 
-            flex: 1; width: 100%; max-width: 800px; 
-            margin: 0 auto; position: relative; 
-            touch-action: pan-y; /* 允許垂直滾動，水平由 JS 接管 */
+            flex: 1; 
+            width: 100%; 
+            max-width: 800px; 
+            /* 調整上下邊距，使其小於網頁邊框 */
+            margin: 40px auto; 
+            position: relative; 
+            touch-action: pan-y; 
         }
-
+        
         .page-slide { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            padding: 80px 40px 100px 40px; /* 上下留白給 Header/Footer */
-            opacity: 0; pointer-events: none; 
-            transform: translateX(20px); 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; 
+            opacity: 0; pointer-events: none; transform: translateX(30px); 
             transition: opacity 0.4s ease, transform 0.4s ease; 
-            display: flex; flex-direction: column; justify-content: flex-start; 
-            gap: 20px; 
-            box-sizing: border-box;
-            overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; gap: 25px; 
         }
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
         .page-slide.is-swiping { transition: none; }
 
-        /* --- 內容樣式 --- */
+        /* 文字樣式修正 */
         p { 
-            font-size: clamp(1.1rem, 2.2vmin, 1.25rem); 
-            line-height: 1.8; 
+            font-size: clamp(1.1rem, 2.2vmin, 1.35rem); 
+            line-height: 1.9; 
             text-align: justify; 
             margin: 0;
-            overflow-wrap: break-word; /* 防止長單詞溢出 */
-            hyphens: auto;
+            font-weight: 400; /* 確保正文不粗體 */
+            overflow-wrap: break-word; 
+            transform-origin: left center; 
+            transition: transform 0.2s;
         }
+        p:hover { transform: scale(1.01); }
         
-        h1 { font-size: 2rem; font-weight: 700; text-align: center; margin-bottom: 10px; }
-        h2 { font-size: 1.5rem; font-weight: 500; margin: 15px 0 10px 0; border-bottom: 1px solid var(--accent-color); padding-bottom: 5px; }
-        h3 { font-size: 1.3rem; font-weight: 500; margin: 10px 0; opacity: 0.9; }
-        .meta { text-align: center; font-size: 0.9rem; opacity: 0.6; font-family: var(--ui-font); margin-bottom: 30px; }
+        /* 標題樣式 */
+        h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.4; }
+        .article-heading { margin-top: 10px; margin-bottom: 10px; }
+        .article-heading[data-level="1"] { font-size: 1.8rem; border-left: 4px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
+        .article-heading[data-level="2"] { font-size: 1.4rem; opacity: 0.9; padding-left: 5px; font-weight: 600; }
 
-        figure { 
-            margin: 0; padding: 0; width: 100%; 
-            display: flex; flex-direction: column; align-items: center;
-        }
+        /* 圖片與燈箱 */
+        figure { margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
         figure img { 
-            max-width: 100%; 
-            max-height: 50vh; /* 限制高度，避免一張圖佔滿 */
-            height: auto; 
-            display: block; 
-            border-radius: 4px; 
-            transition: transform 0.3s;
-            object-fit: contain;
+            max-width: 100%; max-height: 65vh; height: auto; 
+            border-radius: 4px; opacity: 0; transition: opacity 0.5s ease, transform 0.3s;
+            cursor: none; /* 讓自定義鼠標處理 */
         }
-        figure img.clickable:hover { transform: scale(1.01); }
-        figcaption { font-size: 0.85rem; font-family: var(--ui-font); text-align: center; opacity: 0.7; margin-top: 8px; }
-
-        /* 圖片加載相關 */
-        .img-container {
-            width: 100%; min-height: 200px; display: flex; align-items: center; justify-content: center;
-            background-color: var(--placeholder-bg); border-radius: 4px; position: relative;
-            overflow: hidden;
-        }
-        .img-container.loaded { background: transparent; min-height: auto; }
-        .img-container.error { border: 1px dashed var(--text-color); }
+        figure img.loaded { opacity: 1; }
+        figure img:hover { transform: scale(1.02); }
         
-        .retry-btn {
-            background: none; border: 1px solid var(--text-color); color: var(--text-color);
-            padding: 8px 16px; border-radius: 20px; font-size: 0.9rem;
-            cursor: none; opacity: 0.7; transition: 0.3s;
-        }
-        .retry-btn:hover { opacity: 1; background: var(--text-color); color: var(--bg-color); }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .loading-pulse { animation: pulse 1.5s infinite ease-in-out; }
-
-        /* --- 底部導航 --- */
-        .pagination { 
-            position: fixed; bottom: 0; width: 100%; height: 60px;
-            display: flex; justify-content: center; align-items: center; gap: 40px; 
-            font-family: var(--ui-font); font-size: 0.9rem; 
-            background: linear-gradient(to top, var(--bg-color) 20%, transparent);
-            z-index: 50;
-        }
-        .nav-btn { border: none; background: none; color: inherit; font-family: inherit; opacity: 0.3; padding: 10px; transition: 0.3s; }
-        .nav-btn:hover { opacity: 1; }
-        .nav-btn:disabled { opacity: 0; pointer-events: none; }
-        .page-indicator { opacity: 0.5; font-variant-numeric: tabular-nums; letter-spacing: 1px;}
-
-        /* --- 目錄 (Modal) --- */
-        .toc-modal {
-            position: fixed; top: 0; right: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); backdrop-filter: blur(5px);
-            z-index: 200; opacity: 0; pointer-events: none;
-            transition: 0.3s; display: flex; justify-content: flex-end;
-        }
-        .toc-modal.open { opacity: 1; pointer-events: auto; }
-        .toc-content {
-            width: 300px; max-width: 80%; height: 100%; background: var(--bg-color);
-            padding: 60px 30px; box-sizing: border-box; overflow-y: auto;
-            transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex; flex-direction: column; gap: 15px;
-        }
-        .toc-modal.open .toc-content { transform: translateX(0); }
-        .toc-item {
-            font-family: var(--ui-font); font-size: 1rem; opacity: 0.6;
-            padding: 10px 0; border-bottom: 1px solid var(--placeholder-bg);
-            transition: 0.2s;
-        }
-        .toc-item:hover { opacity: 1; padding-left: 10px; }
-        .toc-item.level-2 { padding-left: 20px; font-size: 0.9rem; }
-
-        /* --- Lightbox --- */
-        .lightbox {
+        /* Lightbox */
+        #lightbox {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 500;
+            background: rgba(0,0,0,0.9); z-index: 2000;
             display: flex; align-items: center; justify-content: center;
-            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+            backdrop-filter: blur(5px);
         }
-        .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 95%; max-height: 95%; box-shadow: 0 0 20px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.3s; }
-        .lightbox.active img { transform: scale(1); }
+        #lightbox.active { opacity: 1; visibility: visible; }
+        #lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; transform: scale(0.9); transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #lightbox.active img { transform: scale(1); }
 
-        /* --- 正在返回 提示 --- */
-        .return-hint {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 1.5rem; font-weight: 500; color: var(--text-color);
-            opacity: 0; pointer-events: none; z-index: 300;
-            text-shadow: 0 0 10px var(--accent-color);
-            transition: opacity 0.3s; letter-spacing: 5px;
+        .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem; }
+        .loading-placeholder.pulsing { animation: pulse 1.5s infinite ease-in-out; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
+
+        /* 底部頁碼 */
+        .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; user-select: none; z-index: 10; pointer-events: none; }
+        .pagination > * { pointer-events: auto; }
+        .nav-btn { opacity: 0.3; padding: 10px; border: none; background: none; color: inherit; font-size: inherit; }
+        .nav-btn:hover { opacity: 1; }
+        .nav-btn:disabled { opacity: 0.05; }
+
+        /* --- 電腦版目錄側邊欄 --- */
+        #toc-sidebar {
+            width: var(--toc-width); height: 100%; background-color: var(--bg-color);
+            border-left: 1px solid var(--placeholder-bg);
+            position: fixed; right: 0; top: 0;
+            transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 90; display: flex; flex-direction: column;
+            padding: 80px 30px 30px; overflow-y: auto;
+        }
+        #toc-sidebar.open { transform: translateX(0); }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item { 
+            margin-bottom: 18px; opacity: 0.6; transition: 0.2s; 
+            font-size: 0.95rem; line-height: 1.4; display: block;
+        }
+        .toc-item:hover { opacity: 1; transform: translateX(-5px); color: var(--accent-color); }
+        .toc-item[data-level="2"] { padding-left: 20px; font-size: 0.85rem; opacity: 0.5; }
+        .toc-item[data-level="2"]:hover { opacity: 0.9; }
+
+        /* --- 手機版滾輪目錄 (Wheel TOC) --- */
+        #mobile-toc-trigger {
+            position: fixed; bottom: 25%; right: 0;
+            width: 50px; height: 80px;
+            background: rgba(128, 128, 128, 0.1);
+            backdrop-filter: blur(5px);
+            border-radius: 40px 0 0 40px;
+            z-index: 500;
+            display: none; align-items: center; justify-content: center;
+            border: 1px solid rgba(128,128,128,0.2); border-right: none;
+            transition: width 0.3s;
+        }
+        #mobile-toc-trigger::after { content: "≡"; font-size: 24px; color: var(--text-color); opacity: 0.7; transform: translateX(5px); }
+        #mobile-toc-trigger:active { width: 60px; background: rgba(128, 128, 128, 0.2); }
+
+        #mobile-wheel-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(var(--bg-rgb), 0.1);
+            backdrop-filter: blur(0px); /* 動態 JS 控制 */
+            z-index: 600;
+            visibility: hidden; transition: backdrop-filter 0.4s, visibility 0.4s;
+            overflow: hidden;
+            touch-action: none; /* 接管觸摸 */
+        }
+        #mobile-wheel-overlay.active { visibility: visible; backdrop-filter: blur(15px); }
+
+        /* 虛擬滾輪容器 */
+        #wheel-container {
+            position: absolute;
+            top: 50%; right: -250px; /* 中心點在屏幕外 */
+            width: 500px; height: 500px;
+            /* border: 1px solid red; 測試用 */
+            transform: translateY(-50%);
+            pointer-events: none; /* 事件由 overlay 處理 */
+        }
+        .wheel-item {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 300px; height: 40px;
+            margin-top: -20px; margin-left: -150px;
+            text-align: left;
+            padding-left: 40px;
+            transform-origin: center center; /* 會在 JS 中動態調整 transform */
             white-space: nowrap;
+            font-size: 1.1rem;
+            color: var(--text-color);
+            opacity: 0;
+            transition: color 0.2s;
+            display: flex; align-items: center;
         }
-        .return-hint.visible { opacity: 1; animation: glow 1.5s infinite alternate; }
-        @keyframes glow { from { text-shadow: 0 0 5px var(--accent-color); } to { text-shadow: 0 0 20px var(--accent-color), 0 0 10px var(--text-color); } }
+        .wheel-item.active { color: var(--accent-color); font-weight: bold; }
+        .wheel-item[data-level="2"] { font-size: 0.9rem; }
+        .wheel-item span { display: block; } /* 用於存放文字 */
 
-        /* --- Mobile Tweaks --- */
-        @media (max-width: 768px) { 
-            #custom-cursor { display: none; }
-            .page-slide { padding: 60px 20px 80px 20px; gap: 15px; }
-            p { font-size: 1.15rem; }
-            .toc-content { width: 85%; }
+        /* 退出提示與遮罩 */
+        .toast-msg {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: var(--accent-color); color: var(--bg-color); padding: 8px 16px; border-radius: 20px;
+            font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+            z-index: 200;
+        }
+        .toast-msg.show { opacity: 1; }
+        #exit-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); display: flex; align-items: center; justify-content: center;
+            z-index: 999; opacity: 0; visibility: hidden; transition: 0.5s;
+        }
+        #exit-overlay.active { opacity: 1; visibility: visible; }
+        #exit-overlay span { font-size: 1.5rem; letter-spacing: 5px; animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { text-shadow: 0 0 5px var(--text-color); opacity: 0.5; } to { text-shadow: 0 0 20px var(--text-color); opacity: 1; } }
+
+        /* RWD 調整 */
+        @media (min-width: 1025px) {
+            body.has-toc-open .main-content { margin-right: var(--toc-width); }
+            /* 電腦版隱藏手機目錄觸發器 */
+            #mobile-toc-trigger { display: none !important; }
+        }
+
+        @media (max-width: 1024px) { 
+            #custom-cursor { display: none; } 
+            .reader-viewport { margin: 60px auto 100px; width: 90%; } 
+            .page-slide { padding: 0 5px; gap: 20px; }
+            .pagination { bottom: 20px; }
+            .top-controls { top: 20px; left: 20px; }
+            .desktop-toc-trigger { display: none; } /* 手機版隱藏桌面按鈕 */
+            #mobile-toc-trigger { display: flex; }
+            #toc-sidebar { display: none; } /* 完全禁用桌面側邊欄DOM */
         }
     </style>
 </head>
 <body class="js-loading">
     <div id="custom-cursor"></div>
     
-    <!-- 返回按鈕 -->
-    <button class="icon-btn back-arrow interactable" onclick="handleBackAction()" aria-label="返回列表">
-        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-    </button>
-    
-    <!-- 目錄按鈕 -->
-    <button class="icon-btn toc-btn interactable" onclick="toggleToc()" aria-label="目錄">
-        <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
-    </button>
+    <!-- 退出動畫層 -->
+    <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
+    <div class="toast-msg" id="swipe-hint">再次滑動以返回列表</div>
 
-    <!-- 主閱讀區 -->
-    <main class="reader-viewport" id="viewport" aria-live="polite"></main>
+    <!-- 圖片燈箱 -->
+    <div id="lightbox" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" alt="preview">
+    </div>
 
-    <!-- 分頁導航 -->
-    <nav class="pagination">
-        <button class="nav-btn interactable" id="prev-btn">PREV</button>
-        <div class="page-indicator" id="page-num">Loading...</div>
-        <button class="nav-btn interactable" id="next-btn">NEXT</button>
-    </nav>
-
-    <!-- 目錄 Modal -->
-    <div class="toc-modal" id="toc-modal" onclick="toggleToc()">
-        <div class="toc-content" id="toc-list" onclick="event.stopPropagation()">
-            <!-- JS 生成 -->
+    <!-- 手機版滾輪目錄 -->
+    <div id="mobile-toc-trigger" class="interactable"></div>
+    <div id="mobile-wheel-overlay">
+        <div id="wheel-container">
+            <!-- JS 動態填充 .wheel-item -->
         </div>
     </div>
 
-    <!-- Lightbox -->
-    <div class="lightbox" id="lightbox" onclick="closeLightbox()">
-        <img id="lightbox-img" src="" alt="Zoomed View">
+    <div id="app-container">
+        <!-- 主內容區 -->
+        <main class="main-content">
+            <div class="top-controls">
+                <button class="icon-btn interactable" onclick="goBack()" aria-label="返回">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                </button>
+            </div>
+            
+            <div class="desktop-toc-trigger">
+                <button class="icon-btn interactable" id="desktop-toc-btn" onclick="toggleDesktopTOC()" aria-label="目錄">
+                    <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+                </button>
+            </div>
+
+            <div class="reader-viewport" id="viewport" aria-live="polite">
+                <div class="loading-placeholder pulsing"></div>
+            </div>
+
+            <nav class="pagination" role="navigation">
+                <button class="nav-btn interactable" id="prev-btn">PREV</button>
+                <div class="page-indicator" id="page-num">1 / 1</div>
+                <button class="nav-btn interactable" id="next-btn">NEXT</button>
+            </nav>
+        </main>
+
+        <!-- 電腦版側邊欄 -->
+        <aside id="toc-sidebar">
+            <div style="font-size:1.2rem; margin-bottom:20px; opacity:0.5; font-weight:500;">目錄</div>
+            <ul class="toc-list" id="desktop-toc-list"></ul>
+        </aside>
     </div>
 
-    <!-- 返回提示 -->
-    <div class="return-hint" id="return-hint">正在返回...</div>
-
-<script>
-    // --- 狀態管理 ---
-    const state = {
-        articleId: new URLSearchParams(window.location.search).get('id'),
-        content: null,
-        pages: [], // 存放 DOM 元素
-        tocData: [], // { text, pageIndex, level }
-        currentPage: 0,
-        totalPages: 0,
-        isSwiping: false,
-        touchStartX: 0,
-        touchMoveX: 0,
-        overscrollThreshold: 100, // 觸發返回的滑動距離
-        isLoading: true
-    };
-
-    // --- DOM 元素 ---
-    const el = {
-        viewport: document.getElementById('viewport'),
-        pageNum: document.getElementById('page-num'),
-        prevBtn: document.getElementById('prev-btn'),
-        nextBtn: document.getElementById('next-btn'),
-        tocModal: document.getElementById('toc-modal'),
-        tocList: document.getElementById('toc-list'),
-        lightbox: document.getElementById('lightbox'),
-        lightboxImg: document.getElementById('lightbox-img'),
-        returnHint: document.getElementById('return-hint'),
-        cursor: document.getElementById('custom-cursor'),
-        body: document.body
-    };
-
-    // --- 初始化 ---
-    async function init() {
-        try {
-            if (!state.articleId) throw new Error("Missing Article ID");
-            state.content = await fetchArticleContent(state.articleId);
-            document.title = state.content.title;
-            
-            // 初始佈局計算（異步執行以防卡頓）
-            await layoutArticle(state.content);
-            
-            // 綁定事件
-            bindEvents();
-            
-            // 移除 Loading
-            el.body.classList.remove('js-loading');
-            state.isLoading = false;
-        } catch (err) {
-            console.error(err);
-            el.viewport.innerHTML = `<div style="text-align:center; padding-top:100px;">
-                <h2>載入失敗</h2><p>${err.message}</p>
-                <button class="retry-btn interactable" onclick="location.reload()">重新整理</button>
-            </div>`;
-            el.body.classList.remove('js-loading');
-        }
-    }
-
-    // --- 數據獲取 ---
-    async function fetchArticleContent(id) {
-        // 模擬數據獲取，實際應為 fetch(`./article/${id}.json`)
-        // 這裡為了演示，如果沒有 fetch 到文件，返回測試數據
-        try {
-            const res = await fetch(`./article/${id}.json`);
-            if (!res.ok) throw new Error("File not found");
-            return await res.json();
-        } catch (e) {
-             console.warn("Using mock data due to fetch error:", e);
-             // 如果你是本地測試沒有服務器，這裡會使用 Prompt 提供的 Mock Data
-             return {
-                "title": "幾何美學與影像",
-                "date": "2023.11.02",
-                "paragraphs": [
-                    "這是第一段內容。在數字的荒原裡，我們試圖用線條和角度構建一座燈塔。現在，這個世界也加入了影像的維度。",
-                    { "type": "header", "level": 1, "text": "第一章：光影結構" },
-                    { 
-                        "type": "image", 
-                        "src": "https://images.unsplash.com/photo-1593111985590-3b9c612b7f5e?q=80&w=2592&auto=format&fit=crop", 
-                        "alt": "建築內部", 
-                        "caption": "光線穿過幾何結構，構成空間的詩意。" 
-                    },
-                    "設計不應該喧賓奪主，而應該退居幕後。白色背景，黑色文字，沒有多餘的裝飾。每一個像素的間距都是為了呼吸而留。",
-                    { "type": "header", "level": 2, "text": "1.1 細節的意義" },
-                    "這是第四段測試長文本。當網絡不好的時候，Moment 頁面的圖片會顯示加載動畫，而在文章頁面，所有的文字都是即時渲染的。",
-                    "我們會逝去，但影像與文字會留下來。翻頁閱讀讓思緒有了停頓的間隙，不再是無止盡的滑動。",
-                    "測試超長段落用以觀察分頁效果。這段文字應該足夠長，長到需要換行。我們繼續寫作，繼續記錄，為了那些稍縱即逝的靈感。在響應式設計中，文字的流動性是至關重要的。確保它在任何屏幕上都易於閱讀。",
-                    { "type": "header", "level": 1, "text": "結語" },
-                    "最後一段。保持熱愛，奔赴山海。純粹的記錄，有時候比圖像更有力量。"
-                ]
-            };
-        }
-    }
-
-    // --- 核心排版引擎 (分片處理) ---
-    async function layoutArticle(data) {
-        el.viewport.innerHTML = '';
-        state.pages = [];
-        state.tocData = [];
+    <script>
+        const viewport = document.getElementById('viewport');
+        const pageNum = document.getElementById('page-num');
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const cursor = document.getElementById('custom-cursor');
         
-        // 1. 創建標題頁
-        const titlePage = createPage(0);
-        titlePage.innerHTML = `<div class="title-slide"><h1>${data.title}</h1><div class="meta">${data.date}</div></div>`;
-        state.pages.push(titlePage);
-        el.viewport.appendChild(titlePage);
+        // TOC Elements
+        const desktopTocSidebar = document.getElementById('toc-sidebar');
+        const desktopTocList = document.getElementById('desktop-toc-list');
+        const desktopTocBtn = document.getElementById('desktop-toc-btn');
+        const mobileTocTrigger = document.getElementById('mobile-toc-trigger');
+        const mobileOverlay = document.getElementById('mobile-wheel-overlay');
+        const wheelContainer = document.getElementById('wheel-container');
 
-        // 2. 準備測量容器
-        let pageIndex = 1;
-        let currentPageDiv = createPage(pageIndex);
-        state.pages.push(currentPageDiv);
-        el.viewport.appendChild(currentPageDiv); // 先掛載以獲取樣式
-        
-        // 獲取實際可用高度 (減去 padding)
-        const computedStyle = getComputedStyle(currentPageDiv);
-        const vHeight = el.viewport.clientHeight;
-        const pTop = parseFloat(computedStyle.paddingTop);
-        const pBottom = parseFloat(computedStyle.paddingBottom);
-        const pGap = parseFloat(computedStyle.gap) || 20;
-        const contentMaxHeight = vHeight - pTop - pBottom;
+        // Lightbox
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
 
-        // 隱藏的測量 Div，寬度必須嚴格等於 page-slide 的內容寬度
-        const measureDiv = document.createElement('div');
-        measureDiv.style.cssText = `
-            position: absolute; visibility: hidden; pointer-events: none; top:0; left:0;
-            width: ${currentPageDiv.clientWidth - (parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight))}px;
-            font-family: ${computedStyle.fontFamily};
-            font-size: ${computedStyle.fontSize};
-            line-height: ${computedStyle.lineHeight};
-        `;
-        document.body.appendChild(measureDiv);
+        // Hints & Swipe
+        const swipeHint = document.getElementById('swipe-hint');
+        const exitOverlay = document.getElementById('exit-overlay');
 
-        let currentH = 0;
+        let currentPage = 0, totalPages = 0, pages = [];
+        let tocData = []; 
+        let articleData = null;
+        let touchStartX = 0, touchMoveX = 0, isSwiping = false;
+        let lastPageSwipeCount = 0; 
+        let swipeResetTimer;
 
-        // 3. 遍歷內容
-        for (let i = 0; i < data.paragraphs.length; i++) {
-            const item = data.paragraphs[i];
-            let element = null;
-            let elHeight = 0;
-            let isHeader = false;
+        // --- Wheel TOC Variables ---
+        let isWheelOpen = false;
+        let wheelItems = []; // DOM elements
+        let wheelAngle = 0; // Current rotation
+        let wheelVelocity = 0;
+        let wheelDragging = false;
+        let wheelLastY = 0;
+        let wheelRafId = null;
+        const WHEEL_RADIUS = 300; // Radius of the virtual circle
+        const ITEM_ANGLE_GAP = 12; // Degrees between items
 
-            // 構建 DOM 元素
-            if (typeof item === 'string') {
-                element = document.createElement('p');
-                element.className = 'interactable-text';
-                element.innerText = item;
-                element.onclick = () => copyText(element);
-            } else if (item.type === 'header') {
-                element = document.createElement(item.level === 1 ? 'h2' : 'h3');
-                element.innerText = item.text;
-                isHeader = true;
-                // 記錄 TOC
-                state.tocData.push({ text: item.text, pageIndex: pageIndex, level: item.level });
-            } else if (item.type === 'image') {
-                element = createFigure(item);
+        // --- 1. Fetch & Layout ---
+        async function fetchArticleContent(id) {
+            if (!id) throw new Error("ID missing");
+            const response = await fetch(`./article/${id}.json`);
+            if (!response.ok) throw new Error("Fetch failed");
+            return await response.json();
+        }
+
+        async function layoutArticle(content) {
+            articleData = content;
+            document.title = content.title;
+            viewport.innerHTML = `<div class="loading-placeholder pulsing" style="margin: auto;"></div>`;
+            pages = []; currentPage = 0; tocData = [];
+
+            const vH = viewport.clientHeight;
+            const vW = viewport.clientWidth;
+            if (vH <= 0) return;
+
+            // Title Page
+            const titlePage = createPageDiv(0, true);
+            titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta" style="margin-top:10px; opacity:0.6;">${content.date}</div>`;
+            pages.push(titlePage);
+
+            // Content Pages
+            let contentPageIndex = 1;
+            let currentDiv = createPageDiv(1);
+            pages.push(currentDiv);
+
+            // Layout Calculation
+            const tempDiv = document.createElement('div');
+            const style = getComputedStyle(currentDiv);
+            const pGap = parseFloat(style.gap) || 25;
+            tempDiv.style.cssText = `visibility:hidden; position:absolute; width:${vW - (parseFloat(style.paddingLeft)*2)}px; left:0; top:0;`;
+            document.body.appendChild(tempDiv);
+
+            let currentH = 0;
+
+            try {
+                for (const item of content.paragraphs) {
+                    let el, isHeader = false;
+
+                    if (typeof item === 'string') {
+                        el = document.createElement('p');
+                        el.className = 'interactable-text';
+                        el.innerText = item;
+                        el.onclick = () => copyText(el);
+                    } else if (item.type === 'image') {
+                        el = document.createElement('figure');
+                        const ph = document.createElement('div');
+                        ph.className = 'loading-placeholder pulsing interactable';
+                        ph.dataset.src = item.src;
+                        ph.dataset.alt = item.alt || '';
+                        el.appendChild(ph);
+                        if (item.caption) {
+                            const cap = document.createElement('figcaption');
+                            cap.innerText = item.caption;
+                            el.appendChild(cap);
+                        }
+                    } else if (item.type === 'header') {
+                        isHeader = true;
+                        el = document.createElement(item.level === 1 ? 'h2' : 'h3');
+                        el.className = 'article-heading interactable-text';
+                        el.dataset.level = item.level;
+                        el.innerText = item.text;
+                    }
+
+                    if (!el) continue;
+
+                    tempDiv.innerHTML = '';
+                    tempDiv.appendChild(el.cloneNode(true));
+                    const elH = tempDiv.clientHeight;
+
+                    if (currentH > 0 && (currentH + elH + pGap > vH)) {
+                        contentPageIndex++;
+                        currentDiv = createPageDiv(contentPageIndex);
+                        pages.push(currentDiv);
+                        currentH = 0;
+                    }
+
+                    if (isHeader) {
+                        tocData.push({ text: item.text, level: item.level, pageIndex: contentPageIndex });
+                    }
+
+                    currentDiv.appendChild(el);
+                    currentH += (elH + pGap);
+                }
+            } finally {
+                document.body.removeChild(tempDiv);
             }
 
-            if (!element) continue;
+            viewport.innerHTML = '';
+            pages.forEach(p => viewport.appendChild(p));
+            totalPages = pages.length;
 
-            // 測量高度
-            measureDiv.innerHTML = '';
-            measureDiv.appendChild(element.cloneNode(true));
-            // 對於圖片，需要預設高度或等待（這裡我們給容器預設樣式高度進行估算）
-            // 如果是圖片組件，我們主要依賴 CSS 限制 max-height，這裡取元素 clientHeight
-            elHeight = measureDiv.offsetHeight; 
-            
-            // 修正：如果元素是圖片且還未加載，offsetHeight 可能是 0 或僅 placeholder 高度
-            if (item.type === 'image') elHeight = 250 + 30; // 估算值：placeholder + caption + gap
-
-            // 分頁判斷
-            if (currentH + elHeight > contentMaxHeight && currentH > 0) {
-                // 換頁
-                pageIndex++;
-                currentH = 0;
-                currentPageDiv = createPage(pageIndex);
-                state.pages.push(currentPageDiv);
-                el.viewport.appendChild(currentPageDiv);
-                // 如果剛剛那個 Header 被擠到下一頁了，更新 TOC
-                if (isHeader) {
-                    state.tocData[state.tocData.length - 1].pageIndex = pageIndex;
-                }
-                
-                // 性能優化：每處理幾段稍微讓出線程，讓 UI 響應
-                if (pageIndex % 2 === 0) await new Promise(r => requestAnimationFrame(r));
-            }
-
-            currentPageDiv.appendChild(element);
-            currentH += (elHeight + pGap);
+            setupTOC(); // Setup both desktop and mobile
+            updatePage();
+            bindCursorEvents();
+            lazyLoadImages();
         }
 
-        document.body.removeChild(measureDiv);
-        state.totalPages = state.pages.length;
-        
-        generateToc();
-        updatePager();
-    }
-
-    // --- 元件生成 ---
-    function createPage(index) {
-        const div = document.createElement('div');
-        div.className = 'page-slide';
-        if (index === 0) div.classList.add('active');
-        return div;
-    }
-
-    function createFigure(item) {
-        const figure = document.createElement('figure');
-        const container = document.createElement('div');
-        container.className = 'img-container loading-pulse interactable';
-        
-        // 創建圖片元素但不立即設置 src (除非在前幾頁)
-        const img = document.createElement('img');
-        img.alt = item.alt || 'image';
-        img.className = 'interactable';
-        img.onclick = () => openLightbox(img.src);
-        
-        // 錯誤處理按鈕
-        const retryBtn = document.createElement('button');
-        retryBtn.className = 'retry-btn interactable';
-        retryBtn.innerText = '重試載入';
-        retryBtn.style.display = 'none';
-        retryBtn.onclick = (e) => {
-            e.stopPropagation();
-            loadImage(img, item.src, container, retryBtn);
-        };
-
-        container.appendChild(img);
-        container.appendChild(retryBtn);
-        figure.appendChild(container);
-
-        if (item.caption) {
-            const cap = document.createElement('figcaption');
-            cap.innerText = item.caption;
-            figure.appendChild(cap);
+        // --- 2. Image Lightbox & Lazy Load ---
+        function openLightbox(src) {
+            lightboxImg.src = src;
+            lightbox.classList.add('active');
+            cursor.classList.remove('hollow'); // Reset cursor
+        }
+        function closeLightbox() {
+            lightbox.classList.remove('active');
+            setTimeout(() => { lightboxImg.src = ''; }, 300);
         }
 
-        // 立即加載圖片的邏輯
-        loadImage(img, item.src, container, retryBtn);
-
-        return figure;
-    }
-
-    function loadImage(img, src, container, retryBtn) {
-        container.classList.remove('error');
-        container.classList.add('loading-pulse');
-        retryBtn.style.display = 'none';
-        img.style.opacity = '0';
-
-        const temp = new Image();
-        temp.onload = () => {
-            img.src = src;
-            img.style.opacity = '1';
-            container.classList.remove('loading-pulse');
-            container.classList.add('loaded');
-        };
-        temp.onerror = () => {
-            container.classList.remove('loading-pulse');
-            container.classList.add('error');
-            retryBtn.style.display = 'block';
-        };
-        temp.src = src;
-    }
-
-    function generateToc() {
-        el.tocList.innerHTML = `
-            <div style="font-size:1.2rem; font-weight:bold; margin-bottom:10px;">目錄</div>
-            <div class="toc-item interactable" onclick="goToPage(0)">首頁</div>
-        `;
-        state.tocData.forEach(item => {
-            const div = document.createElement('div');
-            div.className = `toc-item interactable level-${item.level}`;
-            div.innerText = item.text;
-            div.onclick = () => {
-                goToPage(item.pageIndex);
-                toggleToc();
-            };
-            el.tocList.appendChild(div);
-        });
-        bindCursor(); // Re-bind for new elements
-    }
-
-    // --- 導航控制 ---
-    function goToPage(index) {
-        if (index < 0 || index >= state.totalPages) return;
-        
-        const current = state.pages[state.currentPage];
-        const next = state.pages[index];
-
-        // 簡單切換，可加入方向判斷做滑動動畫
-        current.classList.remove('active');
-        current.style.transform = index > state.currentPage ? 'translateX(-30px)' : 'translateX(30px)';
-        current.style.opacity = '0';
-        
-        next.classList.add('active');
-        next.style.transform = 'translateX(0)';
-        next.style.opacity = '1'; // 確保顯示
-
-        state.currentPage = index;
-        updatePager();
-        
-        // 重置所有非當前頁的樣式
-        setTimeout(() => {
-            state.pages.forEach((p, i) => {
-                if (i !== index) {
-                    p.classList.remove('active');
-                    p.style.opacity = '0';
-                }
+        function lazyLoadImages() {
+            const range = [currentPage-1, currentPage, currentPage+1, currentPage+2, currentPage+3];
+            range.forEach(idx => {
+                if (idx < 0 || idx >= totalPages) return;
+                const page = pages[idx];
+                page.querySelectorAll('.loading-placeholder[data-src]').forEach(ph => {
+                    if (ph.dataset.loading === 'true') return;
+                    ph.dataset.loading = 'true';
+                    
+                    const img = document.createElement('img');
+                    img.src = ph.dataset.src;
+                    img.alt = ph.dataset.alt;
+                    img.className = 'interactable';
+                    
+                    img.onload = () => {
+                        img.classList.add('loaded');
+                        // 綁定點擊放大
+                        img.onclick = (e) => { e.stopPropagation(); openLightbox(img.src); };
+                        ph.parentNode.replaceChild(img, ph);
+                        bindCursorEvents(); // Re-bind new elements
+                    };
+                    
+                    img.onerror = () => {
+                        let retries = parseInt(ph.dataset.retry || 0);
+                        if (retries < 3) {
+                            setTimeout(() => {
+                                ph.dataset.loading = 'false';
+                                ph.dataset.retry = retries + 1;
+                                lazyLoadImages(); // Retry
+                            }, 2000);
+                        } else {
+                            ph.classList.remove('pulsing');
+                            ph.innerHTML = '<span>加載失敗，點擊重試</span>';
+                            ph.onclick = () => {
+                                ph.innerHTML = ''; ph.classList.add('pulsing');
+                                ph.dataset.retry = 0; ph.dataset.loading = 'false';
+                                lazyLoadImages();
+                            };
+                        }
+                    };
+                });
             });
-        }, 400);
-    }
+        }
 
-    function updatePager() {
-        el.pageNum.innerText = `${state.currentPage + 1} / ${state.totalPages}`;
-        el.prevBtn.disabled = state.currentPage === 0;
-        el.nextBtn.disabled = state.currentPage === state.totalPages - 1;
-        el.prevBtn.style.opacity = state.currentPage === 0 ? 0.1 : 1;
-        el.nextBtn.style.opacity = state.currentPage === state.totalPages - 1 ? 0.1 : 1;
-    }
-
-    function handleBackAction() {
-        // 顯示正在返回動畫
-        el.returnHint.innerText = "正在返回...";
-        el.returnHint.classList.add('visible');
-        document.body.style.opacity = 0;
-        setTimeout(() => {
-            window.location.href = './articles.html';
-        }, 600);
-    }
-
-    // --- 交互事件綁定 ---
-    function bindEvents() {
-        // 按鈕點擊
-        el.prevBtn.onclick = () => goToPage(state.currentPage - 1);
-        el.nextBtn.onclick = () => goToPage(state.currentPage + 1);
-
-        // 鍵盤
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') goToPage(state.currentPage - 1);
-            if (e.key === 'ArrowRight') goToPage(state.currentPage + 1);
-            if (e.key === 'Escape') {
-                if (el.tocModal.classList.contains('open')) toggleToc();
-                if (el.lightbox.classList.contains('active')) closeLightbox();
-            }
-        });
-
-        // 觸控滑動 & Overscroll
-        let startX = 0, currentX = 0;
-        
-        el.viewport.addEventListener('touchstart', e => {
-            startX = e.touches[0].clientX;
-            state.isSwiping = true;
-            state.pages[state.currentPage].classList.add('is-swiping');
-        }, { passive: true });
-
-        el.viewport.addEventListener('touchmove', e => {
-            if (!state.isSwiping) return;
-            currentX = e.touches[0].clientX;
-            const diff = currentX - startX;
-            const isFirst = state.currentPage === 0;
-            const isLast = state.currentPage === state.totalPages - 1;
-
-            // 正常翻頁預覽
-            if ((!isFirst && diff > 0) || (!isLast && diff < 0)) {
-                 state.pages[state.currentPage].style.transform = `translateX(${diff}px)`;
-            }
-            
-            // Overscroll Logic (邊緣拉動)
-            if ((isFirst && diff > 0) || (isLast && diff < 0)) {
-                // 增加阻尼感
-                const dampened = diff * 0.4; 
-                state.pages[state.currentPage].style.transform = `translateX(${dampened}px)`;
-                
-                // 顯示提示
-                if (Math.abs(diff) > state.overscrollThreshold) {
-                    el.returnHint.classList.add('visible');
-                } else {
-                    el.returnHint.classList.remove('visible');
-                }
-            }
-        }, { passive: true });
-
-        el.viewport.addEventListener('touchend', e => {
-            if (!state.isSwiping) return;
-            state.isSwiping = false;
-            state.pages[state.currentPage].classList.remove('is-swiping');
-            const diff = currentX - startX;
-            const isFirst = state.currentPage === 0;
-            const isLast = state.currentPage === state.totalPages - 1;
-
-            // 觸發返回
-            if (((isFirst && diff > state.overscrollThreshold) || (isLast && diff < -state.overscrollThreshold))) {
-                handleBackAction();
+        // --- 3. TOC Logic (Desktop & Mobile) ---
+        function setupTOC() {
+            if (tocData.length === 0) {
+                desktopTocBtn.parentElement.style.display = 'none';
+                mobileTocTrigger.style.display = 'none';
                 return;
             }
 
-            // 隱藏提示
-            el.returnHint.classList.remove('visible');
-
-            // 翻頁判定
-            if (Math.abs(diff) > 50) {
-                if (diff > 0 && !isFirst) goToPage(state.currentPage - 1);
-                else if (diff < 0 && !isLast) goToPage(state.currentPage + 1);
-                else resetPagePosition();
-            } else {
-                resetPagePosition();
-            }
-        });
-
-        // 鼠標跟隨
-        if (!window.matchMedia("(hover: none)").matches) {
-            document.addEventListener('mousemove', e => {
-                el.cursor.style.left = e.clientX + 'px';
-                el.cursor.style.top = e.clientY + 'px';
+            // Desktop
+            desktopTocList.innerHTML = '';
+            tocData.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'toc-item interactable';
+                li.innerText = item.text;
+                li.dataset.level = item.level;
+                li.onclick = () => { 
+                    currentPage = item.pageIndex; 
+                    updatePage(); 
+                    if (window.innerWidth <= 1024) toggleDesktopTOC(); // Close if needed
+                };
+                desktopTocList.appendChild(li);
             });
-            document.addEventListener('mousedown', () => el.cursor.classList.add('clicking'));
-            document.addEventListener('mouseup', () => el.cursor.classList.remove('clicking'));
-            bindCursor();
+            
+            // Auto-open on big screens
+            if (window.innerWidth > 1024) toggleDesktopTOC(true);
+
+            // Mobile Wheel Init
+            initMobileWheel();
         }
-    }
 
-    function resetPagePosition() {
-        state.pages[state.currentPage].style.transform = 'translateX(0)';
-    }
+        function toggleDesktopTOC(forceOpen = null) {
+            const isOpen = forceOpen !== null ? forceOpen : !desktopTocSidebar.classList.contains('open');
+            desktopTocSidebar.classList.toggle('open', isOpen);
+            document.body.classList.toggle('has-toc-open', isOpen);
+            
+            if (isOpen && articleData && window.innerWidth > 1024) {
+                setTimeout(() => layoutArticle(articleData), 300);
+            }
+        }
 
-    // --- 輔助功能 ---
-    function toggleToc() {
-        el.tocModal.classList.toggle('open');
-    }
+        // --- 4. Mobile Wheel Logic ---
+        function initMobileWheel() {
+            wheelContainer.innerHTML = '';
+            wheelItems = [];
+            
+            // 構建滾輪項目
+            tocData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'wheel-item';
+                div.dataset.index = index;
+                div.dataset.targetPage = item.pageIndex;
+                div.dataset.level = item.level;
+                
+                const span = document.createElement('span');
+                span.innerText = item.text;
+                // 添加一點內縮給二級目錄
+                if (item.level > 1) span.style.paddingLeft = "20px";
+                
+                div.appendChild(span);
+                wheelContainer.appendChild(div);
+                wheelItems.push(div);
+                
+                // 點擊跳轉
+                div.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 防止觸發 overlay 關閉
+                    // 滾動到這個項目
+                    snapToItem(index, () => {
+                        setTimeout(() => {
+                            currentPage = item.pageIndex;
+                            updatePage();
+                            closeMobileWheel();
+                        }, 200);
+                    });
+                });
+            });
 
-    function openLightbox(src) {
-        el.lightboxImg.src = src;
-        el.lightbox.classList.add('active');
-    }
+            // 綁定觸發器
+            mobileTocTrigger.onclick = openMobileWheel;
+            
+            // 綁定 Overlay 交互 (滑動與點擊)
+            mobileOverlay.addEventListener('touchstart', onWheelTouchStart, {passive: false});
+            mobileOverlay.addEventListener('touchmove', onWheelTouchMove, {passive: false});
+            mobileOverlay.addEventListener('touchend', onWheelTouchEnd);
+            
+            // 點擊左側空白關閉
+            mobileOverlay.addEventListener('click', (e) => {
+                if (e.clientX < window.innerWidth * 0.4) closeMobileWheel();
+            });
+        }
 
-    function closeLightbox() {
-        el.lightbox.classList.remove('active');
-    }
+        function openMobileWheel() {
+            isWheelOpen = true;
+            mobileOverlay.classList.add('active');
+            mobileTocTrigger.style.width = '0px'; // Hide trigger
+            document.body.style.overflow = 'hidden';
+            
+            // 計算初始角度，讓當前章節位於中間
+            // 找到當前頁面最接近的章節
+            let targetIdx = 0;
+            for(let i=0; i<tocData.length; i++) {
+                if(tocData[i].pageIndex <= currentPage) targetIdx = i;
+            }
+            wheelAngle = targetIdx * ITEM_ANGLE_GAP;
+            wheelVelocity = 0;
+            requestAnimationFrame(updateWheelVisuals);
+        }
 
-    async function copyText(element) {
-        try {
-            await navigator.clipboard.writeText(element.innerText);
-            // 可選：顯示一個小提示
-            const originalColor = element.style.color;
-            element.style.color = 'var(--accent-color)';
-            setTimeout(() => element.style.color = '', 200);
-        } catch (err) {}
-    }
+        function closeMobileWheel() {
+            isWheelOpen = false;
+            mobileOverlay.classList.remove('active');
+            mobileTocTrigger.style.width = ''; 
+            document.body.style.overflow = '';
+        }
 
-    function bindCursor() {
-        document.querySelectorAll('.interactable, .interactable-text').forEach(item => {
-            item.onmouseenter = () => el.cursor.classList.add('hollow');
-            item.onmouseleave = () => el.cursor.classList.remove('hollow');
-        });
-    }
+        // 滾輪物理邏輯
+        function onWheelTouchStart(e) {
+            wheelDragging = true;
+            wheelLastY = e.touches[0].clientY;
+            wheelVelocity = 0;
+            cancelAnimationFrame(wheelRafId);
+        }
 
-    // 啟動
-    window.onload = init;
+        function onWheelTouchMove(e) {
+            if (!wheelDragging) return;
+            e.preventDefault();
+            const y = e.touches[0].clientY;
+            const delta = wheelLastY - y;
+            wheelLastY = y;
+            
+            // 靈敏度係數 (將像素轉換為角度)
+            wheelAngle += delta * 0.5; 
+            wheelVelocity = delta * 0.5; // 記錄速度用於慣性
+            
+            requestAnimationFrame(updateWheelVisuals);
+        }
 
-</script>
+        function onWheelTouchEnd(e) {
+            wheelDragging = false;
+            
+            // 檢測是否為向右滑動 (退出手勢)
+            const touchX = e.changedTouches[0].clientX;
+            // 如果在左側區域鬆開，或者是快速右滑
+            // 這裡簡單判定：如果在左側點擊在 click 事件處理，這裡處理慣性
+            
+            inertiaLoop();
+        }
+
+        function inertiaLoop() {
+            if (wheelDragging || !isWheelOpen) return;
+            
+            // 摩擦力
+            wheelVelocity *= 0.95;
+            wheelAngle += wheelVelocity;
+            
+            // 邊界限制 (彈性)
+            const maxAngle = (wheelItems.length - 1) * ITEM_ANGLE_GAP;
+            if (wheelAngle < -10) {
+                wheelAngle += (-10 - wheelAngle) * 0.1;
+                wheelVelocity = 0;
+            } else if (wheelAngle > maxAngle + 10) {
+                wheelAngle += (maxAngle + 10 - wheelAngle) * 0.1;
+                wheelVelocity = 0;
+            }
+
+            updateWheelVisuals();
+            
+            if (Math.abs(wheelVelocity) > 0.1) {
+                wheelRafId = requestAnimationFrame(inertiaLoop);
+            }
+        }
+
+        function snapToItem(index, callback) {
+            const targetAngle = index * ITEM_ANGLE_GAP;
+            // 簡單動畫插值
+            const animate = () => {
+                const diff = targetAngle - wheelAngle;
+                if (Math.abs(diff) < 0.5) {
+                    wheelAngle = targetAngle;
+                    updateWheelVisuals();
+                    if (callback) callback();
+                    return;
+                }
+                wheelAngle += diff * 0.1;
+                updateWheelVisuals();
+                requestAnimationFrame(animate);
+            };
+            animate();
+        }
+
+        function updateWheelVisuals() {
+            const centerX = 0; // Relative to wheel container center
+            const centerY = 0; 
+            
+            wheelItems.forEach((item, index) => {
+                const itemAngle = (index * ITEM_ANGLE_GAP) - wheelAngle;
+                
+                // 只渲染視野內的 (例如 -90度 到 +90度)
+                if (itemAngle < -90 || itemAngle > 90) {
+                    item.style.visibility = 'hidden';
+                    return;
+                }
+                item.style.visibility = 'visible';
+
+                // 計算變換
+                // 1. 旋轉：讓文字呈放射狀
+                // 2. 位移：推到圓周上 (Radius)
+                // 3. 修正旋轉：讓文字本身保持水平或微傾斜
+                
+                // 這裡採用一種效果：輪盤在右側，文字向左伸出
+                // y軸位移基於角度
+                const rad = itemAngle * (Math.PI / 180);
+                const y = Math.sin(rad) * WHEEL_RADIUS;
+                const x = (Math.cos(rad) * WHEEL_RADIUS) - WHEEL_RADIUS; // 向左突出
+                
+                // 旋轉文字以指向圓心
+                const rotate = itemAngle * 0.5; // 係數控制傾斜程度
+
+                item.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
+                
+                // 距離中心的透明度與大小變化
+                const dist = Math.abs(itemAngle);
+                const opacity = 1 - (dist / 90);
+                const scale = 1 - (dist / 180);
+                
+                item.style.opacity = Math.max(0, opacity);
+                
+                // 高亮中間項
+                if (dist < ITEM_ANGLE_GAP / 2) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // --- 5. General Helpers ---
+        function createPageDiv(index, isTitle = false) { 
+            const div = document.createElement('div'); 
+            div.className = 'page-slide'; 
+            if (isTitle) div.classList.add('title-slide'); 
+            div.dataset.index = index; 
+            return div; 
+        }
+
+        function changePage(dir) { 
+            const newPage = currentPage + dir; 
+            if (newPage >= 0 && newPage < totalPages) { 
+                currentPage = newPage; 
+                updatePage(); 
+            }
+        }
+
+        function updatePage() { 
+            pages.forEach((page, index) => { 
+                page.style.transform = ''; 
+                page.classList.remove('is-swiping'); 
+                page.classList.toggle('active', index === currentPage); 
+            }); 
+            pageNum.innerText = `${currentPage + 1} / ${totalPages}`; 
+            prevBtn.disabled = (currentPage === 0); 
+            nextBtn.disabled = (currentPage === totalPages - 1); 
+            lazyLoadImages();
+        }
+
+        async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
+
+        function goBack() {
+            document.body.style.opacity = '0';
+            setTimeout(() => { window.location.href = './articles.html'; }, 500);
+        }
+
+        // --- 6. Initialization ---
+        async function initialize() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const articleId = params.get('id');
+                const content = await fetchArticleContent(articleId);
+                await document.fonts.ready;
+                await layoutArticle(content);
+                
+                let resizeTimer;
+                window.addEventListener('resize', () => {
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(() => {
+                        if (articleData && !isWheelOpen) layoutArticle(articleData);
+                    }, 250);
+                });
+                
+                initInputs();
+            } catch (error) {
+                console.error("Init failed", error);
+            } finally {
+                document.body.classList.remove('js-loading');
+            }
+        }
+
+        function initInputs() {
+            prevBtn.addEventListener('click', () => changePage(-1)); 
+            nextBtn.addEventListener('click', () => changePage(1)); 
+            document.addEventListener('keydown', (e) => { 
+                if (e.key === 'ArrowLeft') { prevBtn.click(); } 
+                else if (e.key === 'ArrowRight') { nextBtn.click(); } 
+            });
+
+            // Swipe logic (Page Navigation)
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) {
+                viewport.addEventListener('touchstart', e => {
+                    touchStartX = e.touches[0].clientX;
+                    touchMoveX = touchStartX;
+                    isSwiping = true;
+                    pages[currentPage]?.classList.add('is-swiping');
+                }, {passive: true});
+
+                viewport.addEventListener('touchmove', e => {
+                    if (!isSwiping) return;
+                    touchMoveX = e.touches[0].clientX;
+                    const delta = touchMoveX - touchStartX;
+                    const page = pages[currentPage];
+                    if (!page) return;
+                    // Damping at edges
+                    let tx = delta;
+                    if ((currentPage === 0 && delta > 0) || (currentPage === totalPages-1 && delta < 0)) tx *= 0.4;
+                    page.style.transform = `translateX(${tx}px)`;
+                }, {passive: true});
+
+                viewport.addEventListener('touchend', e => {
+                    if (!isSwiping) return;
+                    isSwiping = false;
+                    pages[currentPage]?.classList.remove('is-swiping');
+                    const delta = touchMoveX - touchStartX;
+                    
+                    if (delta < -50) { // Next
+                        if (currentPage < totalPages - 1) {
+                            changePage(1);
+                            resetSwipeExit();
+                        } else {
+                            handleSwipeExit();
+                        }
+                    } else if (delta > 50) { // Prev
+                        changePage(-1);
+                        resetSwipeExit();
+                    } else {
+                        updatePage();
+                    }
+                }, {passive: true});
+            }
+
+            // Cursor
+            if (!window.matchMedia("(hover: none) or (max-width: 1024px)").matches) {
+                document.addEventListener('mousemove', e => { cursor.style.left = `${e.clientX}px`; cursor.style.top = `${e.clientY}px`; });
+                document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+                document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+            }
+        }
+        
+        function bindCursorEvents() {
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
+            setTimeout(() => {
+                document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+                    el.removeEventListener('mouseenter', hoverOn); // Clean up
+                    el.removeEventListener('mouseleave', hoverOff);
+                    el.addEventListener('mouseenter', hoverOn);
+                    el.addEventListener('mouseleave', hoverOff);
+                });
+            }, 100);
+        }
+        const hoverOn = () => cursor.classList.add('hollow');
+        const hoverOff = () => cursor.classList.remove('hollow');
+
+        function handleSwipeExit() {
+            clearTimeout(swipeResetTimer);
+            lastPageSwipeCount++;
+            if (lastPageSwipeCount === 1) {
+                swipeHint.classList.add('show');
+                updatePage();
+                swipeResetTimer = setTimeout(resetSwipeExit, 3000);
+            } else if (lastPageSwipeCount >= 2) {
+                swipeHint.classList.remove('show');
+                exitOverlay.classList.add('active');
+                setTimeout(goBack, 1000);
+            }
+        }
+        function resetSwipeExit() {
+            lastPageSwipeCount = 0;
+            swipeHint.classList.remove('show');
+        }
+
+        window.addEventListener('load', initialize);
+    </script>
 </body>
 </html>
