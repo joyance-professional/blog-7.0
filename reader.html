@@ -11,77 +11,83 @@
         :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; --placeholder-bg: #f0f0f0; --menu-bg: rgba(255,255,255,0.95); }
         @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; --menu-bg: rgba(0,0,0,0.9); } }
         
+        /* 強制隱藏系統鼠標 */
+        html, body, * { cursor: none !important; box-sizing: border-box; }
+        @media (hover: none) or (max-width: 768px) { html, body, * { cursor: auto !important; } }
+        
         body.js-loading { opacity: 0; visibility: hidden; }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; transition: opacity 0.8s ease; user-select: none; -webkit-user-select: none; }
-        * { cursor: none !important; box-sizing: border-box; }
-        @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
-        
-        /* Custom Cursor */
-        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s, border 0.2s; will-change: transform, left, top; }
+
+        /* 自定義游標 */
+        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s; will-change: transform, left, top; }
         #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); transform: rotate(45deg) scale(1.2); }
         #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--accent-color); }
 
-        /* UI Controls */
+        /* UI 層 */
         .ui-layer { position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 0; pointer-events: none; }
-        .interactable { pointer-events: auto; cursor: pointer !important; }
+        .interactable { pointer-events: auto; }
         
-        .back-arrow { position: fixed; top: 30px; left: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; }
+        .back-arrow { position: fixed; top: 30px; left: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; cursor: none !important; }
         .back-arrow:hover { opacity: 1; }
         .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
         
-        .toc-btn { position: fixed; top: 30px; right: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+        /* 目錄按鈕 (默認隱藏，有數據才顯示) */
+        .toc-btn { position: fixed; top: 30px; right: 30px; opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; display: none; flex-direction: column; gap: 4px; align-items: flex-end; cursor: none !important; }
         .toc-btn:hover { opacity: 1; }
         .toc-line { height: 2px; background: var(--text-color); transition: 0.3s; }
         .toc-line:nth-child(1) { width: 24px; } .toc-line:nth-child(2) { width: 16px; } .toc-line:nth-child(3) { width: 20px; }
-        
-        /* Reader Viewport */
+
+        /* 閱讀視口 */
         .reader-viewport { flex: 1; width: 100%; max-width: 800px; margin: 80px auto; position: relative; touch-action: pan-y; }
         .page-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity 0.4s ease, transform 0.4s ease; display: flex; flex-direction: column; justify-content: center; gap: 25px; }
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
         .page-slide.is-swiping { transition: none; }
         
-        /* Typography */
-        p { font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.8; text-align: justify; margin: 0; word-break: break-word; overflow-wrap: break-word; }
-        h1, h2, h3 { margin: 0; font-weight: 700; line-height: 1.4; }
-        h1 { font-size: 2.2rem; text-align: center; margin-bottom: 20px; }
-        h2 { font-size: 1.5rem; margin-top: 10px; border-left: 3px solid var(--accent-color); padding-left: 15px; }
-        .title-slide .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; text-align: center; margin-top: 10px; }
+        /* 文本樣式 (保留原始動畫與交互) */
+        p { font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: left center; margin: 0; word-break: break-word; overflow-wrap: break-word; }
+        p:hover { transform: scale(1.02); }
+        p:active { transform: scale(0.98); }
+        
+        h1 { font-size: 2.2rem; font-weight: 500; text-align: center; margin-bottom: 20px; margin-top: 0; }
+        h2 { font-size: 1.5rem; margin-top: 10px; border-left: 3px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
+        .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; text-align: center; margin-top: 10px; }
 
-        /* Images */
+        /* 圖片樣式 */
         figure { margin: 0; padding: 0; width: 100%; display: flex; flex-direction: column; align-items: center; }
-        figure img { max-width: 100%; max-height: 50vh; width: auto; height: auto; display: block; border-radius: 4px; transition: transform 0.3s; object-fit: contain; }
-        .image-wrapper { width: 100%; display: flex; justify-content: center; position: relative; min-height: 100px; }
+        .image-wrapper { width: 100%; display: flex; justify-content: center; position: relative; min-height: 100px; cursor: none !important; }
+        .image-wrapper img { max-width: 100%; max-height: 55vh; width: auto; height: auto; display: block; border-radius: 4px; transition: transform 0.3s; object-fit: contain; }
         .image-wrapper:hover img { transform: scale(1.01); }
         figcaption { font-size: 0.9rem; font-family: sans-serif; text-align: center; opacity: 0.7; margin-top: 10px; width: 100%; }
         
-        /* Loading & Error States */
+        /* 加載與錯誤狀態 */
         .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; display: flex; align-items: center; justify-content: center; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .retry-btn { background: none; border: 1px solid var(--text-color); color: var(--text-color); padding: 8px 16px; font-family: sans-serif; opacity: 0.7; transition: 0.2s; }
+        .retry-btn { background: none; border: 1px solid var(--text-color); color: var(--text-color); padding: 8px 16px; font-family: sans-serif; opacity: 0.7; transition: 0.2s; cursor: none !important; }
         .retry-btn:hover { opacity: 1; background: var(--text-color); color: var(--bg-color); }
 
-        /* Pagination */
+        /* 分頁導航 */
         .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; z-index: 100; }
-        .nav-btn { opacity: 0.3; padding: 10px; transition: 0.3s; border: none; background: none; color: inherit; font-family: inherit; font-size: inherit; }
+        .nav-btn { opacity: 0.3; padding: 10px; transition: 0.3s; border: none; background: none; color: inherit; font-family: inherit; font-size: inherit; cursor: none !important; }
         .nav-btn:hover, .nav-btn:focus { opacity: 1; outline: none; }
-        .nav-btn:disabled { opacity: 0.05; cursor: default !important; }
+        .nav-btn:disabled { opacity: 0.05; pointer-events: none; }
         .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; min-width: 60px; text-align: center; }
 
-        /* Table of Contents Overlay */
+        /* 目錄遮罩 */
         .toc-overlay { position: fixed; top: 0; right: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; opacity: 0; pointer-events: none; transition: 0.3s; }
         .toc-overlay.open { opacity: 1; pointer-events: auto; }
         .toc-panel { position: absolute; top: 0; right: 0; width: 300px; max-width: 80%; height: 100%; background: var(--menu-bg); transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); padding: 80px 30px; overflow-y: auto; backdrop-filter: blur(10px); display: flex; flex-direction: column; gap: 20px; }
         .toc-overlay.open .toc-panel { transform: translateX(0); }
-        .toc-item { font-size: 1.1rem; opacity: 0.6; transition: 0.2s; padding: 10px 0; border-bottom: 1px solid var(--placeholder-bg); }
+        .toc-item { font-size: 1.1rem; opacity: 0.6; transition: 0.2s; padding: 10px 0; border-bottom: 1px solid var(--placeholder-bg); cursor: none !important; }
         .toc-item:hover { opacity: 1; padding-left: 10px; }
         .toc-item.active { opacity: 1; font-weight: 500; border-left: 2px solid var(--accent-color); padding-left: 10px; border-bottom: none; }
 
-        /* Lightbox */
+        /* 大圖 Lightbox */
         .lightbox { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--bg-color); z-index: 2000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .lightbox.active { opacity: 1; pointer-events: auto; }
-        .lightbox img { max-width: 95%; max-height: 95%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        .lightbox img { max-width: 95%; max-height: 95%; box-shadow: 0 10px 30px rgba(0,0,0,0.2); transform: scale(0.9); transition: transform 0.3s ease; }
+        .lightbox.active img { transform: scale(1); }
 
-        /* Exit Hint & Overlay */
+        /* 退出提示與動畫 */
         .exit-hint { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.8rem; font-family: sans-serif; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 500; }
         .exit-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
         .exit-overlay.active { opacity: 1; }
@@ -94,16 +100,17 @@
             .page-slide { padding: 0 10px; gap: 20px; } 
             .pagination { bottom: 20px; } 
             h1 { font-size: 1.8rem; }
-            p { text-align: left; } /* Mobile readability */
+            p { text-align: left; } 
+            /* 手機版允許點擊操作 */
+            .interactable, .interactable-text, .image-wrapper { cursor: pointer !important; }
         }
     </style>
 </head>
 <body class="js-loading">
     <div id="custom-cursor"></div>
     
-    <!-- UI Layer -->
     <div class="ui-layer">
-        <button class="back-arrow interactable" onclick="attemptGoBack(true)" aria-label="返回文章列表">
+        <button class="back-arrow interactable" onclick="attemptGoBack(true)" aria-label="返回">
             <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
         </button>
         <button class="toc-btn interactable" id="toc-btn" aria-label="目錄">
@@ -111,27 +118,22 @@
         </button>
     </div>
 
-    <!-- Main Content -->
     <main class="reader-viewport" id="viewport" aria-live="polite">
         <div class="loading-placeholder"></div>
     </main>
 
-    <!-- Navigation -->
     <nav class="pagination">
         <button class="nav-btn interactable" id="prev-btn">PREV</button>
         <div class="page-indicator" id="page-num">...</div>
         <button class="nav-btn interactable" id="next-btn">NEXT</button>
     </nav>
 
-    <!-- Overlays -->
     <div class="toc-overlay" id="toc-overlay">
-        <div class="toc-panel" id="toc-list">
-            <!-- TOC Items generated here -->
-        </div>
+        <div class="toc-panel" id="toc-list"></div>
     </div>
 
     <div class="lightbox" id="lightbox">
-        <img src="" alt="Zoomed Image">
+        <img src="" alt="Zoomed">
     </div>
 
     <div class="exit-hint" id="exit-hint">再次滑動以返回列表</div>
@@ -141,12 +143,11 @@
     </div>
 
 <script>
-    // --- Configuration & State ---
     const CONFIG = {
         paragraphGap: 25,
-        maxImageHeightRatio: 0.55, // Image can take up to 55% of viewport height
+        maxImageHeightRatio: 0.55,
         swipeThreshold: 60,
-        renderChunkSize: 3 // Render 3 elements at a time to prevent UI freeze
+        renderChunkSize: 3
     };
 
     const els = {
@@ -155,6 +156,7 @@
         prevBtn: document.getElementById('prev-btn'),
         nextBtn: document.getElementById('next-btn'),
         cursor: document.getElementById('custom-cursor'),
+        tocBtn: document.getElementById('toc-btn'),
         tocOverlay: document.getElementById('toc-overlay'),
         tocList: document.getElementById('toc-list'),
         lightbox: document.getElementById('lightbox'),
@@ -166,29 +168,30 @@
     let state = {
         currentPage: 0,
         totalPages: 0,
-        pages: [], // DOM elements
-        toc: [], // { text: string, pageIndex: number }
+        pages: [], 
+        toc: [], 
         isSwiping: false,
         touchStartX: 0,
         touchMoveX: 0,
-        exitSwipeStage: 0, // 0: none, 1: hint shown, 2: exiting
+        exitSwipeStage: 0, 
         exitTimer: null,
         isLayoutComplete: false
     };
 
-    // --- Core Logic: Fetch & Render ---
-
+    // --- 獲取數據 ---
     async function fetchArticleContent(id) {
-        if (!id) throw new Error("Article ID is missing.");
+        if (!id) {
+            // 用戶沒有提供 ID 時的測試數據
+            console.warn("No ID provided. Using test data.");
+            // 在實際部署時，這裡應該報錯或使用 fetch(`./article/${id}.json`)
+        }
         try {
-            // Simulate fetch. Replace with: const response = await fetch(`./article/${id}.json`);
-            // For demo, we return the structure directly if fetch fails (or use mock).
-            // Here is the requested logic to fetch:
+            // 這裡模擬 fetch，實際使用時請取消註解下面這行
             const response = await fetch(`./article/${id}.json`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) throw new Error("HTTP " + response.status);
             return await response.json();
         } catch (error) {
-            console.warn("Fetch failed, using mock data for demo if available or throwing error.");
+            console.error("Fetch error:", error);
             throw error;
         }
     }
@@ -196,7 +199,6 @@
     async function initialize() {
         try {
             const params = new URLSearchParams(window.location.search);
-            // Default ID for testing if none provided, or remove logic for production
             const articleId = params.get('id'); 
             
             const content = await fetchArticleContent(articleId);
@@ -205,21 +207,17 @@
             setupInteraction();
             await startLayoutEngine(content);
             
-            window.addEventListener('resize', debounce(() => {
-                // Full re-layout on resize is expensive, reload page or smart adjust
-                location.reload(); 
-            }, 500));
+            window.addEventListener('resize', debounce(() => location.reload(), 500));
             
         } catch (error) {
             console.error(error);
-            els.viewport.innerHTML = `<p style="text-align:center; padding-top:50px;">載入文章失敗。<br><button class="retry-btn interactable" onclick="location.reload()">重試</button></p>`;
+            els.viewport.innerHTML = `<p style="text-align:center; padding-top:50px;">無法載入文章。<br><button class="retry-btn interactable" onclick="location.reload()">點擊重試</button></p>`;
         } finally {
             document.body.classList.remove('js-loading');
         }
     }
 
-    // --- Layout Engine (The Complex Part) ---
-
+    // --- 核心排版引擎 ---
     async function startLayoutEngine(content) {
         document.title = content.title;
         els.viewport.innerHTML = '';
@@ -227,28 +225,26 @@
         state.toc = [];
         state.currentPage = 0;
         
-        // 1. Create Title Page
+        // 1. 創建首頁
         const titlePage = createPage(0);
         titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta">${content.date}</div>`;
         addPage(titlePage);
-        updateNav();
 
-        // 2. Prepare Calculation Environment
+        // 2. 準備測量環境
         const viewportHeight = els.viewport.clientHeight;
         const pageStyle = getComputedStyle(titlePage);
         const vPadding = parseFloat(pageStyle.paddingTop) + parseFloat(pageStyle.paddingBottom);
         const availableHeight = viewportHeight - vPadding;
         
-        // Hidden container for measurement
         const measureBox = document.createElement('div');
         measureBox.style.cssText = `position:absolute; visibility:hidden; width:${els.viewport.clientWidth - (parseFloat(pageStyle.paddingLeft)*2)}px; top:0; left:0; z-index:-1;`;
         document.body.appendChild(measureBox);
 
-        // 3. Process Content Stream
+        // 3. 逐段處理
         let currentPageIdx = 1;
         let currentPageDiv = createPage(currentPageIdx);
         let currentHeight = 0;
-        let tempElements = []; // Hold elements before committing to a page
+        let tempElements = [];
 
         function commitPage() {
             if (tempElements.length > 0) {
@@ -259,10 +255,9 @@
             currentPageIdx++;
             currentPageDiv = createPage(currentPageIdx);
             currentHeight = 0;
-            updateNav(); // Update UI progressively
+            updateNav(); 
         }
 
-        // --- Generator Loop for Async Processing ---
         const items = content.paragraphs;
         
         for (let i = 0; i < items.length; i++) {
@@ -270,51 +265,54 @@
             let element = null;
             let itemHeight = 0;
 
-            // Small delay every few items to let UI breathe (Main Thread unblocking)
+            // 異步分塊，避免卡頓
             if (i % CONFIG.renderChunkSize === 0 && i > 0) await new Promise(r => setTimeout(r, 0));
 
             if (typeof item === 'string') {
+                // 純文本段落
                 element = document.createElement('p');
-                element.className = 'interactable-text';
-                element.textContent = item;
-                // Add to measure box
+                element.className = 'interactable-text'; // 用於鼠標樣式
+                element.innerText = item;
+                
+                // 恢復原有的點擊複製功能
+                element.onclick = (e) => {
+                    e.stopPropagation(); // 防止冒泡觸發其他點擊事件
+                    copyText(element);
+                };
+
                 measureBox.appendChild(element);
                 itemHeight = element.offsetHeight;
                 measureBox.removeChild(element);
                 
-                // Check fit
                 if (currentHeight + itemHeight + CONFIG.paragraphGap > availableHeight) {
-                    commitPage(); // Start new page
+                    commitPage();
                 }
                 
                 tempElements.push(element);
                 currentHeight += itemHeight + CONFIG.paragraphGap;
 
             } else if (item.type === 'header') {
-                // Header Logic
+                // 標題 (目錄)
                 element = document.createElement(`h${Math.min(item.level + 1, 3)}`);
-                element.textContent = item.text;
-                element.id = `section-${i}`;
+                element.innerText = item.text;
+                element.className = 'interactable-text';
                 
                 measureBox.appendChild(element);
                 itemHeight = element.offsetHeight;
                 measureBox.removeChild(element);
 
-                // If header is at the very bottom, push to next page
                 if (currentHeight + itemHeight + CONFIG.paragraphGap + 100 > availableHeight) {
                     commitPage();
                 }
 
-                // Add to TOC map (Use current Page Index if empty, else next one if full?)
-                // Actually, since we haven't committed yet, it belongs to `currentPageIdx`.
-                // Optimization: if it's the very first item on a page, height is 0.
+                // 加入目錄數據
                 state.toc.push({ text: item.text, pageIndex: currentPageIdx });
                 
                 tempElements.push(element);
                 currentHeight += itemHeight + CONFIG.paragraphGap;
 
             } else if (item.type === 'image') {
-                // Image Logic - Complex because of loading
+                // 圖片
                 const wrapper = document.createElement('figure');
                 wrapper.className = 'image-wrapper interactable';
                 
@@ -322,22 +320,17 @@
                 placeholder.className = 'loading-placeholder';
                 wrapper.appendChild(placeholder);
                 
-                // We need to estimate height or wait for it. 
-                // To keep layout stable, we try to load the image.
                 const img = new Image();
                 img.alt = item.alt || '';
                 
-                // Promise wrapper for loading
-                let imgHeight = 250; // default
+                let imgHeight = 250; 
                 try {
                     await new Promise((resolve) => {
                         img.onload = () => {
-                            // Calculate scaled height fitting in width
                             const ratio = img.naturalHeight / img.naturalWidth;
-                            const displayedWidth = measureBox.clientWidth; // Width constraints
+                            const displayedWidth = measureBox.clientWidth;
                             let calcHeight = displayedWidth * ratio;
                             
-                            // Max height constraint
                             const maxH = viewportHeight * CONFIG.maxImageHeightRatio;
                             if (calcHeight > maxH) {
                                 calcHeight = maxH;
@@ -347,38 +340,32 @@
                             imgHeight = calcHeight;
                             resolve();
                         };
-                        img.onerror = () => {
-                            resolve(); // Continue layout even if fail
-                        };
+                        img.onerror = resolve;
                         img.src = item.src;
                     });
                     
                     wrapper.replaceChild(img, placeholder);
                     if (item.caption) {
                         const cap = document.createElement('figcaption');
-                        cap.textContent = item.caption;
+                        cap.innerText = item.caption;
                         wrapper.appendChild(cap);
-                        imgHeight += 30; // approx caption height
+                        imgHeight += 30;
                     }
                     
-                    // Click to zoom
-                    wrapper.onclick = (e) => {
-                        e.stopPropagation();
-                        openLightbox(item.src);
-                    };
+                    // 點擊放大 (Lightbox) - 使用閉包確保引用正確
+                    (function(imageSrc) {
+                        wrapper.onclick = (e) => {
+                            e.stopPropagation();
+                            openLightbox(imageSrc);
+                        };
+                    })(item.src);
 
                 } catch (e) {
-                    // Error Handling UI
                     wrapper.innerHTML = '';
                     const errBtn = document.createElement('button');
                     errBtn.className = 'retry-btn interactable';
-                    errBtn.textContent = '圖片載入失敗 - 點擊重試';
-                    errBtn.onclick = (e) => {
-                        e.stopPropagation();
-                        // Reload current article logic or specific image reload
-                        // Simple hack: re-layout is safer for pagination
-                        location.reload(); 
-                    };
+                    errBtn.innerText = '圖片載入失敗 - 點擊重試';
+                    errBtn.onclick = (e) => { e.stopPropagation(); location.reload(); };
                     wrapper.appendChild(errBtn);
                     wrapper.style.height = '150px';
                     wrapper.style.display = 'flex';
@@ -387,7 +374,6 @@
                     imgHeight = 150;
                 }
 
-                // Check fit
                 if (currentHeight + imgHeight + CONFIG.paragraphGap > availableHeight && currentHeight > 50) {
                     commitPage();
                 }
@@ -397,17 +383,24 @@
             }
         }
 
-        commitPage(); // Commit last page
+        commitPage();
         document.body.removeChild(measureBox);
         state.totalPages = state.pages.length;
         state.isLayoutComplete = true;
         
-        generateTOC();
+        // 處理目錄顯示邏輯
+        if (state.toc.length > 0) {
+            els.tocBtn.style.display = 'flex';
+            generateTOC();
+        } else {
+            els.tocBtn.style.display = 'none';
+        }
+
         updateNav();
-        bindCursorEvents(); // Re-bind for new elements
+        bindCursorEvents();
     }
 
-    // --- Helper Functions ---
+    // --- 輔助功能 ---
 
     function createPage(index) {
         const div = document.createElement('div');
@@ -434,23 +427,22 @@
         state.currentPage = index;
         state.pages.forEach((p, i) => {
             p.classList.toggle('active', i === index);
-            p.style.transform = ''; // Reset swipe transforms
+            p.style.transform = ''; 
         });
         updateNav();
-        // Reset exit hint state when changing pages
+        // 換頁時重置退出提示
         state.exitSwipeStage = 0; 
         els.exitHint.style.opacity = '0';
     }
 
     function updateNav() {
-        els.pageNum.textContent = state.isLayoutComplete 
+        els.pageNum.innerText = state.isLayoutComplete 
             ? `${state.currentPage + 1} / ${state.totalPages}` 
             : `${state.currentPage + 1} / ...`;
         
         els.prevBtn.disabled = state.currentPage === 0;
         els.nextBtn.disabled = state.isLayoutComplete && state.currentPage === state.totalPages - 1;
         
-        // Highlight TOC
         document.querySelectorAll('.toc-item').forEach(item => {
             const idx = parseInt(item.dataset.page);
             item.classList.toggle('active', idx === state.currentPage);
@@ -459,15 +451,10 @@
 
     function generateTOC() {
         els.tocList.innerHTML = '';
-        if (state.toc.length === 0) {
-            els.tocList.innerHTML = '<div style="opacity:0.5; text-align:center;">無目錄</div>';
-            return;
-        }
         
-        // Add Title
         const homeLink = document.createElement('div');
         homeLink.className = 'toc-item interactable';
-        homeLink.textContent = "封面";
+        homeLink.innerText = "封面";
         homeLink.dataset.page = 0;
         homeLink.onclick = () => { goToPage(0); toggleTOC(); };
         els.tocList.appendChild(homeLink);
@@ -475,7 +462,7 @@
         state.toc.forEach(item => {
             const div = document.createElement('div');
             div.className = 'toc-item interactable';
-            div.textContent = item.text;
+            div.innerText = item.text;
             div.dataset.page = item.pageIndex;
             div.onclick = () => {
                 goToPage(item.pageIndex);
@@ -485,18 +472,25 @@
         });
     }
 
-    // --- Interaction Logic ---
+    async function copyText(el) {
+        try { 
+            await navigator.clipboard.writeText(el.innerText);
+            // 這裡可以加一個小的複製成功提示，目前保持原始行為(無UI干擾，僅console)
+            console.log('Text copied'); 
+        } catch (err) { 
+            console.error('Failed to copy: ', err); 
+        }
+    }
+
+    // --- 交互邏輯 ---
 
     function setupInteraction() {
-        // Nav Buttons
-        els.prevBtn.onclick = () => attemptGoBack(false); // Check swipe logic inside
+        els.prevBtn.onclick = () => attemptGoBack(false);
         els.nextBtn.onclick = () => changePage(1);
-        
-        // TOC
-        document.getElementById('toc-btn').onclick = toggleTOC;
+        els.tocBtn.onclick = toggleTOC;
         els.tocOverlay.onclick = (e) => { if(e.target === els.tocOverlay) toggleTOC(); };
+        els.lightbox.onclick = closeLightbox;
 
-        // Keyboard
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') els.prevBtn.click();
             if (e.key === 'ArrowRight') els.nextBtn.click();
@@ -506,10 +500,6 @@
             }
         });
 
-        // Lightbox
-        els.lightbox.onclick = closeLightbox;
-
-        // Swipe
         if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) {
             initSwipe();
         } else {
@@ -517,37 +507,23 @@
         }
     }
 
-    function toggleTOC() {
-        els.tocOverlay.classList.toggle('open');
-    }
-
-    function openLightbox(src) {
-        els.lightboxImg.src = src;
-        els.lightbox.classList.add('active');
-    }
-
-    function closeLightbox() {
-        els.lightbox.classList.remove('active');
-        setTimeout(() => els.lightboxImg.src = '', 300);
-    }
+    function toggleTOC() { els.tocOverlay.classList.toggle('open'); }
+    function openLightbox(src) { els.lightboxImg.src = src; els.lightbox.classList.add('active'); }
+    function closeLightbox() { els.lightbox.classList.remove('active'); setTimeout(() => els.lightboxImg.src = '', 300); }
 
     function attemptGoBack(isUiClick) {
-        // Logic for "Going Back"
-        // If UI button click -> Direct exit
         if (isUiClick) {
             triggerExitAnim();
             return;
         }
-        // If Prev Button click (or Arrow Left) -> Normal page logic
         if (state.currentPage > 0) {
             changePage(-1);
         } else {
-            // If on first page and clicks Prev -> Hint
             handleExitIntent();
         }
     }
 
-    // --- Swipe & Cursor Logic ---
+    // --- 滑動與退出邏輯 ---
 
     function initSwipe() {
         els.viewport.addEventListener('touchstart', (e) => {
@@ -562,10 +538,10 @@
             state.touchMoveX = e.touches[0].clientX;
             const deltaX = state.touchMoveX - state.touchStartX;
             
-            // Visual drag effect with resistance at edges
+            // 阻尼效果
             let constrainedDeltaX = deltaX;
             if ((state.currentPage === 0 && deltaX > 0) || (state.currentPage === state.totalPages - 1 && deltaX < 0)) {
-                constrainedDeltaX *= 0.3; // High resistance for exit intent
+                constrainedDeltaX *= 0.3; 
             }
             if(state.pages[state.currentPage]) state.pages[state.currentPage].style.transform = `translateX(${constrainedDeltaX}px)`;
         }, { passive: true });
@@ -577,32 +553,34 @@
             
             if(state.pages[state.currentPage]) state.pages[state.currentPage].classList.remove('is-swiping');
             
-            // Reset transform or Change Page
+            // 判斷滑動
             if (deltaX < -CONFIG.swipeThreshold) {
-                // Swipe Left (Next)
-                if (state.currentPage < state.totalPages - 1) changePage(1);
-                else {
-                    // End of article swipe
-                    goToPage(state.currentPage); // Reset position
+                // 向左滑 (下一頁)
+                if (state.currentPage < state.totalPages - 1) {
+                    changePage(1);
+                } else {
+                    // 尾頁向左滑 -> 退出
+                    goToPage(state.currentPage); 
                     handleExitIntent();
                 }
             } else if (deltaX > CONFIG.swipeThreshold) {
-                // Swipe Right (Prev)
-                if (state.currentPage > 0) changePage(-1);
-                else {
-                    // Start of article swipe
-                    goToPage(state.currentPage); // Reset position
+                // 向右滑 (上一頁)
+                if (state.currentPage > 0) {
+                    changePage(-1);
+                } else {
+                    // 首頁向右滑 -> 退出
+                    goToPage(state.currentPage);
                     handleExitIntent();
                 }
             } else {
-                goToPage(state.currentPage); // Reset
+                goToPage(state.currentPage); // 回彈
             }
         }, { passive: true });
     }
 
     function handleExitIntent() {
         if (state.exitSwipeStage === 0) {
-            // First time: Show Hint
+            // 第一次滑動：顯示提示
             state.exitSwipeStage = 1;
             els.exitHint.style.opacity = '1';
             
@@ -610,9 +588,9 @@
             state.exitTimer = setTimeout(() => {
                 state.exitSwipeStage = 0;
                 els.exitHint.style.opacity = '0';
-            }, 3000);
+            }, 3000); // 3秒內不再次滑動則重置
         } else if (state.exitSwipeStage === 1) {
-            // Second time: Exit
+            // 第二次滑動：觸發退出
             triggerExitAnim();
         }
     }
@@ -638,7 +616,8 @@
 
     function bindCursorEvents() {
         if (window.matchMedia("(hover: none)").matches) return;
-        document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+        // 更新選擇器，包含新的 UI 元素和動態生成的文本
+        document.querySelectorAll('.interactable, .interactable-text, .toc-item').forEach(el => {
             el.addEventListener('mouseenter', () => els.cursor.classList.add('hollow'));
             el.addEventListener('mouseleave', () => els.cursor.classList.remove('hollow'));
         });
@@ -652,7 +631,6 @@
         };
     }
 
-    // Start
     window.addEventListener('load', initialize);
 
 </script>
