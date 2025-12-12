@@ -38,20 +38,23 @@
         #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
         .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* --- 鼠標系統 --- */
+        /* --- 鼠標系統 (優化版) --- */
         #cursor-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 999999; overflow: hidden;
         }
         #custom-cursor { 
             position: absolute; top: 0; left: 0;
-            width: 12px; height: 12px; 
+            /* 優化：縮小尺寸 */
+            width: 9px; height: 9px; 
             background-color: var(--accent-color); 
+            /* 初始狀態，具體位置由 JS 控制 */
             transform: translate(-50%, -50%) rotate(45deg);
             will-change: transform;
             pointer-events: none;
             mix-blend-mode: difference; 
-            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            /* 優化：移除 width/height transition，完全交給 JS 做平滑縮放 */
+            transition: background-color 0.2s;
             opacity: 0; 
         }
         #custom-cursor.active { opacity: 1; }
@@ -65,15 +68,9 @@
         .icon-btn:hover { opacity: 1; transform: scale(1.1); }
         .icon-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
 
-        /* --- 閱讀視口 --- */
         .reader-viewport { 
-            flex: 1; 
-            width: 100%; 
-            max-width: 800px; 
-            height: calc(100vh - 160px); 
-            margin: 80px auto; 
-            position: relative; 
-            touch-action: pan-y; 
+            flex: 1; width: 100%; max-width: 800px; height: calc(100vh - 160px); 
+            margin: 80px auto; position: relative; touch-action: pan-y; 
         }
         
         .page-slide { 
@@ -81,18 +78,12 @@
             opacity: 0; pointer-events: none; 
             transform: translateX(60px); 
             transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
-            display: flex; flex-direction: column; 
-            justify-content: center; 
-            gap: 25px; 
-            overflow: hidden; 
-            /* 優化：未激活的頁面隱藏，避免重繪 */
-            visibility: hidden; 
+            display: flex; flex-direction: column; justify-content: center; gap: 25px; 
+            overflow: hidden; visibility: hidden; 
         }
         
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); visibility: visible; z-index: 2; }
-        /* 上一頁保留動畫效果 */
         .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; visibility: visible; z-index: 1; }
-        
         .reader-viewport.no-anim .page-slide { transition: none !important; }
 
         p { 
@@ -418,20 +409,21 @@
                 document.body.removeChild(tempDiv);
             }
 
-            // 優化點：不再一次性將所有 pages append 到 viewport
             viewport.innerHTML = ''; 
             totalPages = pages.length;
             pageSlider.max = totalPages;
 
             setupTOC();
             restoreProgress();
-            // 注意：restoreProgress 會調用 updatePage，從而掛載初始頁面
             bindCursorEvents();
         }
 
-        // --- Cursor Logic ---
+        // --- Optimized Cursor Logic ---
         let mouseX = -100, mouseY = -100, cursorX = -100, cursorY = -100;
         let isHovering = false, isClicking = false, isCursorInited = false;
+        
+        // 新增：當前縮放比例，用於實現平滑縮放插值
+        let currentScale = 1;
 
         function initCursor() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
@@ -443,13 +435,24 @@
             document.addEventListener('mouseup', () => isClicking = false);
 
             function loop() {
-                cursorX += (mouseX - cursorX) * 0.2;
-                cursorY += (mouseY - cursorY) * 0.2;
-                let scale = isHovering ? 1.8 : 1;
-                if (isClicking) scale = 0.6;
+                // 優化1：提高位置插值係數 (0.2 -> 0.5)，實現「緊緊跟隨」
+                const posLerp = 0.5;
+                cursorX += (mouseX - cursorX) * posLerp;
+                cursorY += (mouseY - cursorY) * posLerp;
+
+                // 優化2：計算目標縮放值
+                let targetScale = 1;
+                if (isHovering) targetScale = 1.8;
+                if (isClicking) targetScale = 0.8; // 點擊時縮小，但不太小
+
+                // 優化3：對縮放進行插值 (0.15)，實現自然呼吸感
+                currentScale += (targetScale - currentScale) * 0.15;
+
+                // 樣式切換 (Hollow / Solid) 依然根據狀態直接切換
                 if (isHovering) cursor.classList.add('hollow'); else cursor.classList.remove('hollow');
                 if (isClicking) cursor.classList.add('clicking'); else cursor.classList.remove('clicking');
-                cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(45deg) scale(${scale})`;
+
+                cursor.style.transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(45deg) scale(${currentScale})`;
                 requestAnimationFrame(loop);
             }
             requestAnimationFrame(loop);
@@ -459,7 +462,6 @@
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
             const onEnter = () => { isHovering = true; };
             const onLeave = () => { isHovering = false; };
-            // 使用 setTimeout 確保 DOM 變更後能抓到元素
             setTimeout(() => {
                 document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                     el.removeEventListener('mouseenter', onEnter);
@@ -503,47 +505,26 @@
             }
         }
 
-        // --- 核心優化：Update Page 負責掛載 DOM ---
         function updatePage(instant = false) { 
             if (instant) viewport.classList.add('no-anim');
             else viewport.classList.remove('no-anim');
 
-            // 定義緩衝區間：當前頁面 前後各緩衝 2 頁
-            // 這樣在翻頁動畫時，下一頁已經存在於 DOM 中
             const renderRange = 2;
             const startIdx = Math.max(0, currentPage - renderRange);
             const endIdx = Math.min(totalPages - 1, currentPage + renderRange);
 
             pages.forEach((page, index) => {
-                // 判斷是否應該在 DOM 中
                 const shouldBeInDom = index >= startIdx && index <= endIdx;
                 const isInDom = viewport.contains(page);
-
                 if (shouldBeInDom) {
-                    if (!isInDom) {
-                        viewport.appendChild(page);
-                        // 如果是剛掛載，確保綁定事件
-                        // 這裡可以做簡單優化，因為事件綁定是全局委託或者在 bindCursorEvents 處理的
-                    }
-
-                    // 設置狀態
+                    if (!isInDom) viewport.appendChild(page);
                     page.style.transform = ''; 
                     page.classList.remove('active', 'prev-page'); 
-                    
-                    if (index === currentPage) {
-                        page.classList.add('active');
-                        page.style.zIndex = 10;
-                    } else if (index < currentPage) {
-                        page.classList.add('prev-page');
-                        page.style.zIndex = 5;
-                    } else {
-                        page.style.zIndex = 5;
-                    }
+                    if (index === currentPage) { page.classList.add('active'); page.style.zIndex = 10; } 
+                    else if (index < currentPage) { page.classList.add('prev-page'); page.style.zIndex = 5; } 
+                    else { page.style.zIndex = 5; }
                 } else {
-                    // 為了性能，移除看不見的 DOM 節點
-                    if (isInDom) {
-                        viewport.removeChild(page);
-                    }
+                    if (isInDom) viewport.removeChild(page);
                 }
             });
             
@@ -553,8 +534,8 @@
             
             if(!instant) {
                 saveProgress(); 
-                lazyLoadImages(); // 圖片懶加載
-                bindCursorEvents(); // 重新綁定新掛載頁面的鼠標事件
+                lazyLoadImages(); 
+                bindCursorEvents(); 
             }
         }
 
@@ -569,13 +550,10 @@
         function closeLightbox() { lightbox.classList.remove('active'); setTimeout(() => { lightboxImg.src = ''; }, 300); }
 
         function lazyLoadImages() {
-            // 這裡依然可以對 pages 數組進行操作，即使它們不在 DOM 裡
-            // 但為了節省網絡，我們只加載附近的
             const range = [currentPage-1, currentPage, currentPage+1, currentPage+2];
             range.forEach(idx => {
                 if (idx < 0 || idx >= totalPages) return;
                 const page = pages[idx];
-                // querySelectorAll 在未掛載的元素上也能工作
                 page.querySelectorAll('.loading-placeholder[data-src]').forEach(ph => {
                     if (ph.dataset.loading === 'true') return;
                     ph.dataset.loading = 'true';
@@ -679,7 +657,7 @@
                     touchMoveX = e.touches[0].clientX;
                     const delta = touchMoveX - touchStartX;
                     const page = pages[currentPage];
-                    if (!page || !viewport.contains(page)) return; // 安全檢查
+                    if (!page || !viewport.contains(page)) return;
                     let tx = delta;
                     if ((currentPage === 0 && delta > 0) || (currentPage === totalPages-1 && delta < 0)) tx *= 0.4;
                     page.style.transform = `translateX(${tx}px)`;
