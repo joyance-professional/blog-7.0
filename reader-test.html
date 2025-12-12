@@ -14,7 +14,7 @@
             --accent-color: #000000; 
             --placeholder-bg: #f0f0f0; 
             --toc-width: 280px;
-            --ease-fluid: cubic-bezier(0.2, 0.8, 0.2, 1);
+            --ease-fluid: cubic-bezier(0.25, 1, 0.5, 1);
         }
         @media (prefers-color-scheme: dark) { 
             :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
@@ -32,35 +32,40 @@
             transition: opacity 0.8s ease; 
         }
         
-        /* 全局隱藏默認鼠標 */
+        /* 隱藏原生鼠標 */
         * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
+        @media (hover: none) or (max-width: 1024px) { * { cursor: auto !important; } }
 
         #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
         .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* --- 自定義鼠標 (重做版) --- */
+        /* --- 鼠標系統 (重寫版) --- */
+        #cursor-layer {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 999999; overflow: hidden;
+        }
         #custom-cursor { 
-            position: fixed; top: 0; left: 0; 
+            position: absolute; top: 0; left: 0;
             width: 12px; height: 12px; 
             background-color: var(--accent-color); 
-            pointer-events: none; z-index: 999999; 
-            /* 初始隱藏，由 JS 控制顯示與位置 */
-            opacity: 0;
+            transform: translate(-50%, -50%) rotate(45deg);
+            will-change: transform;
+            pointer-events: none;
             mix-blend-mode: difference; 
-            display: block;
-            will-change: transform, width, height; /* 啟用 GPU 加速 */
-            transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                        height 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
-                        background-color 0.2s;
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            opacity: 0; /* JS 控制顯示 */
         }
-        /* 鼠標狀態樣式 */
+        
+        /* 鼠標狀態 */
         #custom-cursor.active { opacity: 1; }
         #custom-cursor.hollow { 
             background: transparent; 
             border: 1.5px solid var(--accent-color); 
+            /* scale 在 JS 中處理以避免 transform 覆蓋衝突 */
         }
-        /* scale 和 rotate 現在由 JS 統一管理以避免衝突，這裡只定義基本外觀變更 */
+        #custom-cursor.clicking {
+            background: var(--accent-color);
+        }
 
         /* 頂部按鈕 */
         .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
@@ -75,6 +80,7 @@
             flex: 1; 
             width: 100%; 
             max-width: 800px; 
+            /* 預留上下空間 */
             height: calc(100vh - 160px); 
             margin: 80px auto; 
             position: relative; 
@@ -86,10 +92,14 @@
             opacity: 0; pointer-events: none; 
             transform: translateX(60px); 
             transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
-            display: flex; flex-direction: column; justify-content: center; gap: 25px; 
+            display: flex; flex-direction: column; 
+            /* 內容垂直居中，但如果內容很多則靠上 */
+            justify-content: center; 
+            gap: 25px; 
             overflow: hidden; 
         }
         
+        /* 當內容撐滿時改為靠上對齊，由 JS 動態判斷或默認 center 即可，這裡保持 center */
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
         .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; }
         .reader-viewport.no-anim .page-slide { transition: none !important; }
@@ -111,18 +121,18 @@
         figure { 
             margin: 0; padding: 0; 
             width: 100%; 
-            /* 移除固定高度限制，讓 JS 決定換頁 */
+            /* 關鍵：高度自動，不強制 100%，避免拉伸 */
             height: auto; 
             display: flex; flex-direction: column; align-items: center; justify-content: center; 
         }
         figure img { 
-            /* 改為寬度優先或自動，防止強制拉伸 */
+            /* 寬度自動，最大不超過容器 */
             width: auto;
-            height: auto;
             max-width: 100%; 
-            /* 限制最大高度不超過視口，但使用 contain 保持比例 */
+            /* 高度自動，最大不超過容器高度 */
+            height: auto;
             max-height: 100%; 
-            object-fit: contain;
+            object-fit: contain; /* 確保比例正確 */
             border-radius: 4px; 
             opacity: 0; transition: opacity 0.5s ease, transform 0.3s;
         }
@@ -153,7 +163,7 @@
         .page-indicator { cursor: none; padding: 5px 10px; transition: 0.3s; opacity: 0.6; }
         .page-indicator:hover { opacity: 1; transform: scale(1.1); }
 
-        /* --- 改進的發光進度條 --- */
+        /* --- 發光進度條 --- */
         #progress-container {
             position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
             width: 70%; max-width: 320px; height: 50px;
@@ -278,7 +288,7 @@
         }
 
         @media (max-width: 1024px) { 
-            #custom-cursor { display: none !important; } 
+            #cursor-layer { display: none !important; } 
             .reader-viewport { 
                 margin: 60px auto 100px; width: 90%; 
                 height: calc(100vh - 160px); 
@@ -293,7 +303,9 @@
     </style>
 </head>
 <body class="js-loading">
-    <div id="custom-cursor"></div>
+    <div id="cursor-layer">
+        <div id="custom-cursor"></div>
+    </div>
     
     <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
     <div class="toast-msg" id="swipe-hint">Release to Return</div>
@@ -378,7 +390,7 @@
         let isWheelOpen = false, wheelItems = [], wheelAngle = 0, wheelVelocity = 0, wheelDragging = false, wheelLastY = 0, wheelRafId = null;
         const WHEEL_RADIUS = 300, ITEM_ANGLE_GAP = 12;
 
-        // --- 1. Fetch & Layout (Async Image Loading) ---
+        // --- 1. Fetch & Layout (Async Image Loading & Smart Layout) ---
         async function fetchArticleContent(id) {
             if (!id) throw new Error("ID missing");
             currentArticleId = id; 
@@ -387,12 +399,11 @@
             return await response.json();
         }
 
-        // 預加載圖片並獲取原始尺寸的輔助函數
         function getImageMeta(src) {
             return new Promise((resolve) => {
                 const img = new Image();
                 img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight, ok: true });
-                img.onerror = () => resolve({ w: 800, h: 600, ok: false }); // Fallback
+                img.onerror = () => resolve({ w: 800, h: 600, ok: false }); 
                 img.src = src;
             });
         }
@@ -407,7 +418,6 @@
             const vW = viewport.clientWidth;
             if (vH <= 0) return;
 
-            // 標題頁
             const titlePage = createPageDiv(0, true);
             titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta" style="margin-top:10px; opacity:0.6;">${content.date}</div>`;
             titlePage.dataset.startIndex = 0; 
@@ -446,31 +456,32 @@
                         el.innerText = item;
                         el.onclick = () => copyText(el);
                         
-                        // 測量文字高度
                         tempDiv.innerHTML = '';
                         tempDiv.appendChild(el.cloneNode(true));
                         displayedHeight = tempDiv.clientHeight;
 
                     } else if (item.type === 'image') {
-                        // 等待圖片元數據，計算實際渲染高度以避免壓縮
+                        // 圖片高度計算邏輯 (不壓縮比例)
                         const meta = await getImageMeta(item.src);
                         const aspectRatio = meta.h / meta.w;
                         
-                        // 圖片在頁面中會自動填滿寬度（受 max-width: 100% 限制）
-                        // 計算如果寬度填滿，高度會是多少
-                        // 注意：如果圖片原始寬度小於 availableWidth，它可能不會填滿，但為了安全起見，我們假設它可能佔用這些空間
-                        // 這裡使用簡單邏輯：假設寬度為 availableWidth 計算高度
-                        displayedHeight = availableWidth * aspectRatio;
+                        // 計算在 availableWidth 下的理論高度
+                        const theoreticalHeight = availableWidth * aspectRatio;
                         
-                        // 如果圖片本身超級長（比如長圖），限制其計算高度不超過一頁，視覺上由 object-fit: contain 處理
-                        if (displayedHeight > vH) displayedHeight = vH; 
+                        // 實際顯示高度：如果理論高度大於剩餘空間，CSS 會自動 resize (object-fit: contain)，
+                        // 但我們需要知道佔據多高來決定是否換頁
+                        // 這裡使用理論高度作為基準，因為 max-width: 100%
+                        displayedHeight = theoreticalHeight;
+
+                        // 限制：圖片高度不應超過整個視口的高度 (減去 padding)
+                        // 如果圖片超長，在單頁模式下通常會被縮放以適應
+                        if (displayedHeight > vH) displayedHeight = vH;
 
                         el = document.createElement('figure');
                         const ph = document.createElement('div');
                         ph.className = 'loading-placeholder pulsing interactable';
                         ph.dataset.src = item.src;
                         ph.dataset.alt = item.alt || '';
-                        // 標記圖片，讓 lazyLoadImages 稍後處理
                         el.appendChild(ph);
                         
                         let captionHeight = 0;
@@ -478,7 +489,6 @@
                             const cap = document.createElement('figcaption');
                             cap.innerText = item.caption;
                             el.appendChild(cap);
-                            // 簡單估算 caption 高度
                             captionHeight = 30; 
                         }
                         displayedHeight += captionHeight;
@@ -497,8 +507,10 @@
 
                     if (!el) continue;
 
-                    // --- 關鍵邏輯：換頁判斷 ---
-                    // 如果當前已有內容，且加入新元素後會超出高度 -> 換頁
+                    // --- 換頁判斷 ---
+                    // 邏輯：當前高度 + 新元素高度 > 視口高度 => 換頁
+                    // 修正：如果元素能在當前頁面 "顯示得下" (Fit)，就不換頁。
+                    // 這裡的 currentH + displayedHeight 即為放入後的高度
                     if (currentH > 0 && (currentH + displayedHeight + pGap > vH)) {
                         contentPageIndex++;
                         currentDiv = createPageDiv(contentPageIndex);
@@ -526,62 +538,68 @@
             lazyLoadImages();
         }
 
-        // --- Custom Cursor Logic (Redone) ---
-        let cursorState = { x: -100, y: -100, scale: 1, rotation: 45, hollow: false };
-        let mousePos = { x: -100, y: -100 };
-        let isCursorVisible = false;
+        // --- Custom Cursor Logic (Completely Redone) ---
+        // 使用簡單的 Lerp 邏輯，避免任何不必要的複雜性
+        let mouseX = -100, mouseY = -100;
+        let cursorX = -100, cursorY = -100;
+        let isHovering = false, isClicking = false;
+        let isCursorInited = false;
 
         function initCursor() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
 
-            // 使用 RAF 更新位置，比直接在 mousemove 設置 style 效能更好
-            function loop() {
-                // 簡單的平滑處理 (Lerp) - 如果想要完全無延遲可設為 1
-                const ease = 0.2; 
-                cursorState.x += (mousePos.x - cursorState.x) * ease;
-                cursorState.y += (mousePos.y - cursorState.y) * ease;
-
-                // 構建 transform 字符串
-                // translate3d 啟用 GPU 加速
-                // translate(-50%, -50%) 保持中心點對齊
-                let transform = `translate3d(${cursorState.x}px, ${cursorState.y}px, 0) translate(-50%, -50%)`;
-                
-                // 狀態處理
-                if (cursorState.hollow) {
-                    transform += ` rotate(45deg) scale(1.8)`;
-                } else if (cursorState.scale !== 1) { // clicking
-                    transform += ` rotate(45deg) scale(${cursorState.scale})`;
-                } else {
-                    transform += ` rotate(45deg)`;
-                }
-
-                cursor.style.transform = transform;
-                
-                // 首次移動後顯示鼠標
-                if (!isCursorVisible && (mousePos.x > 0 || mousePos.y > 0)) {
-                    isCursorVisible = true;
+            document.addEventListener('mousemove', e => { 
+                mouseX = e.clientX; 
+                mouseY = e.clientY; 
+                if(!isCursorInited) {
+                    cursorX = mouseX; cursorY = mouseY;
+                    isCursorInited = true;
                     cursor.classList.add('active');
                 }
+            });
 
+            document.addEventListener('mousedown', () => isClicking = true);
+            document.addEventListener('mouseup', () => isClicking = false);
+
+            function loop() {
+                // 平滑移動 (Lerp factor 0.2)
+                const dx = mouseX - cursorX;
+                const dy = mouseY - cursorY;
+                cursorX += dx * 0.2;
+                cursorY += dy * 0.2;
+
+                // 構建 Transform 字符串
+                // translate3d(x,y,0) 處理位置
+                // translate(-50%,-50%) 居中
+                // rotate(45deg) 基礎旋轉
+                let transform = `translate3d(${cursorX}px, ${cursorY}px, 0) translate(-50%, -50%) rotate(45deg)`;
+                
+                // 狀態縮放邏輯
+                let scale = 1;
+                if (isHovering) scale = 1.8;
+                if (isClicking) scale = 0.6; // 點擊優先級高，或者乘法? 這裡直接覆蓋
+
+                // 應用 hollow 樣式
+                if (isHovering) cursor.classList.add('hollow');
+                else cursor.classList.remove('hollow');
+                
+                if (isClicking) cursor.classList.add('clicking');
+                else cursor.classList.remove('clicking');
+
+                cursor.style.transform = transform + ` scale(${scale})`;
+                
                 requestAnimationFrame(loop);
             }
-            loop();
-
-            document.addEventListener('mousemove', e => { 
-                mousePos.x = e.clientX; 
-                mousePos.y = e.clientY; 
-            });
-            document.addEventListener('mousedown', () => { cursorState.scale = 0.6; cursor.classList.add('clicking'); });
-            document.addEventListener('mouseup', () => { cursorState.scale = 1; cursor.classList.remove('clicking'); });
+            requestAnimationFrame(loop);
         }
 
-        // 修改 Hover 事件綁定，不再依賴 CSS 的 hover，改為更新 cursorState 對象
         function bindCursorEvents() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
             
-            const onEnter = () => { cursorState.hollow = true; cursor.classList.add('hollow'); };
-            const onLeave = () => { cursorState.hollow = false; cursor.classList.remove('hollow'); };
+            const onEnter = () => { isHovering = true; };
+            const onLeave = () => { isHovering = false; };
 
+            // 稍微延遲以確保 DOM 已渲染
             setTimeout(() => {
                 document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                     el.removeEventListener('mouseenter', onEnter);
@@ -592,7 +610,7 @@
             }, 100);
         }
 
-        // --- Progress Persistence (Unchanged) ---
+        // --- Progress Persistence ---
         function saveProgress() {
             if (!currentArticleId || !pages[currentPage]) return;
             const idx = pages[currentPage].dataset.startIndex || 0;
@@ -614,7 +632,7 @@
             updatePage(false);
         }
 
-        // --- Update Page (Unchanged) ---
+        // --- Update Page ---
         function createPageDiv(index, isTitle = false) { 
             const div = document.createElement('div'); 
             div.className = 'page-slide'; 
@@ -652,7 +670,11 @@
             }
         }
 
-        // --- Slider (Unchanged) ---
+        // --- Slider & Visibility Fix ---
+        function hideSlider() {
+            progressContainer.classList.remove('active');
+        }
+
         pageNum.addEventListener('click', (e) => {
             e.stopPropagation();
             progressContainer.classList.add('active');
@@ -670,17 +692,16 @@
             }
         });
 
-        pageSlider.addEventListener('change', () => {
-            updatePage(false);
-            progressContainer.classList.remove('active');
-        });
+        // 修復：確保鬆手後必定消失，無論在哪一頁
+        pageSlider.addEventListener('change', hideSlider);
+        pageSlider.addEventListener('mouseup', hideSlider);
+        pageSlider.addEventListener('touchend', hideSlider);
 
-        // --- Image & Copy (Unchanged Logic, Updated for new layout) ---
+        // --- Image & Copy ---
         function openLightbox(src) {
             lightboxImg.src = src;
             lightbox.classList.add('active');
-            cursorState.hollow = false; // Reset cursor state
-            cursor.classList.remove('hollow');
+            isHovering = false; // Reset hover state
         }
         function closeLightbox() {
             lightbox.classList.remove('active');
@@ -712,7 +733,7 @@
 
         async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
 
-        // --- TOC (Unchanged) ---
+        // --- TOC ---
         function setupTOC() {
             if (tocData.length === 0) {
                 desktopTocBtn.parentElement.style.display = 'none';
@@ -851,7 +872,6 @@
                 const articleId = params.get('id');
                 const content = await fetchArticleContent(articleId);
                 await document.fonts.ready;
-                // 注意：這裡直接調用 layoutArticle，其內部現在會等待圖片元數據
                 await layoutArticle(content);
                 
                 let resizeTimer;
@@ -860,7 +880,7 @@
                     resizeTimer = setTimeout(() => { if (articleData && !isWheelOpen) layoutArticle(articleData); }, 250);
                 });
                 initInputs();
-                initCursor(); // Initialize the new cursor logic
+                initCursor(); 
             } catch (error) { console.error("Init failed", error); } 
             finally { document.body.classList.remove('js-loading'); }
         }
