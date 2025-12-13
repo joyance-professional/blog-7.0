@@ -37,12 +37,11 @@
             padding: 0; 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
-            cursor: none !important; /* 殺手鐧：強制所有元素無游標 */
+            cursor: none !important; /* 強制無游標 */
         }
 
         html {
             height: 100%;
-            /* 配合 JS 禁止滾動 */
             overflow: hidden; 
         }
 
@@ -52,13 +51,13 @@
             color: var(--text-color);
             width: 100vw;
             height: 100%;
-            overflow: hidden; /* 雙重保險 */
+            overflow: hidden;
             display: flex;
             opacity: 0; 
             will-change: transform, opacity;
             animation: pageFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             
-            /* 禁止選取文字，增強 App 感 */
+            /* 禁止選取文字 */
             user-select: none;
             -webkit-user-select: none;
         }
@@ -254,9 +253,9 @@
         /* --- 3. 手機版適配 --- */
         /* ========================================= */
         @media (max-width: 768px) {
-            /* 1. 鎖定視口 */
+            /* 1. 鎖定視口：絕對禁止滑動 */
             html, body {
-                position: fixed; /* 強制固定，禁止瀏覽器彈性滾動 */
+                position: fixed; /* 釘死 */
                 width: 100%;
                 height: 100%;
                 overflow: hidden;
@@ -364,18 +363,17 @@
                 padding-bottom: 0;
             }
 
-            /* --- 圖片修復核心代碼 --- */
+            /* --- 圖片處理：既然加載不出，就讓它乾淨地留白 --- */
             .moment-img {
                 filter: none;
                 display: block !important;
                 width: 100% !important;
-                /* 關鍵修復：強制給定高度，避免高度塌陷導致不渲染 */
-                height: 180px !important; 
+                height: 180px !important; /* 保留高度，維持版面 */
                 min-height: 180px !important;
-                object-fit: cover; /* 保持比例填滿 */
+                object-fit: cover; 
                 border-radius: 4px;
                 margin-bottom: 8px;
-                background-color: #f0f0f0; /* 添加背景色，確保就算圖片掛了也能看到位置 */
+                background-color: transparent; /* 去除灰色佔位，留白 */
             }
 
             .article-item {
@@ -436,8 +434,8 @@
                 </span>
                 
                 <div class="moment-item">
-                    <!-- 圖片修復：移除 async，確保同步繪製；添加 alt 確保無障礙 -->
-                    <img src="/medias/IMG_3719.png" class="moment-img" alt="moment">
+                    <!-- 圖片處理：若加載失敗，onerror 會將其隱藏，只留白 -->
+                    <img src="/medias/IMG_3719.png" class="moment-img" alt="moment" onerror="this.style.opacity=0">
                     <p class="moment-text interactable" onclick="copyText(this)">
                         時光依舊，不過物是人非罷了
                     </p>
@@ -499,9 +497,8 @@
             } else {
                 // 手機端邏輯：鎖定滑動 + 右滑跳轉
                 
-                // 1. 嚴格禁止任何觸控滑動 (解決絲毫滑動問題)
+                // 1. 嚴格禁止任何觸控滑動 (保證絲毫不動)
                 document.addEventListener('touchmove', function(e) {
-                    // 這裡的 passive: false 是關鍵，允許我們取消默認行為
                     e.preventDefault();
                 }, { passive: false });
 
@@ -521,6 +518,7 @@
                     const diffX = globalTouchEndX - globalTouchStartX;
                     const diffY = globalTouchEndY - globalTouchStartY;
 
+                    // 邏輯：向右滑動距離 > 60px 且垂直移動 < 50px
                     if (diffX > 60 && Math.abs(diffY) < 50) {
                         goToProfile();
                     }
