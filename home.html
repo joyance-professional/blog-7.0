@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>主頁 | Home</title>
-    <!-- 預加載關鍵資源 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
@@ -32,15 +31,19 @@
             }
         }
 
-        body, h1, h2, h3, p, div, section, span, img { 
+        /* 重置與游標隱藏：對所有可能的元素強制隱藏 */
+        *, *::before, *::after {
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
+            cursor: none !important; /* 殺手鐧：強制所有元素無游標 */
         }
 
         html {
             height: 100%;
+            /* 配合 JS 禁止滾動 */
+            overflow: hidden; 
         }
 
         body {
@@ -49,12 +52,15 @@
             color: var(--text-color);
             width: 100vw;
             height: 100%;
-            overflow: hidden; /* 默認隱藏溢出 */
+            overflow: hidden; /* 雙重保險 */
             display: flex;
             opacity: 0; 
             will-change: transform, opacity;
-            /* 進場動畫 */
             animation: pageFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            
+            /* 禁止選取文字，增強 App 感 */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         @keyframes pageFadeIn {
@@ -62,7 +68,6 @@
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* 離場動畫類 */
         body.page-exit {
             animation: pageFadeOut 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
             pointer-events: none;
@@ -73,7 +78,7 @@
             to { opacity: 0; transform: translateY(-10px); }
         }
 
-        /* --- 2. PC端默認樣式 --- */
+        /* --- 2. PC端佈局 --- */
         .left-section {
             width: 30%;
             height: 100%;
@@ -94,8 +99,6 @@
             padding-left: 20px;
             letter-spacing: 0.2em;
             writing-mode: vertical-rl;
-            user-select: none;
-            cursor: pointer;
             transition: opacity 0.3s;
         }
         .my-name:hover { opacity: 0.6; }
@@ -180,7 +183,7 @@
             transition: filter 0.4s;
             margin-bottom: 15px;
             border-radius: 2px;
-            display: block; /* 確保圖片正確渲染 */
+            display: block;
         }
         
         .moment-text {
@@ -210,9 +213,6 @@
         
         /* --- PC 專有樣式 --- */
         @media (min-width: 769px) {
-            /* 修復：強制隱藏所有元素的鼠標，確保無死角 */
-            *, *::before, *::after { cursor: none !important; }
-
             #custom-cursor {
                 position: fixed;
                 top: 0; left: 0;
@@ -254,20 +254,20 @@
         /* --- 3. 手機版適配 --- */
         /* ========================================= */
         @media (max-width: 768px) {
-            /* 修復：強制鎖定頁面，禁止任何滑動 */
+            /* 1. 鎖定視口 */
             html, body {
-                position: fixed;
+                position: fixed; /* 強制固定，禁止瀏覽器彈性滾動 */
                 width: 100%;
                 height: 100%;
                 overflow: hidden;
                 overscroll-behavior: none;
-                touch-action: none; /* 禁用瀏覽器默認觸控行為 */
+                touch-action: none;
             }
 
             body { 
                 flex-direction: column; 
-                padding-bottom: 20px; /* 調整底部間距確保內容可見 */
-                justify-content: space-evenly; /* 均勻分佈內容 */
+                padding-bottom: 20px; 
+                justify-content: space-evenly;
             }
 
             #custom-cursor { display: none; }
@@ -279,7 +279,7 @@
                 flex-direction: column;
                 align-items: flex-start;
                 gap: 15px;
-                flex-shrink: 0; /* 防止頭部被壓縮 */
+                flex-shrink: 0; 
             }
 
             .my-name {
@@ -311,12 +311,12 @@
 
             .right-section {
                 width: 100%;
-                flex: 1; /* 佔據剩餘空間 */
+                flex: 1; 
                 display: flex;
                 flex-direction: column;
-                gap: 20px; /* 減少間距以適應小屏幕 */
+                gap: 20px; 
                 padding: 0 25px;
-                justify-content: center; /* 內容垂直居中 */
+                justify-content: center; 
             }
             
             .geo-viewport {
@@ -347,14 +347,12 @@
                 font-size: 1.1rem;
                 opacity: 0.8;
             }
-            
             .box-title::after {
                 content: '→';
                 font-size: 1.1rem;
                 opacity: 0.3;
             }
             
-            /* 隱藏多餘項目以保證單頁顯示 */
             .moment-item:nth-child(n+5),
             .article-item:nth-child(n+5) {
                 display: none;
@@ -365,15 +363,19 @@
                 margin-bottom: 10px;
                 padding-bottom: 0;
             }
-            /* 修復：強制圖片顯示並撐開 */
+
+            /* --- 圖片修復核心代碼 --- */
             .moment-img {
                 filter: none;
-                width: 100% !important;
                 display: block !important;
-                height: auto; 
-                max-height: 180px; /* 限制高度防止溢出 */
+                width: 100% !important;
+                /* 關鍵修復：強制給定高度，避免高度塌陷導致不渲染 */
+                height: 180px !important; 
+                min-height: 180px !important;
+                object-fit: cover; /* 保持比例填滿 */
                 border-radius: 4px;
                 margin-bottom: 8px;
+                background-color: #f0f0f0; /* 添加背景色，確保就算圖片掛了也能看到位置 */
             }
 
             .article-item {
@@ -385,7 +387,7 @@
             }
         }
 
-        /* --- 展開動畫 (CSS部分) --- */
+        /* --- 展開動畫 --- */
         .geo-viewport.expanding {
             position: fixed !important;
             top: 0 !important; left: 0 !important;
@@ -415,10 +417,8 @@
     </style>
 </head>
 <body>
-    <!-- 自定義鼠標 (手機端會被CSS隱藏) -->
     <div id="custom-cursor"></div>
 
-    <!-- 左側區 -->
     <section class="left-section">
         <div class="my-name interactable" onclick="goToProfile(event)">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
@@ -426,7 +426,6 @@
         </div>
     </section>
 
-    <!-- 右側內容區 -->
     <section class="right-section">
         
         <!-- MOMENTS -->
@@ -437,8 +436,8 @@
                 </span>
                 
                 <div class="moment-item">
-                    <!-- 優化：移除 lazy load，確保手機端直接顯示 -->
-                    <img src="/medias/IMG_3719.png" class="moment-img" decoding="async" alt="moment">
+                    <!-- 圖片修復：移除 async，確保同步繪製；添加 alt 確保無障礙 -->
+                    <img src="/medias/IMG_3719.png" class="moment-img" alt="moment">
                     <p class="moment-text interactable" onclick="copyText(this)">
                         時光依舊，不過物是人非罷了
                     </p>
@@ -477,8 +476,8 @@
 
             const isMobile = window.innerWidth <= 768;
 
-            // --- 0. 鼠標邏輯 (僅PC) ---
             if (!isMobile) {
+                // PC 端邏輯
                 const cursor = document.getElementById('custom-cursor');
                 if (cursor) {
                     document.addEventListener('mousemove', (e) => {
@@ -498,15 +497,15 @@
                     });
                 }
             } else {
-                // --- 手機端特殊處理 ---
+                // 手機端邏輯：鎖定滑動 + 右滑跳轉
                 
-                // 1. 強制禁止垂直滑動 (解決絲毫滑動問題)
+                // 1. 嚴格禁止任何觸控滑動 (解決絲毫滑動問題)
                 document.addEventListener('touchmove', function(e) {
-                    // 這裡禁止所有默認滾動行為，確保頁面紋絲不動
+                    // 這裡的 passive: false 是關鍵，允許我們取消默認行為
                     e.preventDefault();
                 }, { passive: false });
 
-                // 2. 全局右滑跳轉邏輯
+                // 2. 右滑檢測
                 let globalTouchStartX = 0;
                 let globalTouchStartY = 0;
                 
@@ -522,14 +521,13 @@
                     const diffX = globalTouchEndX - globalTouchStartX;
                     const diffY = globalTouchEndY - globalTouchStartY;
 
-                    // 邏輯：向右滑動距離 > 60px 且垂直移動 < 50px (防止斜向滾動誤觸)
                     if (diffX > 60 && Math.abs(diffY) < 50) {
                         goToProfile();
                     }
                 }, {passive: true});
             }
 
-            // --- 1. 格言系統 ---
+            // --- 格言系統 ---
             const quotes = [
                 "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
                 "我不會安慰你 在顫抖的楓葉上 寫滿春天的謊言",
@@ -563,7 +561,6 @@
                     }, 300);
                 }
 
-                // 阻止冒泡，避免點擊格言時觸發其他行為
                 quoteArea.addEventListener('click', (e) => {
                     e.stopPropagation(); 
                     updateQuote('next');
@@ -584,7 +581,7 @@
                 }, {passive: true});
             }
 
-            // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
+            // --- Z-Index 邏輯 (僅PC) ---
             if (!isMobile) {
                 const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
                 const bringToFront = (activeId) => {
@@ -607,7 +604,7 @@
             }
         });
 
-        // --- 功能函數 ---
+        // --- 全局函數 ---
 
         function goToProfile(event) {
             if(event) event.stopPropagation();
