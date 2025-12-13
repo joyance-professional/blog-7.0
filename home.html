@@ -4,214 +4,472 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>主頁 | Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
 
     <style>
+        /* --- 1. 全局變量 --- */
         :root {
-            --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; --secondary-text: #666666; --border-color: #e0e0e0;
-            --skew-angle: -15deg; --content-angle: 15deg;
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #000000;
+            --secondary-text: #666666;
+            --border-color: #e0e0e0;
+            --skew-angle: -15deg; 
+            --content-angle: 15deg; 
         }
-        @media (prefers-color-scheme: dark) {
-            :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --secondary-text: #888888; --border-color: #333333; }
-        }
-        body, h1, h2, h3, p, div, section, span, img { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html { height: 100%; }
-        body {
-            font-family: 'Noto Serif TC', serif; background-color: var(--bg-color); color: var(--text-color);
-            width: 100vw; height: 100%; overflow: hidden; display: flex;
-            opacity: 0; animation: pageFadeIn 0.8s ease forwards;
-        }
-        @keyframes pageFadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* 左側與標題 */
-        .left-section { width: 30%; height: 100%; padding: 60px 40px; display: flex; justify-content: center; align-items: center; gap: 40px; z-index: 50; transition: opacity 0.5s; }
-        .my-name {
-            font-size: 2.5rem; font-weight: 700; border-left: 2px solid var(--accent-color); padding-left: 20px;
-            letter-spacing: 0.2em; writing-mode: vertical-rl; user-select: none; cursor: pointer;
-            transition: all 0.8s cubic-bezier(0.65, 0, 0.35, 1); transform-origin: top left;
-        }
-        
-        /* 離場動畫：去 Profile 頁 */
-        /* PC: 旋轉回 0，移動到左上角 */
-        body.exit-to-profile .my-name {
-            position: fixed; top: 60px; left: 60px;
-            transform: rotate(0deg) !important; 
-            border: none; padding: 0; margin: 0; z-index: 9999;
-            font-size: 1.5rem; /* Profile 頁的大小 */
-        }
-        /* Mobile: 移動到正下方，變大 */
-        @media (max-width: 768px) {
-            body.exit-to-profile .my-name {
-                position: fixed; top: auto; bottom: 40px; left: 50%;
-                transform: translateX(-50%) scale(1.1);
-                z-index: 9999; font-size: 2.2rem;
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --accent-color: #ffffff;
+                --secondary-text: #888888;
+                --border-color: #333333;
             }
         }
 
-        /* 引用文本 */
+        body, h1, h2, h3, p, div, section, span, img { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            -webkit-tap-highlight-color: transparent; 
+        }
+
+        html { height: 100%; }
+
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            width: 100vw; height: 100%;
+            overflow: hidden;
+            display: flex;
+            opacity: 0; 
+            will-change: transform, opacity;
+            animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        @keyframes pageFadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 2. PC端默認樣式 --- */
+        .left-section {
+            width: 30%; height: 100%;
+            padding: 60px 40px;
+            display: flex; flex-direction: row; 
+            justify-content: center; align-items: center;
+            z-index: 50; gap: 40px; 
+            transition: opacity 0.5s ease;
+        }
+
+        /* === 關鍵修改：Joyance 標題樣式 === */
+        .my-name {
+            font-size: 2.5rem; font-weight: 700;
+            border-left: 2px solid var(--accent-color); 
+            padding-left: 20px;
+            letter-spacing: 0.2em;
+            writing-mode: vertical-rl;
+            user-select: none;
+            /* 允許位置變換動畫 */
+            transition: all 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+            transform-origin: top left;
+            cursor: pointer; /* 提示可點擊 */
+        }
+
+        /* === 關鍵動畫：離場去 Profile 頁時的狀態 === */
+        /* PC端：標題旋轉回水平，移動到左上角 (匹配 Profile 頁) */
+        body.exit-mode .my-name {
+            position: fixed;
+            top: 60px; left: 60px;
+            transform: rotate(0deg) !important; /* 強制水平 */
+            writing-mode: horizontal-tb; /* 切換書寫模式 */
+            border: none;
+            padding: 0; margin: 0;
+            font-size: 1.5rem; /* Profile 頁的大小 */
+            z-index: 9999;
+        }
+
+        /* 離場去 Index 頁時 (可選，簡單淡出或移動) */
+        body.exit-to-index {
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 0.8s ease;
+        }
+
         .quote-wrapper { height: 60%; width: 60px; position: relative; }
         .quote-text {
-            font-size: 1.1rem; font-weight: 300; line-height: 1.5; height: 100%; position: absolute; top: 0; right: 0;
-            transition: all 0.6s; writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap;
+            font-size: 1.1rem; font-weight: 300; line-height: 1.5;
+            height: 100%; position: absolute; top: 0; right: 0; 
+            will-change: transform, opacity;
+            transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+            opacity: 1; writing-mode: vertical-rl; text-orientation: upright; white-space: nowrap;
         }
-        .quote-enter { opacity: 0; transform: translateX(20px); } .quote-active { opacity: 1; transform: translateX(0); } .quote-exit { opacity: 0; transform: translateX(-20px); }
+        .quote-enter { opacity: 0; transform: translateX(20px); } 
+        .quote-active { opacity: 1; transform: translateX(0); }
+        .quote-exit { opacity: 0; transform: translateX(-20px); } 
 
-        /* 右側幾何視窗 */
         .right-section { width: 70%; height: 100%; position: relative; }
+
         .geo-viewport {
-            position: absolute; background: var(--bg-color); border: 1.5px solid var(--accent-color);
-            transform: skewX(var(--skew-angle)); overflow: hidden; box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
-            transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease;
+            position: absolute;
+            background: var(--bg-color);
+            border: 1.5px solid var(--accent-color);
+            transform: skewX(var(--skew-angle)); 
+            overflow: hidden;
+            box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
+            transform-origin: center center;
+            will-change: transform, border-color;
+            transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease; 
         }
+
         .geo-scroller {
-            width: 120%; height: 100%; margin-left: -10%; transform: skewX(var(--content-angle));
-            overflow-y: auto; overflow-x: hidden; padding: 60px 100px; scrollbar-width: none;
+            width: 120%; height: 100%; margin-left: -10%; 
+            transform: skewX(var(--content-angle)*2); 
+            overflow-y: auto; overflow-x: hidden;
+            padding: 60px 100px; 
+            scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth;
         }
         .geo-scroller::-webkit-scrollbar { display: none; }
-        .box-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 30px; display: inline-block; padding-bottom: 10px; border-bottom: 2px solid var(--accent-color); cursor: pointer; }
-        .moment-item { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px dashed var(--border-color); }
-        .moment-img { width: 100%; height: 180px; object-fit: cover; filter: grayscale(100%); transition: filter 0.4s; border-radius: 2px; }
-        .article-item { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--border-color); cursor: pointer; }
-        .article-title { font-size: 1.05rem; font-weight: 500; }
-        .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
 
-        /* PC 特定 */
+        .box-title {
+            font-size: 1.5rem; font-weight: 700; margin-bottom: 30px;
+            display: inline-block; padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent-color);
+            transition: transform 0.2s, color 0.2s;
+        }
+
+        .moment-item { margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px dashed var(--border-color); }
+        .moment-img {
+            width: 100%; height: 180px; object-fit: cover;
+            filter: grayscale(100%); will-change: filter; transition: filter 0.4s;
+            margin-bottom: 15px; border-radius: 2px;
+        }
+        
+        .moment-text { font-size: 0.95rem; line-height: 1.8; word-break: break-all; text-align: justify; cursor: pointer; }
+
+        .article-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 0; border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s; cursor: pointer;
+        }
+        .article-title { 
+            font-size: 1.05rem; font-weight: 500; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis; max-width: 70%;
+        }
+        .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
+        
+        /* --- PC 專有樣式 --- */
         @media (min-width: 769px) {
             body, html, a, button { cursor: none !important; }
+
             #custom-cursor {
-                position: fixed; width: 12px; height: 12px; background-color: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; mix-blend-mode: difference; transition: transform 0.1s;
+                position: fixed; top: 0; left: 0;
+                width: 12px; height: 12px;
+                background-color: var(--text-color);
+                transform: rotate(45deg); pointer-events: none; z-index: 99999;
+                transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
+                mix-blend-mode: difference;
             }
-            #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--text-color); transform: rotate(45deg) scale(1.2); }
-            #custom-cursor.clicking { transform: rotate(45deg) scale(0.6); background: var(--accent-color); }
+            #custom-cursor.hollow {
+                background-color: transparent; border: 1.5px solid var(--text-color);
+                transform: rotate(45deg) scale(1.2);
+            }
+            #custom-cursor.clicking {
+                transform: rotate(45deg) scale(0.6); background-color: var(--accent-color);
+            }
+            
             .geo-viewport:hover .moment-img { filter: grayscale(0%); }
-            .geo-viewport.active, .geo-viewport:hover { transform: skewX(var(--skew-angle)) scale(1.02); box-shadow: -15px 15px 40px rgba(0,0,0,0.15); border-color: var(--text-color); z-index: 20; }
-            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; z-index: 10; }
-            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; z-index: 11; }
+
+            .geo-viewport.active, .geo-viewport:hover {
+                transform: skewX(var(--skew-angle)) scale(1.02);
+                box-shadow: -15px 15px 40px rgba(0,0,0,0.15);
+                border-color: var(--text-color); z-index: 20;
+            }
+            .geo-viewport:not(.active):not(:hover) { z-index: 10; }
+            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; }
+            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; }
         }
 
-        /* Mobile 適配 */
+        /* --- 3. 手機版適配 --- */
         @media (max-width: 768px) {
-            body { flex-direction: column; overflow-y: auto; height: auto; padding-bottom: 80px; }
+            body { 
+                flex-direction: column; overflow-y: auto; overflow-x: hidden;
+                height: auto; padding-bottom: 80px; -webkit-overflow-scrolling: touch;
+            }
             #custom-cursor { display: none; }
-            .left-section { width: 100%; height: auto; padding: 60px 25px 20px; flex-direction: column; align-items: flex-start; gap: 20px; }
-            .my-name { writing-mode: horizontal-tb; border: none; padding-left: 0; font-size: 2.2rem; width: 100%; }
+
+            .left-section {
+                width: 100%; height: auto;
+                padding: 60px 25px 20px 25px; 
+                flex-direction: column; align-items: flex-start; gap: 20px;
+            }
+
+            .my-name {
+                writing-mode: horizontal-tb; border: none; width: 100%;
+                padding-left: 0; font-size: 2.2rem; letter-spacing: 0.1em;
+                /* Mobile Transition 設定 */
+                transition: all 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+            }
+            
+            /* === 手機版離場動畫 === */
+            body.exit-mode .my-name {
+                position: fixed;
+                top: auto !important; /* 取消頂部定位 */
+                bottom: 40px; /* 移動到底部 */
+                left: 50%;
+                transform: translateX(-50%) scale(1.2) !important; /* 放大並居中 */
+                writing-mode: horizontal-tb;
+                z-index: 9999;
+                text-align: center;
+                width: auto;
+            }
+
             .quote-wrapper { width: 100%; height: auto; min-height: 24px; }
-            .quote-text { writing-mode: horizontal-tb; position: relative; width: 100%; text-align: left; font-size: 0.9rem; color: var(--secondary-text); white-space: normal; }
-            .quote-enter { transform: translateY(10px); } .quote-exit { transform: translateY(-10px); }
-            .right-section { width: 100%; height: auto; display: flex; flex-direction: column; gap: 50px; padding: 0 25px; }
-            .geo-viewport { position: relative; width: 100% !important; height: auto !important; transform: none !important; border: none; box-shadow: none; overflow: visible; top: auto !important; left: auto !important; }
-            .geo-scroller { transform: none; width: 100%; margin: 0; padding: 0; overflow: visible; }
-            .box-title { display: flex; justify-content: space-between; border: none; opacity: 0.8; font-size: 1.2rem; }
-            .box-title::after { content: '→'; opacity: 0.3; }
-            .moment-img { filter: none; height: auto; max-height: 200px; margin-bottom: 10px; }
+            .quote-text {
+                writing-mode: horizontal-tb; position: relative; width: 100%;
+                white-space: normal; text-align: left;
+                font-size: 0.9rem; color: var(--secondary-text);
+            }
+            .quote-enter { transform: translateY(10px); } 
+            .quote-exit { transform: translateY(-10px); }
+
+            .right-section {
+                width: 100%; height: auto; display: flex; flex-direction: column;
+                gap: 50px; padding: 0 25px;
+            }
+            
+            .geo-viewport {
+                position: relative !important; top: auto !important; left: auto !important;
+                width: 100% !important; height: auto !important;
+                transform: none !important; border: none !important; box-shadow: none !important;
+                overflow: visible; 
+            }
+
+            .geo-scroller {
+                transform: none !important; width: 100% !important;
+                margin-left: 0 !important; padding: 0; overflow: visible;
+            }
+
+            .box-title {
+                display: flex; justify-content: space-between; align-items: center;
+                border: none; margin-bottom: 20px; font-size: 1.2rem; opacity: 0.8;
+            }
+            .box-title::after { content: '→'; font-size: 1.2rem; opacity: 0.3; }
+            
+            .moment-item:nth-child(n+5), .article-item:nth-child(n+5) { display: none; }
+            .moment-item { border: none; margin-bottom: 30px; padding-bottom: 0; }
+            .moment-img { filter: none; height: auto; max-height: 200px; border-radius: 4px; margin-bottom: 10px; }
+            .article-item { border: none; padding: 12px 0; }
+            .article-title { font-weight: 400; }
         }
 
-        /* 內容展開過渡 */
-        .geo-viewport.expanding { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; transform: none !important; z-index: 9999; transition: all 0.6s ease !important; margin: 0 !important; padding: 25px !important; }
-        body.is-transitioning *:not(.geo-viewport.expanding):not(.geo-viewport.expanding *) { opacity: 0; transition: opacity 0.3s; }
+        /* --- 展開動畫 --- */
+        .geo-viewport.expanding {
+            position: fixed !important; top: 0 !important; left: 0 !important;
+            width: 100vw !important; height: 100vh !important;
+            transform: none !important; z-index: 9999 !important;
+            background-color: var(--bg-color);
+            transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
+            border: none; margin: 0 !important; padding: 25px !important; overflow-y: auto; 
+        }
+        
+        .geo-viewport.expanding .geo-scroller { opacity: 0; transition: opacity 0.2s; }
+
+        /* 離場時，隱藏其他元素，只留標題 */
+        body.is-transitioning .left-section > *:not(.my-name),
+        body.is-transitioning .geo-viewport:not(.expanding) {
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
     </style>
 </head>
 <body>
     <div id="custom-cursor"></div>
+
+    <!-- 左側區 -->
     <section class="left-section">
-        <!-- 點擊名稱跳轉 Profile -->
+        <!-- 添加 onclick 事件以支持點擊標題跳轉 -->
         <div class="my-name interactable" onclick="goToProfile()">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
             <div class="quote-text" id="current-quote"></div>
         </div>
     </section>
+
+    <!-- 右側內容區 -->
     <section class="right-section">
+        <!-- MOMENTS -->
         <div class="geo-viewport" id="moments-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('moments', event)">MOMENTS</span>
+                <span class="box-title interactable" onclick="expandSection('moments', event)">
+                    MOMENTS
+                </span>
+                
                 <div class="moment-item">
-                    <img src="/medias/IMG_3719.png" class="moment-img" loading="lazy">
-                    <p class="moment-text interactable">時光依舊，不過物是人非罷了</p>
+                    <img src="/medias/IMG_3719.png" class="moment-img" loading="lazy" decoding="async">
+                    <p class="moment-text interactable" onclick="copyText(this)">
+                        時光依舊，不過物是人非罷了
+                        <span style="font-size:0.8em; opacity:0.6; display:block; margin-top:5px;">（點擊複製）</span>
+                    </p>
                 </div>
             </div>
         </div>
+
+        <!-- ARTICLES -->
         <div class="geo-viewport" id="articles-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('articles', event)">ARTICLES</span>
-                <div class="article-item interactable"><span class="article-title">四萬步，與一座城重逢</span><span class="article-date">11.02</span></div>
-                <div class="article-item interactable"><span class="article-title">《什麼樣的故事啊》日記part-1</span><span class="article-date">10.15</span></div>
+                <span class="box-title interactable" onclick="expandSection('articles', event)">
+                    ARTICLES
+                </span>
+                
+                <div class="article-item interactable" onclick="openLink('diary-2')">
+                    <span class="article-title">四萬步，與一座城重逢</span>
+                    <span class="article-date">11.02</span>
+                </div>
+                <div class="article-item interactable" onclick="openLink('diary-1')">
+                    <span class="article-title">《什麼樣的故事啊》日記part-1</span>
+                    <span class="article-date">10.15</span>
+                </div>
+                <div class="article-item interactable" onclick="openLink('the-frigging-life')">
+                    <span class="article-title">麻痺的生活 the frigging life</span>
+                    <span class="article-date">09.28</span>
+                </div>
             </div>
         </div>
     </section>
 
     <script defer>
-        let isNavigating = false;
-        
+        let isNavigating = false; // 防止重複觸發
+
+        // === 1. 跳轉到 Profile (介紹頁) ===
         function goToProfile() {
             if (isNavigating) return;
             isNavigating = true;
-            document.body.classList.add('exit-to-profile'); // 觸發標題動畫
-            document.body.classList.add('is-transitioning'); // 淡出其他內容
-            setTimeout(() => { window.location.href = './profile.html'; }, 800);
+
+            // 觸發 CSS 動畫
+            document.body.classList.add('is-transitioning'); // 淡出內容
+            document.body.classList.add('exit-mode');      // 移動標題
+
+            // 等待動畫完成跳轉
+            setTimeout(() => {
+                window.location.href = './profile.html';
+            }, 800);
         }
 
-        // 內容展開跳轉
-        function expandSection(type, event) {
-            if(event) event.stopPropagation();
+        // === 2. 跳轉到 Intro (首頁) ===
+        function goToIndex() {
             if (isNavigating) return;
-            const box = document.getElementById(type + '-box');
-            if (!box) return;
             isNavigating = true;
-            document.body.classList.add('is-transitioning');
-            box.classList.add('expanding');
-            setTimeout(() => { window.location.href = './' + type + '.html'; }, 600);
+            document.body.classList.add('exit-to-index'); // 向下滑出
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 800);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+
             const isMobile = window.innerWidth <= 768;
 
-            // 1. 格言系統
-            const quotes = ["困在蹉跎 空轉 不如漂浮在迷茫的美夢裡", "我不會安慰你 在顫抖的楓葉上 寫滿春天的謊言", "慾望被這個時代寵壞 真相在慢慢離開", "沒有妳的銀杏樹林 澄澈的黃 無法分享", "網"];
-            let qIdx = 0;
-            const qEl = document.getElementById('current-quote');
-            if (qEl) {
-                qEl.innerText = quotes[0]; qEl.classList.add('quote-active');
-                document.getElementById('quote-area').addEventListener('click', () => {
-                    qEl.classList.remove('quote-active'); qEl.classList.add('quote-exit');
-                    setTimeout(() => {
-                        qIdx = (qIdx + 1) % quotes.length; qEl.innerText = quotes[qIdx];
-                        qEl.classList.remove('quote-exit'); void qEl.offsetWidth; qEl.classList.add('quote-active');
-                    }, 300);
-                });
-            }
-
-            // 2. 鼠標與交互
+            // --- 鼠標邏輯 (僅PC) ---
             if (!isMobile) {
                 const cursor = document.getElementById('custom-cursor');
-                document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
-                document.querySelectorAll('.interactable, .box-title, .article-item').forEach(el => {
-                    el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
-                    el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
-                });
-                // Z-index Logic
-                 const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
-                 boxes.forEach(box => {
-                    box.addEventListener('mouseenter', () => {
-                        boxes.forEach(b => b.classList.remove('active'));
-                        box.classList.add('active');
+                if (cursor) {
+                    document.addEventListener('mousemove', (e) => {
+                        cursor.style.left = e.clientX + 'px';
+                        cursor.style.top = e.clientY + 'px';
                     });
-                 });
+                    document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+                    document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
+                    
+                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper');
+                    interactables.forEach(el => {
+                        el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
+                        el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+                    });
+                    
+                    // Box Z-Index Logic
+                    const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
+                    boxes.forEach(box => {
+                        if(box) {
+                           box.addEventListener('mouseenter', () => {
+                               // 簡單實現：hover的在前
+                               boxes.forEach(b => b.classList.remove('active'));
+                               box.classList.add('active');
+                           });
+                        }
+                    });
+                }
             }
 
-            // 3. 鍵盤監聽 (新增)
+            // --- 格言系統 (保留您原有的左右切換) ---
+            const quotes = [
+                "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
+                "我不會安慰你 在顫抖的楓葉上 寫滿春天的謊言",
+                "慾望被這個時代寵壞 真相在慢慢離開",
+                "沒有妳的銀杏樹林 澄澈的黃 無法分享",
+                "網"
+            ];
+            
+            let quoteIndex = 0;
+            const quoteEl = document.getElementById('current-quote');
+            const quoteArea = document.getElementById('quote-area');
+            
+            if (quoteEl) {
+                quoteEl.innerText = quotes[0];
+                quoteEl.classList.add('quote-active');
+
+                const updateQuote = (direction) => {
+                    quoteEl.classList.remove('quote-active');
+                    quoteEl.classList.add(direction === 'next' ? 'quote-exit' : 'quote-enter');
+                    
+                    setTimeout(() => {
+                        if (direction === 'next') {
+                            quoteIndex = (quoteIndex + 1) % quotes.length;
+                        } else {
+                            quoteIndex = (quoteIndex - 1 + quotes.length) % quotes.length;
+                        }
+                        quoteEl.innerText = quotes[quoteIndex];
+                        quoteEl.classList.remove('quote-exit', 'quote-enter');
+                        void quoteEl.offsetWidth; 
+                        quoteEl.classList.add('quote-active');
+                    }, 300);
+                }
+
+                quoteArea.addEventListener('click', () => updateQuote('next'));
+
+                // 保留左右滑動切換格言
+                let touchStartX = 0;
+                quoteArea.addEventListener('touchstart', e => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, {passive: true});
+                
+                quoteArea.addEventListener('touchend', e => {
+                    let touchEndX = e.changedTouches[0].screenX;
+                    if (touchStartX - touchEndX > 30) updateQuote('next'); 
+                    if (touchEndX - touchStartX > 30) updateQuote('prev'); 
+                }, {passive: true});
+            }
+
+            // --- 新增：鍵盤控制 ---
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp') window.location.href = './index.html'; // 回 Intro
-                if (e.key === 'ArrowDown') goToProfile(); // 去 Profile
+                if (e.key === 'ArrowUp') goToIndex();    // 上鍵 -> 回默認頁
+                if (e.key === 'ArrowDown') goToProfile(); // 下鍵 -> 去介紹頁
             });
 
-            // 4. 手機上滑去 Profile (新增)
+            // --- 新增：手機端底部上滑跳轉 Profile ---
             if (isMobile) {
-                let startY = 0;
-                window.addEventListener('touchstart', e => startY = e.changedTouches[0].screenY, {passive: true});
+                let pageTouchStartY = 0;
+                window.addEventListener('touchstart', e => {
+                    pageTouchStartY = e.changedTouches[0].screenY;
+                }, {passive: true});
+
                 window.addEventListener('touchend', e => {
-                    let endY = e.changedTouches[0].screenY;
-                    // 只有當滾動到底部且繼續上滑時觸發
-                    if (startY - endY > 50) {
+                    let pageTouchEndY = e.changedTouches[0].screenY;
+                    let diff = pageTouchStartY - pageTouchEndY;
+
+                    // 邏輯：如果向上滑動超過 50px，且頁面已經滾動到底部
+                    if (diff > 50) {
+                        // 檢測是否滾動到底部 (允許 50px 誤差)
                         if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50) {
                             goToProfile();
                         }
@@ -219,6 +477,43 @@
                 }, {passive: true});
             }
         });
+
+        // --- 全局功能函數 (保留) ---
+        async function copyText(el) {
+            if(window.event) window.event.stopPropagation();
+            const text = el.innerText.replace('（點擊複製）', '').trim();
+            try {
+                await navigator.clipboard.writeText(text);
+                el.style.transition = 'opacity 0.3s';
+                el.style.opacity = '0.5';
+                setTimeout(() => el.style.opacity = '1', 300);
+                alert("已複製： " + text.substring(0, 10) + "..."); // 簡單反饋
+            } catch (err) { console.error('Copy failed', err); }
+        }
+
+        function handleTransition(boxId, url) {
+            const box = document.getElementById(boxId);
+            if (!box) return;
+            if (isNavigating) return; // 防止衝突
+
+            isNavigating = true;
+            document.body.classList.add('is-transitioning');
+            box.classList.add('expanding');
+            
+            setTimeout(() => {
+                window.location.href = url;
+            }, 600);
+        }
+
+        function expandSection(type, event) {
+            if(event) event.stopPropagation();
+            handleTransition(type + '-box', './' + type + '.html');
+        }
+
+        function openLink(slug) {
+            handleTransition('articles-box', 'reader?id=' + slug);
+        }
+
     </script>
 </body>
 </html>
