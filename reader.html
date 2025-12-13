@@ -2,202 +2,676 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Article</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #ffffff; --text-color: #1a1a1a; --accent-color: #000000; --placeholder-bg: #f0f0f0; }
-        @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } }
+        :root { 
+            --bg-color: #ffffff; 
+            --text-color: #1a1a1a; 
+            --accent-color: #000000; 
+            --placeholder-bg: #f0f0f0; 
+            --toc-width: 280px;
+            --ease-fluid: cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        @media (prefers-color-scheme: dark) { 
+            :root { --bg-color: #000000; --text-color: #e5e5e5; --accent-color: #ffffff; --placeholder-bg: #1c1c1e; } 
+        }
+
         body.js-loading { opacity: 0; visibility: hidden; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: 'Noto Serif TC', serif; margin: 0; height: 100vh; width: 100vw; overflow: hidden; display: flex; flex-direction: column; transition: opacity 0.8s ease; }
-        * { cursor: none !important; }
-        @media (hover: none) or (max-width: 768px) { * { cursor: auto !important; } }
-        #custom-cursor { position: fixed; top: 0; left: 0; width: 12px; height: 12px; background-color: var(--accent-color); transform: rotate(45deg); pointer-events: none; z-index: 99999; transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s, border 0.2s; }
-        #custom-cursor.hollow { background: transparent; border: 1.5px solid var(--accent-color); transform: rotate(45deg) scale(1.2); }
-        #custom-cursor.clicking { transform: rotate(45deg) scale(0.8); background: var(--accent-color); }
-        .back-arrow { position: fixed; top: 30px; left: 30px; opacity: 0.5; z-index: 100; transition: 0.3s; border: none; background: none; padding: 0; }
-        .back-arrow:hover { opacity: 1; }
-        .back-arrow svg { width: 24px; height: 24px; fill: var(--text-color); }
-        .reader-viewport { flex: 1; width: 100%; max-width: 800px; margin: 80px auto; position: relative; touch-action: pan-y; }
-        .page-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; opacity: 0; pointer-events: none; transform: translateX(30px); transition: opacity 0.4s ease, transform 0.4s ease; display: flex; flex-direction: column; justify-content: center; gap: 25px; box-sizing: border-box; }
-        .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); }
-        .page-slide.is-swiping { transition: none; }
-        p { font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); transform-origin: left center; }
-        p:hover { transform: scale(1.02); }
-        p:active { transform: scale(0.98); }
-        figure { margin: 0; padding: 0; }
-        figure img { max-width: 100%; height: auto; display: block; border-radius: 4px; }
-        figcaption { font-size: 0.9rem; font-family: sans-serif; text-align: center; opacity: 0.7; margin-top: 10px; }
-        .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; animation: pulse 1.5s infinite ease-in-out; margin: auto; }
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-color); 
+            font-family: 'Noto Serif TC', serif; 
+            margin: 0; 
+            height: 100vh; 
+            width: 100vw; 
+            overflow: hidden; 
+            transition: opacity 0.8s ease; 
+        }
+        
+        /* 隱藏默認鼠標 */
+        * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        @media (hover: none) or (max-width: 1024px) { * { cursor: auto !important; } }
+
+        #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
+        .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* --- 優化後的鼠標樣式 (參照 Reference) --- */
+        #custom-cursor {
+            position: fixed; top: 0; left: 0;
+            width: 10px; height: 10px; /* 稍微縮小 */
+            /* 使用白色並配合 difference 模式，確保在黑白背景下都能反色顯示 */
+            background-color: #ffffff; 
+            mix-blend-mode: difference;
+            pointer-events: none; z-index: 999999;
+            /* 中心定位 + 基礎菱形旋轉 */
+            transform: translate(-50%, -50%) rotate(45deg);
+            /* 只過渡變形和顏色，位置更新由 JS 直接控制以消除延遲 */
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, width 0.2s, height 0.2s;
+            opacity: 0; 
+        }
+        #custom-cursor.active { opacity: 1; }
+        
+        /* 空心狀態：放大，空心 */
+        #custom-cursor.hollow { 
+            background-color: transparent; 
+            border: 1px solid #ffffff; /* 保持反色可見性 */
+            width: 16px; height: 16px;
+        }
+
+        /* 點擊狀態：縮小，更有彈性 */
+        #custom-cursor.clicking {
+            transform: translate(-50%, -50%) rotate(45deg) scale(0.6);
+            background-color: #ffffff;
+            border: none;
+        }
+
+        /* 頂部按鈕 */
+        .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
+        .desktop-toc-trigger { position: fixed; top: 30px; right: 30px; z-index: 100; pointer-events: none; }
+        
+        .icon-btn { opacity: 0.5; transition: 0.3s; border: none; background: none; padding: 10px; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+        .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+        .icon-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
+
+        /* --- 閱讀視口 --- */
+        .reader-viewport { 
+            flex: 1; width: 100%; max-width: 800px; height: calc(100vh - 160px); 
+            margin: 80px auto; position: relative; touch-action: pan-y; 
+        }
+        
+        .page-slide { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; padding: 0 40px; 
+            opacity: 0; pointer-events: none; 
+            transform: translateX(60px); 
+            transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
+            display: flex; flex-direction: column; justify-content: center; gap: 25px; 
+            overflow: hidden; visibility: hidden; 
+        }
+        
+        .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); visibility: visible; z-index: 2; }
+        .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; visibility: visible; z-index: 1; }
+        .reader-viewport.no-anim .page-slide { transition: none !important; }
+
+        p { 
+            font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; margin: 0; font-weight: 400; 
+            overflow-wrap: break-word; transform-origin: left center; transition: transform 0.2s;
+        }
+        p:hover { transform: scale(1.005); }
+        
+        h1, h2, h3 { margin: 0; font-weight: 600; line-height: 1.4; }
+        .article-heading { margin-top: 10px; margin-bottom: 10px; }
+        .article-heading[data-level="1"] { font-size: 1.8rem; border-left: 4px solid var(--accent-color); padding-left: 15px; font-weight: 700; }
+        .article-heading[data-level="2"] { font-size: 1.4rem; opacity: 0.9; padding-left: 5px; font-weight: 600; }
+
+        figure { margin: 0; padding: 0; width: 100%; height: auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        figure img { width: auto; max-width: 100%; height: auto; max-height: 100%; object-fit: contain; border-radius: 4px; opacity: 0; transition: opacity 0.5s ease, transform 0.3s; }
+        figure img.loaded { opacity: 1; }
+        figure img:hover { transform: scale(1.02); }
+        
+        #lightbox {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 2000;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; transition: 0.3s;
+            backdrop-filter: blur(5px);
+        }
+        #lightbox.active { opacity: 1; visibility: visible; }
+        #lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; transform: scale(0.9); transition: 0.4s cubic-bezier(0.19, 1, 0.22, 1); box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        #lightbox.active img { transform: scale(1); }
+
+        .loading-placeholder { width: 100%; height: 250px; background-color: var(--placeholder-bg); border-radius: 4px; display: flex; align-items: center; justify-content: center; color: var(--text-color); opacity: 0.5; font-size: 0.9rem; }
+        .loading-placeholder.pulsing { animation: pulse 1.5s infinite ease-in-out; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-        .title-slide { text-align: center; }
-        .title-slide h1 { font-size: 2.2rem; font-weight: 500; margin-bottom: 20px; }
-        .title-slide .meta { font-size: 0.9rem; opacity: 0.6; font-family: sans-serif; }
-        .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; user-select: none; }
-        .nav-btn { opacity: 0.3; padding: 10px; transition: 0.3s; border: none; background: none; color: inherit; font-family: inherit; font-size: inherit; }
-        .nav-btn:hover, .nav-btn:focus { opacity: 1; outline: none; }
-        .nav-btn:disabled { opacity: 0.1; }
-        .page-indicator { opacity: 0.5; font-size: 0.8rem; letter-spacing: 2px; }
-        @media (max-width: 768px) { #custom-cursor { display: none; } .reader-viewport { margin: 60px auto 100px; } .page-slide { padding: 0 25px; gap: 20px; } .pagination { bottom: 20px; } }
+
+        .pagination { position: fixed; bottom: 30px; width: 100%; display: flex; justify-content: center; align-items: center; gap: 40px; font-family: sans-serif; font-size: 0.9rem; user-select: none; z-index: 10; pointer-events: none; }
+        .pagination > * { pointer-events: auto; }
+        .nav-btn { opacity: 0.3; padding: 10px; border: none; background: none; color: inherit; font-size: inherit; }
+        .nav-btn:hover { opacity: 1; }
+        .nav-btn:disabled { opacity: 0.05; }
+        .page-indicator { cursor: none; padding: 5px 10px; transition: 0.3s; opacity: 0.6; }
+        .page-indicator:hover { opacity: 1; transform: scale(1.1); }
+
+        #progress-container {
+            position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+            width: 70%; max-width: 320px; height: 50px;
+            z-index: 500; display: flex; align-items: center; justify-content: center;
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s;
+            background: rgba(var(--bg-rgb), 0.1); backdrop-filter: blur(10px); border-radius: 30px; padding: 0 20px;
+        }
+        #progress-container.active { opacity: 1; visibility: visible; pointer-events: auto; }
+
+        .custom-range { -webkit-appearance: none; width: 100%; height: 4px; background: linear-gradient(to right, rgba(128,128,128,0.1), rgba(128,128,128,0.5), rgba(128,128,128,0.1)); border-radius: 2px; outline: none; cursor: none; }
+        .custom-range::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent-color); cursor: none; transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 10px var(--accent-color), 0 0 20px rgba(128,128,128,0.5); border: 2px solid var(--bg-color); }
+        .custom-range::-webkit-slider-thumb:active { transform: scale(1.3); }
+        .progress-float-val { position: absolute; top: -40px; font-size: 1.4rem; font-weight: 700; color: var(--accent-color); opacity: 0; transition: 0.2s; transform: translateY(10px); text-shadow: 0 0 10px rgba(128,128,128,0.3); }
+        #progress-container.active .progress-float-val { opacity: 1; transform: translateY(0); }
+
+        #toc-sidebar {
+            width: var(--toc-width); height: 100%; background-color: var(--bg-color);
+            border-left: 1px solid var(--placeholder-bg);
+            position: fixed; right: 0; top: 0;
+            transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 90; display: flex; flex-direction: column;
+            padding: 80px 30px 30px; overflow-y: auto;
+        }
+        #toc-sidebar.open { transform: translateX(0); }
+        .toc-list { list-style: none; padding: 0; margin: 0; }
+        .toc-item { margin-bottom: 18px; opacity: 0.6; transition: 0.2s; font-size: 0.95rem; line-height: 1.4; display: block; }
+        .toc-item:hover { opacity: 1; transform: translateX(-5px); color: var(--accent-color); }
+        .toc-item[data-level="2"] { padding-left: 20px; font-size: 0.85rem; opacity: 0.5; }
+        
+        #mobile-toc-trigger {
+            position: fixed; bottom: 25%; right: 0; width: 50px; height: 80px;
+            background: rgba(128, 128, 128, 0.1); backdrop-filter: blur(5px);
+            border-radius: 40px 0 0 40px; z-index: 500; display: none; align-items: center; justify-content: center;
+            border: 1px solid rgba(128,128,128,0.2); border-right: none; transition: width 0.3s;
+        }
+        #mobile-toc-trigger::after { content: "≡"; font-size: 24px; color: var(--text-color); opacity: 0.7; transform: translateX(5px); }
+        
+        #mobile-wheel-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(var(--bg-rgb), 0.1); z-index: 600;
+            visibility: hidden; transition: backdrop-filter 0.4s, visibility 0.4s;
+            overflow: hidden; touch-action: none;
+        }
+        #mobile-wheel-overlay.active { visibility: visible; backdrop-filter: blur(15px); }
+        #wheel-container { position: absolute; top: 50%; right: -250px; width: 500px; height: 500px; transform: translateY(-50%); pointer-events: none; }
+        .wheel-item { position: absolute; top: 50%; left: 50%; width: 300px; height: 40px; margin-top: -20px; margin-left: -150px; text-align: left; padding-left: 40px; transform-origin: center center; white-space: nowrap; font-size: 1.1rem; color: var(--text-color); opacity: 0; transition: color 0.2s; display: flex; align-items: center; }
+        .wheel-item.active { color: var(--accent-color); font-weight: bold; }
+        .wheel-item[data-level="2"] { font-size: 0.9rem; }
+        .wheel-item span { display: block; }
+
+        .toast-msg {
+            position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+            background: none; padding: 0; border-radius: 0; color: var(--text-color);
+            font-size: 1.4rem; font-weight: 600; letter-spacing: 2px;
+            opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 200;
+            text-shadow: 0 0 10px var(--accent-color), 0 0 20px var(--bg-color);
+            text-align: center;
+        }
+        .toast-msg.show { opacity: 1; }
+        
+        #exit-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); display: flex; align-items: center; justify-content: center;
+            z-index: 999; opacity: 0; visibility: hidden; transition: 0.5s;
+        }
+        #exit-overlay.active { opacity: 1; visibility: visible; }
+        #exit-overlay span { font-size: 1.5rem; letter-spacing: 5px; animation: glow 1.5s infinite alternate; }
+        @keyframes glow { from { text-shadow: 0 0 5px var(--text-color); opacity: 0.5; } to { text-shadow: 0 0 20px var(--text-color); opacity: 1; } }
+
+        @media (min-width: 1025px) {
+            body.has-toc-open .main-content { margin-right: var(--toc-width); }
+            #mobile-toc-trigger { display: none !important; }
+        }
+
+        @media (max-width: 1024px) { 
+            #custom-cursor { display: none !important; } 
+            .reader-viewport { margin: 60px auto 100px; width: 90%; height: calc(100vh - 160px); } 
+            .page-slide { padding: 0 5px; gap: 20px; }
+            .pagination { bottom: 20px; }
+            .top-controls { top: 20px; left: 20px; }
+            .desktop-toc-trigger { display: none; }
+            #mobile-toc-trigger { display: flex; }
+            #toc-sidebar { display: none; }
+        }
     </style>
 </head>
 <body class="js-loading">
+    <!-- 優化：移除 cursor-layer 容器，直接放置 cursor 元素 -->
     <div id="custom-cursor"></div>
-    <button class="back-arrow interactable" onclick="goBack()" aria-label="返回文章列表">
-        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-    </button>
-    <main class="reader-viewport" id="viewport" aria-live="polite" aria-atomic="true">
-        <div class="loading-placeholder"></div>
-    </main>
-    <nav class="pagination" role="navigation" aria-label="文章分頁">
-        <button class="nav-btn interactable" id="prev-btn" aria-controls="viewport">PREV</button>
-        <div class="page-indicator" id="page-num" aria-live="polite">1 / 1</div>
-        <button class="nav-btn interactable" id="next-btn" aria-controls="viewport">NEXT</button>
-    </nav>
+    
+    <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
+    <div class="toast-msg" id="swipe-hint">Release to Return</div>
+    <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="preview"></div>
+
+    <div id="progress-container">
+        <div class="progress-float-val" id="slider-val">1</div>
+        <input type="range" min="1" max="1" value="1" class="custom-range interactable" id="page-slider">
+    </div>
+
+    <div id="mobile-toc-trigger" class="interactable"></div>
+    <div id="mobile-wheel-overlay"><div id="wheel-container"></div></div>
+
+    <div id="app-container">
+        <main class="main-content">
+            <div class="top-controls">
+                <button class="icon-btn interactable" onclick="goBack()" aria-label="返回">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                </button>
+            </div>
+            
+            <div class="desktop-toc-trigger">
+                <button class="icon-btn interactable" id="desktop-toc-btn" onclick="toggleDesktopTOC()" aria-label="目錄">
+                    <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+                </button>
+            </div>
+
+            <div class="reader-viewport" id="viewport" aria-live="polite">
+                <div class="loading-placeholder pulsing"></div>
+            </div>
+
+            <nav class="pagination" role="navigation">
+                <button class="nav-btn interactable" id="prev-btn">PREV</button>
+                <div class="page-indicator interactable" id="page-num">1 / 1</div>
+                <button class="nav-btn interactable" id="next-btn">NEXT</button>
+            </nav>
+        </main>
+
+        <aside id="toc-sidebar">
+            <div style="font-size:1.2rem; margin-bottom:20px; opacity:0.5; font-weight:500;">目錄</div>
+            <ul class="toc-list" id="desktop-toc-list"></ul>
+        </aside>
+    </div>
 
     <script>
-        // --- 核心修改點 1: 此檔案不再包含 articleContent ---
-
         const viewport = document.getElementById('viewport');
         const pageNum = document.getElementById('page-num');
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const cursor = document.getElementById('custom-cursor');
+        
+        const progressContainer = document.getElementById('progress-container');
+        const pageSlider = document.getElementById('page-slider');
+        const sliderVal = document.getElementById('slider-val');
+
+        const desktopTocSidebar = document.getElementById('toc-sidebar');
+        const desktopTocList = document.getElementById('desktop-toc-list');
+        const desktopTocBtn = document.getElementById('desktop-toc-btn');
+        const mobileTocTrigger = document.getElementById('mobile-toc-trigger');
+        const mobileOverlay = document.getElementById('mobile-wheel-overlay');
+        const wheelContainer = document.getElementById('wheel-container');
+
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        const swipeHint = document.getElementById('swipe-hint');
+        const exitOverlay = document.getElementById('exit-overlay');
 
         let currentPage = 0, totalPages = 0, pages = [];
+        let tocData = []; 
+        let articleData = null;
+        let currentArticleId = null; 
         let touchStartX = 0, touchMoveX = 0, isSwiping = false;
-        
-        // --- 核心修改點 2: 新增一個函數來獲取文章數據 ---
+        let lastPageSwipeCount = 0; 
+        let swipeResetTimer;
+
+        let isWheelOpen = false, wheelItems = [], wheelAngle = 0, wheelVelocity = 0, wheelDragging = false, wheelLastY = 0, wheelRafId = null;
+        const WHEEL_RADIUS = 300, ITEM_ANGLE_GAP = 12;
+
         async function fetchArticleContent(id) {
-            if (!id) {
-                viewport.innerHTML = `<p style="text-align: center;">錯誤：未在連結中指定文章 ID。</p>`;
-                throw new Error("Article ID is missing.");
-            }
-            try {
-                // 根據 ID 構建 JSON 檔案的路徑
-                const response = await fetch(`./article/${id}.json`);
-                if (!response.ok) {
-                    throw new Error(`找不到文章檔案 (HTTP ${response.status})`);
-                }
-                return await response.json();
-            } catch (error) {
-                console.error("無法載入文章:", error);
-                viewport.innerHTML = `<p style="text-align: center;">載入文章失敗。請檢查文章 ID 是否正確。</p>`;
-                throw error;
-            }
+            if (!id) throw new Error("ID missing");
+            currentArticleId = id; 
+            const response = await fetch(`./article/${id}.json`);
+            if (!response.ok) throw new Error("Fetch failed");
+            return await response.json();
         }
 
-        async function layoutArticle(articleContent) {
-            document.title = articleContent.title;
-            viewport.innerHTML = `<div class="loading-placeholder" style="margin: auto;"></div>`;
-            pages = []; currentPage = 0;
-            const viewportHeight = viewport.clientHeight;
-            if (viewportHeight <= 0) return;
+        function getImageMeta(src) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight, ok: true });
+                img.onerror = () => resolve({ w: 800, h: 600, ok: false }); 
+                img.src = src;
+            });
+        }
+
+        async function layoutArticle(content) {
+            articleData = content;
+            document.title = content.title;
+            viewport.innerHTML = `<div class="loading-placeholder pulsing" style="margin: auto;"></div>`;
+            pages = []; currentPage = 0; tocData = [];
+
+            const vH = viewport.clientHeight;
+            const vW = viewport.clientWidth;
+            if (vH <= 0) return;
 
             const titlePage = createPageDiv(0, true);
-            titlePage.innerHTML = `<h1>${articleContent.title}</h1><div class="meta">${articleContent.date}</div>`;
+            titlePage.innerHTML = `<h1>${content.title}</h1><div class="meta" style="margin-top:10px; opacity:0.6;">${content.date}</div>`;
+            titlePage.dataset.startIndex = 0; 
             pages.push(titlePage);
 
-            let contentPageIndex = 1, currentPageDiv = createPageDiv(1);
-            pages.push(currentPageDiv);
-            
-            const pageStyle = getComputedStyle(currentPageDiv);
-            const paragraphGap = parseFloat(pageStyle.gap) || 25;
+            let contentPageIndex = 1;
+            let currentDiv = createPageDiv(1);
+            let contentElementIndex = 0; 
+            pages.push(currentDiv);
+
             const tempDiv = document.createElement('div');
-            tempDiv.style.cssText = `visibility: hidden; position: absolute; width: ${viewport.clientWidth - (parseFloat(pageStyle.paddingLeft) + parseFloat(pageStyle.paddingRight))}px;`;
-            document.body.appendChild(tempDiv);
+            const style = getComputedStyle(currentDiv);
+            const pGap = parseFloat(style.gap) || 25;
+            const paddingHorizontal = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+            const availableWidth = vW - paddingHorizontal;
             
-            let currentHeight = 0;
+            tempDiv.style.cssText = `visibility:hidden; position:absolute; width:${availableWidth}px; left:0; top:0; z-index:-1;`;
+            document.body.appendChild(tempDiv);
+
+            let currentH = 0;
+
             try {
-                for (const item of articleContent.paragraphs) {
-                    let element;
+                if (!currentDiv.dataset.startIndex) currentDiv.dataset.startIndex = 1;
+
+                for (let i = 0; i < content.paragraphs.length; i++) {
+                    const item = content.paragraphs[i];
+                    contentElementIndex++; 
+
+                    let el, isHeader = false;
+                    let displayedHeight = 0;
+
                     if (typeof item === 'string') {
-                        element = document.createElement('p');
-                        element.className = 'interactable-text';
-                        element.innerText = item;
-                        element.onclick = () => copyText(element);
+                        el = document.createElement('p');
+                        el.className = 'interactable-text';
+                        el.innerText = item;
+                        el.onclick = () => copyText(el);
+                        tempDiv.innerHTML = '';
+                        tempDiv.appendChild(el.cloneNode(true));
+                        displayedHeight = tempDiv.clientHeight;
                     } else if (item.type === 'image') {
-                        element = document.createElement('figure');
-                        const img = document.createElement('img');
-                        const placeholder = document.createElement('div');
-                        placeholder.className = 'loading-placeholder';
-                        element.appendChild(placeholder);
-                        try {
-                            await new Promise((resolve, reject) => {
-                                img.onload = resolve; img.onerror = reject;
-                                img.src = item.src; img.alt = item.alt || '';
-                            });
-                            element.replaceChild(img, placeholder);
-                        } catch {
-                            element.innerHTML = '<p style="text-align:center;">圖片載入失敗</p>';
-                        }
+                        const meta = await getImageMeta(item.src);
+                        const aspectRatio = meta.h / meta.w;
+                        const theoreticalHeight = availableWidth * aspectRatio;
+                        displayedHeight = theoreticalHeight;
+                        if (displayedHeight > vH) displayedHeight = vH;
+
+                        el = document.createElement('figure');
+                        const ph = document.createElement('div');
+                        ph.className = 'loading-placeholder pulsing interactable';
+                        ph.dataset.src = item.src;
+                        ph.dataset.alt = item.alt || '';
+                        el.appendChild(ph);
+                        
+                        let captionHeight = 0;
                         if (item.caption) {
-                            const figcaption = document.createElement('figcaption');
-                            figcaption.innerText = item.caption;
-                            element.appendChild(figcaption);
+                            const cap = document.createElement('figcaption');
+                            cap.innerText = item.caption;
+                            el.appendChild(cap);
+                            captionHeight = 30; 
                         }
+                        displayedHeight += captionHeight;
+                    } else if (item.type === 'header') {
+                        isHeader = true;
+                        el = document.createElement(item.level === 1 ? 'h2' : 'h3');
+                        el.className = 'article-heading interactable-text';
+                        el.dataset.level = item.level;
+                        el.innerText = item.text;
+                        tempDiv.innerHTML = '';
+                        tempDiv.appendChild(el.cloneNode(true));
+                        displayedHeight = tempDiv.clientHeight;
                     }
-                    if (!element) continue;
-                    tempDiv.innerHTML = ''; tempDiv.appendChild(element.cloneNode(true));
-                    const elementHeight = tempDiv.clientHeight;
-                    if (currentHeight > 0 && currentHeight + elementHeight + paragraphGap > viewportHeight) {
+
+                    if (!el) continue;
+
+                    if (currentH > 0 && (currentH + displayedHeight + pGap > vH)) {
                         contentPageIndex++;
-                        currentPageDiv = createPageDiv(contentPageIndex);
-                        pages.push(currentPageDiv);
-                        currentHeight = 0;
+                        currentDiv = createPageDiv(contentPageIndex);
+                        currentDiv.dataset.startIndex = contentElementIndex;
+                        pages.push(currentDiv);
+                        currentH = 0;
                     }
-                    currentPageDiv.appendChild(element);
-                    currentHeight += (elementHeight + paragraphGap);
+
+                    if (isHeader) tocData.push({ text: item.text, level: item.level, pageIndex: contentPageIndex });
+                    currentDiv.appendChild(el);
+                    currentH += (displayedHeight + pGap);
                 }
             } finally {
                 document.body.removeChild(tempDiv);
             }
-            viewport.innerHTML = '';
-            pages.forEach(page => viewport.appendChild(page));
+
+            viewport.innerHTML = ''; 
             totalPages = pages.length;
-            updatePage();
+            pageSlider.max = totalPages;
+
+            setupTOC();
+            restoreProgress();
             bindCursorEvents();
         }
-        
-        function goBack() {
-            document.body.style.opacity = '0';
-            // 因為 reader.html 在根目錄，所以直接跳轉到 articles.html
-            setTimeout(() => { window.location.href = './articles.html'; }, 500);
+
+        // --- 優化後的鼠標邏輯 (Direct Follow) ---
+        let isCursorInited = false;
+
+        function initCursor() {
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
+
+            // 緊密跟隨邏輯：移除 loop，在事件中直接更新
+            document.addEventListener('mousemove', (e) => {
+                // 使用 left/top 控制位置，確保與 Reference 一致的"緊"手感
+                // 同時配合 CSS 中的 transform center 進行定位
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+                
+                if(!isCursorInited) {
+                    isCursorInited = true;
+                    cursor.classList.add('active');
+                }
+            });
+
+            document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
+            document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
         }
+
+        function bindCursorEvents() {
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
+            const onEnter = () => { cursor.classList.add('hollow'); };
+            const onLeave = () => { cursor.classList.remove('hollow'); };
+            
+            setTimeout(() => {
+                document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
+                    el.removeEventListener('mouseenter', onEnter);
+                    el.removeEventListener('mouseleave', onLeave);
+                    el.addEventListener('mouseenter', onEnter);
+                    el.addEventListener('mouseleave', onLeave);
+                });
+            }, 100);
+        }
+
+        function saveProgress() {
+            if (!currentArticleId || !pages[currentPage]) return;
+            localStorage.setItem(`article_progress_${currentArticleId}`, pages[currentPage].dataset.startIndex || 0);
+        }
+
+        function restoreProgress() {
+            if (!currentArticleId) { updatePage(false); return; }
+            const savedIdx = localStorage.getItem(`article_progress_${currentArticleId}`);
+            if (savedIdx !== null) {
+                const targetIdx = parseInt(savedIdx);
+                for (let i = 0; i < pages.length; i++) {
+                    if (parseInt(pages[i].dataset.startIndex || 0) <= targetIdx) currentPage = i; else break;
+                }
+            }
+            updatePage(false);
+        }
+
+        function createPageDiv(index, isTitle = false) { 
+            const div = document.createElement('div'); 
+            div.className = 'page-slide'; 
+            if (isTitle) div.classList.add('title-slide'); 
+            div.dataset.index = index; 
+            return div; 
+        }
+
+        function changePage(dir) { 
+            const newPage = currentPage + dir; 
+            if (newPage >= 0 && newPage < totalPages) { 
+                currentPage = newPage; 
+                updatePage(false); 
+            }
+        }
+
+        function updatePage(instant = false) { 
+            if (instant) viewport.classList.add('no-anim');
+            else viewport.classList.remove('no-anim');
+
+            const renderRange = 2;
+            const startIdx = Math.max(0, currentPage - renderRange);
+            const endIdx = Math.min(totalPages - 1, currentPage + renderRange);
+
+            pages.forEach((page, index) => {
+                const shouldBeInDom = index >= startIdx && index <= endIdx;
+                const isInDom = viewport.contains(page);
+
+                if (shouldBeInDom) {
+                    if (!isInDom) viewport.appendChild(page);
+                    page.style.transform = ''; 
+                    page.classList.remove('active', 'prev-page'); 
+                    if (index === currentPage) { page.classList.add('active'); page.style.zIndex = 10; }
+                    else if (index < currentPage) { page.classList.add('prev-page'); page.style.zIndex = 5; }
+                    else { page.style.zIndex = 5; }
+                } else {
+                    if (isInDom) viewport.removeChild(page);
+                }
+            });
+            
+            pageNum.innerText = `${currentPage + 1} / ${totalPages}`; 
+            prevBtn.disabled = (currentPage === 0); 
+            nextBtn.disabled = (currentPage === totalPages - 1); 
+            
+            if(!instant) {
+                saveProgress(); 
+                lazyLoadImages(); 
+                bindCursorEvents();
+            }
+        }
+
+        function hideSlider() { progressContainer.classList.remove('active'); }
+        pageNum.addEventListener('click', (e) => { e.stopPropagation(); progressContainer.classList.add('active'); pageSlider.value = currentPage + 1; sliderVal.innerText = currentPage + 1; });
+        pageSlider.addEventListener('input', (e) => { const val = parseInt(e.target.value); sliderVal.innerText = val; if (currentPage !== val - 1) { currentPage = val - 1; updatePage(true); } });
+        pageSlider.addEventListener('change', hideSlider);
+        pageSlider.addEventListener('mouseup', hideSlider);
+        pageSlider.addEventListener('touchend', hideSlider);
+
+        function openLightbox(src) { lightboxImg.src = src; lightbox.classList.add('active'); cursor.classList.remove('hollow'); }
+        function closeLightbox() { lightbox.classList.remove('active'); setTimeout(() => { lightboxImg.src = ''; }, 300); }
+
+        function lazyLoadImages() {
+            const range = [currentPage-1, currentPage, currentPage+1, currentPage+2];
+            range.forEach(idx => {
+                if (idx < 0 || idx >= totalPages) return;
+                const page = pages[idx];
+                page.querySelectorAll('.loading-placeholder[data-src]').forEach(ph => {
+                    if (ph.dataset.loading === 'true') return;
+                    ph.dataset.loading = 'true';
+                    const img = document.createElement('img');
+                    img.src = ph.dataset.src;
+                    img.alt = ph.dataset.alt;
+                    img.className = 'interactable';
+                    img.onload = () => {
+                        img.classList.add('loaded');
+                        img.onclick = (e) => { e.stopPropagation(); openLightbox(img.src); };
+                        if(ph.parentNode) ph.parentNode.replaceChild(img, ph);
+                    };
+                    img.onerror = () => { setTimeout(() => { ph.dataset.loading = 'false'; lazyLoadImages(); }, 2000); };
+                });
+            });
+        }
+
+        async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch {} }
+
+        function setupTOC() {
+            if (tocData.length === 0) { desktopTocBtn.parentElement.style.display = 'none'; mobileTocTrigger.style.display = 'none'; return; }
+            desktopTocList.innerHTML = '';
+            tocData.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'toc-item interactable';
+                li.innerText = item.text;
+                li.dataset.level = item.level;
+                li.onclick = () => { 
+                    currentPage = item.pageIndex; 
+                    updatePage(); 
+                    if (window.innerWidth <= 1024) toggleDesktopTOC(); 
+                };
+                desktopTocList.appendChild(li);
+            });
+            if (window.innerWidth > 1024) toggleDesktopTOC(true);
+            initMobileWheel();
+        }
+
+        function toggleDesktopTOC(forceOpen = null) {
+            const isOpen = forceOpen !== null ? forceOpen : !desktopTocSidebar.classList.contains('open');
+            desktopTocSidebar.classList.toggle('open', isOpen);
+            document.body.classList.toggle('has-toc-open', isOpen);
+            if (isOpen && articleData && window.innerWidth > 1024) setTimeout(() => layoutArticle(articleData), 300);
+        }
+
+        function initMobileWheel() {
+            wheelContainer.innerHTML = ''; wheelItems = [];
+            tocData.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'wheel-item'; div.dataset.index = index;
+                const span = document.createElement('span');
+                span.innerText = item.text;
+                if (item.level > 1) span.style.paddingLeft = "20px";
+                div.appendChild(span);
+                wheelContainer.appendChild(div); wheelItems.push(div);
+                div.addEventListener('click', (e) => { e.stopPropagation(); snapToItem(index, () => { setTimeout(() => { currentPage = item.pageIndex; updatePage(); closeMobileWheel(); }, 200); }); });
+            });
+            mobileTocTrigger.onclick = openMobileWheel;
+            mobileOverlay.addEventListener('touchstart', onWheelTouchStart, {passive: false});
+            mobileOverlay.addEventListener('touchmove', onWheelTouchMove, {passive: false});
+            mobileOverlay.addEventListener('touchend', onWheelTouchEnd);
+            mobileOverlay.addEventListener('click', (e) => { if (e.clientX < window.innerWidth * 0.4) closeMobileWheel(); });
+        }
+
+        function openMobileWheel() { isWheelOpen = true; mobileOverlay.classList.add('active'); mobileTocTrigger.style.width = '0px'; document.body.style.overflow = 'hidden'; let targetIdx = 0; for(let i=0; i<tocData.length; i++) { if(tocData[i].pageIndex <= currentPage) targetIdx = i; } wheelAngle = targetIdx * ITEM_ANGLE_GAP; wheelVelocity = 0; requestAnimationFrame(updateWheelVisuals); }
+        function closeMobileWheel() { isWheelOpen = false; mobileOverlay.classList.remove('active'); mobileTocTrigger.style.width = ''; document.body.style.overflow = ''; }
+        function onWheelTouchStart(e) { wheelDragging = true; wheelLastY = e.touches[0].clientY; wheelVelocity = 0; cancelAnimationFrame(wheelRafId); }
+        function onWheelTouchMove(e) { if (!wheelDragging) return; e.preventDefault(); const y = e.touches[0].clientY; wheelAngle += (wheelLastY - y) * 0.5; wheelVelocity = (wheelLastY - y) * 0.5; wheelLastY = y; requestAnimationFrame(updateWheelVisuals); }
+        function onWheelTouchEnd(e) { wheelDragging = false; inertiaLoop(); }
+        function inertiaLoop() { if (wheelDragging || !isWheelOpen) return; wheelVelocity *= 0.95; wheelAngle += wheelVelocity; const maxAngle = (wheelItems.length - 1) * ITEM_ANGLE_GAP; if (wheelAngle < -10) { wheelAngle += (-10 - wheelAngle) * 0.1; wheelVelocity = 0; } else if (wheelAngle > maxAngle + 10) { wheelAngle += (maxAngle + 10 - wheelAngle) * 0.1; wheelVelocity = 0; } updateWheelVisuals(); if (Math.abs(wheelVelocity) > 0.1) wheelRafId = requestAnimationFrame(inertiaLoop); }
+        function snapToItem(index, callback) { const targetAngle = index * ITEM_ANGLE_GAP; const animate = () => { const diff = targetAngle - wheelAngle; if (Math.abs(diff) < 0.5) { wheelAngle = targetAngle; updateWheelVisuals(); if (callback) callback(); return; } wheelAngle += diff * 0.1; updateWheelVisuals(); requestAnimationFrame(animate); }; animate(); }
+        function updateWheelVisuals() { wheelItems.forEach((item, index) => { const itemAngle = (index * ITEM_ANGLE_GAP) - wheelAngle; if (itemAngle < -90 || itemAngle > 90) { item.style.visibility = 'hidden'; return; } item.style.visibility = 'visible'; const rad = itemAngle * (Math.PI / 180); const y = Math.sin(rad) * WHEEL_RADIUS; const x = (Math.cos(rad) * WHEEL_RADIUS) - WHEEL_RADIUS; const rotate = itemAngle * 0.5; item.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`; const dist = Math.abs(itemAngle); item.style.opacity = Math.max(0, 1 - (dist / 90)); if (dist < ITEM_ANGLE_GAP / 2) item.classList.add('active'); else item.classList.remove('active'); }); }
+
+        function goBack() { document.body.style.opacity = '0'; setTimeout(() => { window.location.href = './articles.html'; }, 500); }
 
         async function initialize() {
             try {
                 const params = new URLSearchParams(window.location.search);
-                const articleId = params.get('id'); // 從 ?id=... 獲取
-                const articleContent = await fetchArticleContent(articleId);
+                const articleId = params.get('id');
+                const content = await fetchArticleContent(articleId);
                 await document.fonts.ready;
-                await layoutArticle(articleContent);
+                await layoutArticle(content);
+                
                 let resizeTimer;
-                window.addEventListener('resize', () => {
-                    clearTimeout(resizeTimer);
-                    resizeTimer = setTimeout(() => layoutArticle(articleContent), 250);
-                });
-                initNavigation();
-                initSwipeNavigation();
-                initCursor();
-            } catch (error) {
-                console.error("初始化失敗:", error);
-            } finally {
-                document.body.classList.remove('js-loading');
+                window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (articleData && !isWheelOpen) layoutArticle(articleData); }, 250); });
+                initInputs();
+                initCursor(); 
+            } catch (error) { console.error("Init failed", error); } 
+            finally { document.body.classList.remove('js-loading'); }
+        }
+
+        function initInputs() {
+            prevBtn.addEventListener('click', () => changePage(-1)); 
+            nextBtn.addEventListener('click', () => changePage(1)); 
+            document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') prevBtn.click(); else if (e.key === 'ArrowRight') nextBtn.click(); });
+
+            if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) {
+                viewport.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchMoveX = touchStartX; isSwiping = true; viewport.classList.add('no-anim'); }, {passive: true});
+                viewport.addEventListener('touchmove', e => {
+                    if (!isSwiping) return;
+                    touchMoveX = e.touches[0].clientX;
+                    const delta = touchMoveX - touchStartX;
+                    const page = pages[currentPage];
+                    if (!page || !viewport.contains(page)) return;
+                    let tx = delta;
+                    if ((currentPage === 0 && delta > 0) || (currentPage === totalPages-1 && delta < 0)) tx *= 0.4;
+                    page.style.transform = `translateX(${tx}px)`;
+                }, {passive: true});
+                viewport.addEventListener('touchend', e => {
+                    if (!isSwiping) return;
+                    isSwiping = false; viewport.classList.remove('no-anim');
+                    const delta = touchMoveX - touchStartX;
+                    if(pages[currentPage]) pages[currentPage].style.transform = '';
+                    if (delta < -50) { if (currentPage < totalPages - 1) { changePage(1); resetSwipeExit(); } else handleSwipeExit(); } 
+                    else if (delta > 50) { if (currentPage > 0) { changePage(-1); resetSwipeExit(); } else handleSwipeExit(); } 
+                    else { updatePage(false); }
+                }, {passive: true});
             }
         }
-        
-        // --- 其他輔助函數 (無需修改) ---
-        function createPageDiv(index, isTitle = false) { const div = document.createElement('div'); div.className = 'page-slide'; if (isTitle) div.classList.add('title-slide'); div.dataset.index = index; return div; }
-        function changePage(dir) { const newPage = currentPage + dir; if (newPage >= 0 && newPage < totalPages) { currentPage = newPage; updatePage(); } }
-        function updatePage() { pages.forEach((page, index) => { page.style.transform = ''; page.classList.remove('is-swiping'); page.classList.toggle('active', index === currentPage); }); pageNum.innerText = `${currentPage + 1} / ${totalPages}`; prevBtn.disabled = (currentPage === 0); nextBtn.disabled = (currentPage === totalPages - 1); }
-        async function copyText(el) { try { await navigator.clipboard.writeText(el.innerText); } catch (err) { console.error('Failed to copy text: ', err); } }
-        function initNavigation() { prevBtn.addEventListener('click', () => changePage(-1)); nextBtn.addEventListener('click', () => changePage(1)); document.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); } else if (e.key === 'ArrowRight') { e.preventDefault(); nextBtn.click(); } }); }
-        function initSwipeNavigation() { if (!window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; viewport.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; touchMoveX = touchStartX; isSwiping = true; pages[currentPage]?.classList.add('is-swiping'); }, { passive: true }); viewport.addEventListener('touchmove', (e) => { if (!isSwiping) return; touchMoveX = e.touches[0].clientX; const deltaX = touchMoveX - touchStartX; const activePage = pages[currentPage]; if (!activePage) return; let constrainedDeltaX = deltaX; if ((currentPage === 0 && deltaX > 0) || (currentPage === totalPages - 1 && deltaX < 0)) { constrainedDeltaX *= 0.4; } activePage.style.transform = `translateX(${constrainedDeltaX}px)`; }, { passive: true }); viewport.addEventListener('touchend', () => { if (!isSwiping) return; isSwiping = false; const deltaX = touchMoveX - touchStartX; const swipeThreshold = 50; if (deltaX < -swipeThreshold) { changePage(1); } else if (deltaX > swipeThreshold) { changePage(-1); } else { updatePage(); } pages[currentPage]?.classList.remove('is-swiping'); }, { passive: true }); }
-        function initCursor() { if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; document.addEventListener('mousemove', e => { cursor.style.left = `${e.clientX}px`; cursor.style.top = `${e.clientY}px`; }); document.addEventListener('mousedown', () => cursor.classList.add('clicking')); document.addEventListener('mouseup', () => cursor.classList.remove('clicking')); bindCursorEvents(); }
-        function bindCursorEvents() { if (window.matchMedia("(hover: none) or (max-width: 768px)").matches) return; document.querySelectorAll('.interactable, .interactable-text').forEach(el => { el.addEventListener('mouseenter', () => cursor.classList.add('hollow')); el.addEventListener('mouseleave', () => cursor.classList.remove('hollow')); }); }
+
+        function handleSwipeExit() { clearTimeout(swipeResetTimer); lastPageSwipeCount++; if (lastPageSwipeCount === 1) { swipeHint.classList.add('show'); updatePage(false); swipeResetTimer = setTimeout(resetSwipeExit, 3000); } else if (lastPageSwipeCount >= 2) { swipeHint.classList.remove('show'); exitOverlay.classList.add('active'); setTimeout(goBack, 1000); } }
+        function resetSwipeExit() { lastPageSwipeCount = 0; swipeHint.classList.remove('show'); }
 
         window.addEventListener('load', initialize);
     </script>
