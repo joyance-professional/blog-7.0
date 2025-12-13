@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>主頁 | Home</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,16 +31,18 @@
             }
         }
 
-        /* 優化：避免使用全局選擇器 *，針對性重置 */
-        body, h1, h2, h3, p, div, section, span, img { 
+        /* 重置與游標隱藏：對所有可能的元素強制隱藏 */
+        *, *::before, *::after {
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
+            cursor: none !important; /* 強制無游標 */
         }
 
         html {
             height: 100%;
+            overflow: hidden; 
         }
 
         body {
@@ -52,17 +54,30 @@
             overflow: hidden;
             display: flex;
             opacity: 0; 
-            /* 優化：將 transform 添加到 will-change */
             will-change: transform, opacity;
-            animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            animation: pageFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            
+            /* 禁止選取文字 */
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         @keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(15px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        /* --- 2. PC端默認樣式 --- */
+        body.page-exit {
+            animation: pageFadeOut 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            pointer-events: none;
+        }
+
+        @keyframes pageFadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* --- 2. PC端佈局 --- */
         .left-section {
             width: 30%;
             height: 100%;
@@ -83,8 +98,9 @@
             padding-left: 20px;
             letter-spacing: 0.2em;
             writing-mode: vertical-rl;
-            user-select: none;
+            transition: opacity 0.3s;
         }
+        .my-name:hover { opacity: 0.6; }
 
         .quote-wrapper {
             height: 60%;
@@ -99,7 +115,6 @@
             height: 100%;
             position: absolute;
             top: 0; right: 0; 
-            /* 優化：明確 transform 和 opacity 會變動 */
             will-change: transform, opacity;
             transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
             opacity: 1;
@@ -125,7 +140,6 @@
             overflow: hidden;
             box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
             transform-origin: center center;
-            /* 優化：告知瀏覽器 transform 和 border-color 會變動 */
             will-change: transform, border-color;
             transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease; 
         }
@@ -164,11 +178,11 @@
             height: 180px;
             object-fit: cover;
             filter: grayscale(100%);
-            /* 優化：告知瀏覽器 filter 會變動 */
             will-change: filter;
             transition: filter 0.4s;
             margin-bottom: 15px;
             border-radius: 2px;
+            display: block;
         }
         
         .moment-text {
@@ -196,10 +210,8 @@
         }
         .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
         
-        /* --- PC 專有樣式：自定義滑鼠、懸停效果 --- */
+        /* --- PC 專有樣式 --- */
         @media (min-width: 769px) {
-            body, html, a, button { cursor: none !important; }
-
             #custom-cursor {
                 position: fixed;
                 top: 0; left: 0;
@@ -210,6 +222,7 @@
                 z-index: 99999;
                 transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
                 mix-blend-mode: difference;
+                backface-visibility: hidden;
             }
             #custom-cursor.hollow {
                 background-color: transparent;
@@ -240,23 +253,32 @@
         /* --- 3. 手機版適配 --- */
         /* ========================================= */
         @media (max-width: 768px) {
+            /* 1. 鎖定視口：絕對禁止滑動 */
+            html, body {
+                position: fixed; /* 釘死 */
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
+                touch-action: none;
+            }
+
             body { 
                 flex-direction: column; 
-                overflow-y: auto; 
-                overflow-x: hidden;
-                height: auto; 
-                padding-bottom: 80px;
-                -webkit-overflow-scrolling: touch;
+                padding-bottom: 20px; 
+                justify-content: space-evenly;
             }
+
             #custom-cursor { display: none; }
 
             .left-section {
                 width: 100%;
                 height: auto;
-                padding: 60px 25px 20px 25px; 
+                padding: 40px 25px 10px 25px; 
                 flex-direction: column;
                 align-items: flex-start;
-                gap: 20px;
+                gap: 15px;
+                flex-shrink: 0; 
             }
 
             .my-name {
@@ -288,14 +310,14 @@
 
             .right-section {
                 width: 100%;
-                height: auto;
+                flex: 1; 
                 display: flex;
                 flex-direction: column;
-                gap: 50px;
+                gap: 20px; 
                 padding: 0 25px;
+                justify-content: center; 
             }
             
-            /* 優化：手機端不需要複雜的 transform, shadow, border */
             .geo-viewport {
                 position: relative !important;
                 top: auto !important; left: auto !important;
@@ -304,7 +326,7 @@
                 transform: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                overflow: visible; /* 避免內容被裁切 */
+                overflow: visible;
             }
 
             .geo-scroller {
@@ -320,46 +342,50 @@
                 justify-content: space-between;
                 align-items: center;
                 border: none;
-                margin-bottom: 20px;
-                font-size: 1.2rem;
+                margin-bottom: 15px;
+                font-size: 1.1rem;
                 opacity: 0.8;
             }
-            
             .box-title::after {
                 content: '→';
-                font-size: 1.2rem;
+                font-size: 1.1rem;
                 opacity: 0.3;
             }
             
-            /* 優化：手機版僅顯示前3條，使用 :nth-child 性能更好 */
-            .moment-item:nth-child(n+5), /* 標題是第1個子元素，所以從n+5開始 */
+            .moment-item:nth-child(n+5),
             .article-item:nth-child(n+5) {
                 display: none;
             }
 
             .moment-item {
                 border: none;
-                margin-bottom: 30px;
+                margin-bottom: 10px;
                 padding-bottom: 0;
             }
+
+            /* --- 圖片處理：既然加載不出，就讓它乾淨地留白 --- */
             .moment-img {
                 filter: none;
-                height: auto; 
-                max-height: 200px;
+                display: block !important;
+                width: 100% !important;
+                height: 180px !important; /* 保留高度，維持版面 */
+                min-height: 180px !important;
+                object-fit: cover; 
                 border-radius: 4px;
-                margin-bottom: 10px;
+                margin-bottom: 8px;
+                background-color: transparent; /* 去除灰色佔位，留白 */
             }
 
             .article-item {
                 border: none;
-                padding: 12px 0;
+                padding: 10px 0;
             }
             .article-title {
                 font-weight: 400;
             }
         }
 
-        /* --- 展開動畫 (CSS部分) --- */
+        /* --- 展開動畫 --- */
         .geo-viewport.expanding {
             position: fixed !important;
             top: 0 !important; left: 0 !important;
@@ -369,10 +395,9 @@
             background-color: var(--bg-color);
             transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
             border: none;
-            /* 重置 margin 和 padding 以確保全螢幕 */
             margin: 0 !important;
-            padding: 25px !important; /* 可以保留一些邊距以匹配目標頁面 */
-            overflow-y: auto; /* 允許在動畫期間滾動 */
+            padding: 25px !important;
+            overflow-y: auto;
         }
         
         .geo-viewport.expanding .geo-scroller {
@@ -390,98 +415,120 @@
     </style>
 </head>
 <body>
-    <!-- 自定義鼠標 (手機端會被CSS隱藏) -->
     <div id="custom-cursor"></div>
 
-    <!-- 左側區 -->
     <section class="left-section">
-        <div class="my-name">Joyance</div>
+        <div class="my-name interactable" onclick="goToProfile(event)">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
-            <!-- 初始內容由JS填充 -->
             <div class="quote-text" id="current-quote"></div>
         </div>
     </section>
 
-    <!-- 右側內容區 -->
     <section class="right-section">
         
         <!-- MOMENTS -->
         <div class="geo-viewport" id="moments-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('moments', event)">
+                <!-- 更新：標題點擊前往 /moment-list -->
+                <span class="box-title interactable" onclick="expandSection('moments', event, '/moment-list')">
                     MOMENTS
                 </span>
                 
-                <div class="moment-item">
-                    <!-- 優化：添加 decoding="async" -->
-                    <img src="/medias/IMG_3719.png" class="moment-img" loading="lazy" decoding="async">
-                    <p class="moment-text interactable" onclick="copyText(this)">
-                        時光依舊，不過物是人非罷了
-                    </p>
+                <!-- 容器：動態寫入 moment-list.json 的內容 -->
+                <div id="moments-container">
+                    <!-- Javascript 將在此處插入 .moment-item -->
                 </div>
-                
             </div>
         </div>
 
         <!-- ARTICLES -->
         <div class="geo-viewport" id="articles-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('articles', event)">
+                <span class="box-title interactable" onclick="expandSection('articles', event, './articles.html')">
                     ARTICLES
                 </span>
                 
-                <div class="article-item interactable" onclick="openLink('diary-2')">
-                    <span class="article-title">四萬步，與一座城重逢</span>
-                    <span class="article-date">11.02</span>
+                <!-- 容器：動態寫入 articles.json 的內容 -->
+                <div id="articles-container">
+                    <!-- Javascript 將在此處插入 .article-item -->
                 </div>
-                <div class="article-item interactable" onclick="openLink('diary-1')">
-                    <span class="article-title">《什麼樣的故事啊》日記part-1</span>
-                    <span class="article-date">10.15</span>
-                </div>
-                <div class="article-item interactable" onclick="openLink('the-frigging-life')">
-                    <span class="article-title">麻痺的生活 the frigging life</span>
-                    <span class="article-date">09.28</span>
-                </div>
-                
             </div>
         </div>
 
     </section>
 
-    <!-- 優化：添加 defer 屬性，讓腳本在文檔解析後執行 -->
     <script defer>
-        // 使用 'DOMContentLoaded' 確保所有元素都已加載
         document.addEventListener('DOMContentLoaded', () => {
+            
+            // 1. 加載數據
+            fetchData();
 
+            // 2. 設備判斷
             const isMobile = window.innerWidth <= 768;
 
-            // --- 0. 鼠標邏輯 (僅PC) ---
             if (!isMobile) {
+                // PC 端邏輯
                 const cursor = document.getElementById('custom-cursor');
                 if (cursor) {
                     document.addEventListener('mousemove', (e) => {
-                        cursor.style.left = e.clientX + 'px';
-                        cursor.style.top = e.clientY + 'px';
+                        requestAnimationFrame(() => {
+                            cursor.style.left = e.clientX + 'px';
+                            cursor.style.top = e.clientY + 'px';
+                        });
                     });
 
                     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
                     document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
-
-                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper');
-                    interactables.forEach(el => {
-                        el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
-                        el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+                    
+                    // 注意：由於內容是動態加載的，建議使用事件委託或在加載後重新綁定
+                    // 下方使用 Observer 或在 fetch 回調中綁定更佳，這裡保留基礎綁定
+                    document.body.addEventListener('mouseover', (e) => {
+                        if (e.target.closest('.interactable, .box-title, .article-item, .quote-wrapper, .my-name')) {
+                            cursor.classList.add('hollow');
+                        } else {
+                            cursor.classList.remove('hollow');
+                        }
                     });
                 }
+            } else {
+                // 手機端邏輯：鎖定滑動 + 右滑跳轉
+                
+                // 1. 嚴格禁止任何觸控滑動 (保證絲毫不動)
+                document.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+
+                // 2. 右滑檢測
+                let globalTouchStartX = 0;
+                let globalTouchStartY = 0;
+                
+                window.addEventListener('touchstart', e => {
+                    globalTouchStartX = e.changedTouches[0].screenX;
+                    globalTouchStartY = e.changedTouches[0].screenY;
+                }, {passive: true});
+                
+                window.addEventListener('touchend', e => {
+                    const globalTouchEndX = e.changedTouches[0].screenX;
+                    const globalTouchEndY = e.changedTouches[0].screenY;
+                    
+                    const diffX = globalTouchEndX - globalTouchStartX;
+                    const diffY = globalTouchEndY - globalTouchStartY;
+
+                    // 邏輯：向右滑動距離 > 60px 且垂直移動 < 50px
+                    if (diffX > 60 && Math.abs(diffY) < 50) {
+                        goToProfile();
+                    }
+                }, {passive: true});
             }
 
-            // --- 1. 格言系統 ---
+            // --- 格言系統 ---
             const quotes = [
                 "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
                 "我不會安慰你 在顫抖的楓葉上 寫滿春天的謊言",
                 "慾望被這個時代寵壞 真相在慢慢離開",
                 "沒有妳的銀杏樹林 澄澈的黃 無法分享",
-                "網"
+                "網",
+                "重織的時光留下死結 或未完成的詩"
             ];
             
             let quoteIndex = 0;
@@ -509,21 +556,27 @@
                     }, 300);
                 }
 
-                quoteArea.addEventListener('click', () => updateQuote('next'));
+                quoteArea.addEventListener('click', (e) => {
+                    e.stopPropagation(); 
+                    updateQuote('next');
+                });
 
                 let touchStartX = 0;
                 quoteArea.addEventListener('touchstart', e => {
                     touchStartX = e.changedTouches[0].screenX;
-                }, {passive: true}); // 優化：明確 passive
+                    e.stopPropagation(); 
+                }, {passive: true});
                 
                 quoteArea.addEventListener('touchend', e => {
+                    e.stopPropagation(); 
                     let touchEndX = e.changedTouches[0].screenX;
+                    if (Math.abs(touchStartX - touchEndX) < 10) return;
                     if (touchStartX - touchEndX > 30) updateQuote('next'); 
                     if (touchEndX - touchStartX > 30) updateQuote('prev'); 
-                }, {passive: true}); // 優化：明確 passive
+                }, {passive: true});
             }
 
-            // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
+            // --- Z-Index 邏輯 (僅PC) ---
             if (!isMobile) {
                 const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
                 const bringToFront = (activeId) => {
@@ -546,21 +599,87 @@
             }
         });
 
-        // --- 2. 複製功能 (全局函數) ---
-        async function copyText(el) {
-            if(window.event) window.event.stopPropagation();
-            const text = el.innerText.replace('（點擊複製）', '').trim();
+        // --- 數據加載函數 ---
+        async function fetchData() {
+            // 1. 讀取 Articles
             try {
-                await navigator.clipboard.writeText(text);
-                el.style.transition = 'opacity 0.3s';
-                el.style.opacity = '0.5';
-                setTimeout(() => el.style.opacity = '1', 300);
-            } catch (err) { 
-                console.error('Copy failed', err); 
-            }
+                const articlesRes = await fetch('articles.json');
+                if (articlesRes.ok) {
+                    const articles = await articlesRes.json();
+                    renderArticles(articles);
+                }
+            } catch (err) { console.error('Error fetching articles:', err); }
+
+            // 2. 讀取 Moments
+            try {
+                const momentsRes = await fetch('moment-list.json');
+                if (momentsRes.ok) {
+                    const moments = await momentsRes.json();
+                    renderMoments(moments);
+                }
+            } catch (err) { console.error('Error fetching moments:', err); }
         }
 
-        // --- 3 & 4. 頁面跳轉邏輯 (全局函數) ---
+        function renderArticles(data) {
+            const container = document.getElementById('articles-container');
+            if (!container) return;
+            
+            // 手機版 CSS 控制顯示數量，這裡建議渲染適量內容（例如前5篇）
+            const items = data.slice(0, 6).map(item => {
+                // 格式化日期：2025.11.16 -> 11.16
+                let displayDate = item.date;
+                if (item.date.includes('.') && item.date.length >= 10) {
+                    displayDate = item.date.substring(5);
+                } else if (item.date.includes('-') && item.date.length >= 10) {
+                    displayDate = item.date.substring(5).replace('-', '.');
+                }
+
+                return `
+                <div class="article-item interactable" onclick="openLink('${item.id}')">
+                    <span class="article-title">${item.title}</span>
+                    <span class="article-date">${displayDate}</span>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = items;
+        }
+
+        function renderMoments(data) {
+            const container = document.getElementById('moments-container');
+            if (!container || data.length === 0) return;
+
+            // 取第一條數據顯示（主頁顯示最新動態）
+            const latestMoment = data[0];
+            const coverImg = latestMoment.cover ? latestMoment.cover : ''; 
+            
+            // 跳轉至 /moment-list
+            const jumpToMomentList = "expandSection('moments', event, '/moment-list')";
+
+            const html = `
+                <div class="moment-item">
+                    <img src="${coverImg}" class="moment-img interactable" alt="moment" 
+                         onerror="this.style.opacity=0"
+                         onclick="${jumpToMomentList}">
+                    <p class="moment-text interactable" onclick="${jumpToMomentList}">
+                        ${latestMoment.description}
+                    </p>
+                </div>
+            `;
+            container.innerHTML = html;
+        }
+
+        // --- 全局交互函數 ---
+
+        function goToProfile(event) {
+            if(event) event.stopPropagation();
+            document.body.classList.add('page-exit');
+            setTimeout(() => {
+                window.location.href = '/profile';
+            }, 500);
+        }
+
+        // 原本的 copyText 已移除，現在 Moment 點擊後跳轉
+
         function handleTransition(boxId, url) {
             const box = document.getElementById(boxId);
             if (!box) return;
@@ -573,9 +692,12 @@
             }, 600);
         }
 
-        function expandSection(type, event) {
+        // 修改：增加 url 參數，支持自定義跳轉
+        function expandSection(type, event, customUrl) {
             if(event) event.stopPropagation();
-            handleTransition(type + '-box', './' + type + '.html');
+            // 如果沒有傳入 customUrl，則使用默認邏輯 (雖然在這裡我們都已經在 HTML 傳入具體路徑了)
+            const targetUrl = customUrl ? customUrl : './' + type + '.html';
+            handleTransition(type + '-box', targetUrl);
         }
 
         function openLink(slug) {
