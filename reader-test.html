@@ -32,43 +32,44 @@
             transition: opacity 0.8s ease; 
         }
         
+        /* 隱藏默認鼠標 */
         * { cursor: none !important; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         @media (hover: none) or (max-width: 1024px) { * { cursor: auto !important; } }
 
         #app-container { display: flex; width: 100%; height: 100%; transition: transform 0.3s ease; }
         .main-content { flex: 1; position: relative; height: 100%; display: flex; flex-direction: column; overflow: hidden; transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-        /* --- 鼠標系統 (優化版：緊跟隨) --- */
-        #custom-cursor { 
+        /* --- 優化後的鼠標樣式 (參照 Reference) --- */
+        #custom-cursor {
             position: fixed; top: 0; left: 0;
-            width: 12px; height: 12px; 
-            /* 修正中心點，讓鼠標尖端對準坐標 */
-            margin-left: -6px; margin-top: -6px;
-            background-color: var(--accent-color); 
-            transform: rotate(45deg);
+            width: 10px; height: 10px; /* 稍微縮小 */
+            /* 使用白色並配合 difference 模式，確保在黑白背景下都能反色顯示 */
+            background-color: #ffffff; 
+            mix-blend-mode: difference;
             pointer-events: none; z-index: 999999;
-            mix-blend-mode: difference; 
-            /* 只對變形做過渡動畫，位置移動是即時的 */
-            transition: transform 0.15s ease-out, background-color 0.2s;
-            opacity: 0; /* 初始隱藏，動了再顯示 */
+            /* 中心定位 + 基礎菱形旋轉 */
+            transform: translate(-50%, -50%) rotate(45deg);
+            /* 只過渡變形和顏色，位置更新由 JS 直接控制以消除延遲 */
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s, width 0.2s, height 0.2s;
+            opacity: 0; 
         }
-        
-        /* 鼠標狀態 */
         #custom-cursor.active { opacity: 1; }
         
+        /* 空心狀態：放大，空心 */
         #custom-cursor.hollow { 
             background-color: transparent; 
-            border: 1.5px solid var(--accent-color); 
-            /* 懸停時稍微放大 */
-            transform: rotate(45deg) scale(1.4); 
-        }
-        
-        #custom-cursor.clicking {
-            background-color: var(--accent-color);
-            /* 點擊時縮小，產生按壓感 */
-            transform: rotate(45deg) scale(0.6);
+            border: 1px solid #ffffff; /* 保持反色可見性 */
+            width: 16px; height: 16px;
         }
 
+        /* 點擊狀態：縮小，更有彈性 */
+        #custom-cursor.clicking {
+            transform: translate(-50%, -50%) rotate(45deg) scale(0.6);
+            background-color: #ffffff;
+            border: none;
+        }
+
+        /* 頂部按鈕 */
         .top-controls { position: fixed; top: 30px; left: 30px; z-index: 100; pointer-events: none; }
         .desktop-toc-trigger { position: fixed; top: 30px; right: 30px; z-index: 100; pointer-events: none; }
         
@@ -78,13 +79,8 @@
 
         /* --- 閱讀視口 --- */
         .reader-viewport { 
-            flex: 1; 
-            width: 100%; 
-            max-width: 800px; 
-            height: calc(100vh - 160px); 
-            margin: 80px auto; 
-            position: relative; 
-            touch-action: pan-y; 
+            flex: 1; width: 100%; max-width: 800px; height: calc(100vh - 160px); 
+            margin: 80px auto; position: relative; touch-action: pan-y; 
         }
         
         .page-slide { 
@@ -92,21 +88,16 @@
             opacity: 0; pointer-events: none; 
             transform: translateX(60px); 
             transition: opacity 0.5s var(--ease-fluid), transform 0.5s var(--ease-fluid); 
-            display: flex; flex-direction: column; 
-            justify-content: center; 
-            gap: 25px; 
-            overflow: hidden; 
-            visibility: hidden; 
+            display: flex; flex-direction: column; justify-content: center; gap: 25px; 
+            overflow: hidden; visibility: hidden; 
         }
         
         .page-slide.active { opacity: 1; pointer-events: auto; transform: translateX(0); visibility: visible; z-index: 2; }
         .page-slide.prev-page { opacity: 0; transform: translateX(-60px); pointer-events: none; visibility: visible; z-index: 1; }
-        
         .reader-viewport.no-anim .page-slide { transition: none !important; }
 
         p { 
-            font-size: clamp(1.1rem, 2.2vmin, 1.35rem); 
-            line-height: 1.9; text-align: justify; margin: 0; font-weight: 400; 
+            font-size: clamp(1.1rem, 2.2vmin, 1.35rem); line-height: 1.9; text-align: justify; margin: 0; font-weight: 400; 
             overflow-wrap: break-word; transform-origin: left center; transition: transform 0.2s;
         }
         p:hover { transform: scale(1.005); }
@@ -232,7 +223,9 @@
     </style>
 </head>
 <body class="js-loading">
+    <!-- 優化：移除 cursor-layer 容器，直接放置 cursor 元素 -->
     <div id="custom-cursor"></div>
+    
     <div id="exit-overlay"><span id="exit-text">正在返回...</span></div>
     <div class="toast-msg" id="swipe-hint">Release to Return</div>
     <div id="lightbox" onclick="closeLightbox()"><img id="lightbox-img" src="" alt="preview"></div>
@@ -436,15 +429,23 @@
             bindCursorEvents();
         }
 
-        // --- Optimized Cursor Logic (Direct Tracking) ---
+        // --- 優化後的鼠標邏輯 (Direct Follow) ---
+        let isCursorInited = false;
+
         function initCursor() {
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
 
-            // 直接跟隨，無延遲
-            document.addEventListener('mousemove', e => { 
+            // 緊密跟隨邏輯：移除 loop，在事件中直接更新
+            document.addEventListener('mousemove', (e) => {
+                // 使用 left/top 控制位置，確保與 Reference 一致的"緊"手感
+                // 同時配合 CSS 中的 transform center 進行定位
                 cursor.style.left = e.clientX + 'px';
                 cursor.style.top = e.clientY + 'px';
-                if(cursor.style.opacity !== '1') cursor.style.opacity = '1';
+                
+                if(!isCursorInited) {
+                    isCursorInited = true;
+                    cursor.classList.add('active');
+                }
             });
 
             document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
@@ -455,7 +456,7 @@
             if (window.matchMedia("(hover: none) or (max-width: 1024px)").matches) return;
             const onEnter = () => { cursor.classList.add('hollow'); };
             const onLeave = () => { cursor.classList.remove('hollow'); };
-
+            
             setTimeout(() => {
                 document.querySelectorAll('.interactable, .interactable-text').forEach(el => {
                     el.removeEventListener('mouseenter', onEnter);
@@ -515,16 +516,9 @@
                     if (!isInDom) viewport.appendChild(page);
                     page.style.transform = ''; 
                     page.classList.remove('active', 'prev-page'); 
-                    
-                    if (index === currentPage) {
-                        page.classList.add('active');
-                        page.style.zIndex = 10;
-                    } else if (index < currentPage) {
-                        page.classList.add('prev-page');
-                        page.style.zIndex = 5;
-                    } else {
-                        page.style.zIndex = 5;
-                    }
+                    if (index === currentPage) { page.classList.add('active'); page.style.zIndex = 10; }
+                    else if (index < currentPage) { page.classList.add('prev-page'); page.style.zIndex = 5; }
+                    else { page.style.zIndex = 5; }
                 } else {
                     if (isInDom) viewport.removeChild(page);
                 }
@@ -536,7 +530,7 @@
             
             if(!instant) {
                 saveProgress(); 
-                lazyLoadImages();
+                lazyLoadImages(); 
                 bindCursorEvents();
             }
         }
@@ -659,7 +653,7 @@
                     touchMoveX = e.touches[0].clientX;
                     const delta = touchMoveX - touchStartX;
                     const page = pages[currentPage];
-                    if (!page || !viewport.contains(page)) return; 
+                    if (!page || !viewport.contains(page)) return;
                     let tx = delta;
                     if ((currentPage === 0 && delta > 0) || (currentPage === totalPages-1 && delta < 0)) tx *= 0.4;
                     page.style.transform = `translateX(${tx}px)`;
