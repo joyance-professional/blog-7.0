@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>主頁 | Home</title>
+    <!-- 預加載關鍵資源 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
@@ -31,7 +32,6 @@
             }
         }
 
-        /* 優化：避免使用全局選擇器 *，針對性重置 */
         body, h1, h2, h3, p, div, section, span, img { 
             margin: 0; 
             padding: 0; 
@@ -52,14 +52,27 @@
             overflow: hidden;
             display: flex;
             opacity: 0; 
-            /* 優化：將 transform 添加到 will-change */
+            /* 優化：將 opacity 和 transform 提升為 GPU 渲染 */
             will-change: transform, opacity;
-            animation: pageFadeIn 1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            /* 進場動畫 */
+            animation: pageFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
+        /* 優化後的進場 */
         @keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translateY(15px) scale(0.99); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* 新增：離場動畫類 */
+        body.page-exit {
+            animation: pageFadeOut 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            pointer-events: none; /* 禁止再次點擊 */
+        }
+
+        @keyframes pageFadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-10px); }
         }
 
         /* --- 2. PC端默認樣式 --- */
@@ -84,6 +97,12 @@
             letter-spacing: 0.2em;
             writing-mode: vertical-rl;
             user-select: none;
+            /* 新增：表明可點擊 */
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .my-name:hover {
+            opacity: 0.6;
         }
 
         .quote-wrapper {
@@ -99,7 +118,6 @@
             height: 100%;
             position: absolute;
             top: 0; right: 0; 
-            /* 優化：明確 transform 和 opacity 會變動 */
             will-change: transform, opacity;
             transition: all 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
             opacity: 1;
@@ -125,7 +143,6 @@
             overflow: hidden;
             box-shadow: -5px 5px 20px rgba(0,0,0,0.05);
             transform-origin: center center;
-            /* 優化：告知瀏覽器 transform 和 border-color 會變動 */
             will-change: transform, border-color;
             transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease; 
         }
@@ -164,7 +181,6 @@
             height: 180px;
             object-fit: cover;
             filter: grayscale(100%);
-            /* 優化：告知瀏覽器 filter 會變動 */
             will-change: filter;
             transition: filter 0.4s;
             margin-bottom: 15px;
@@ -196,7 +212,7 @@
         }
         .article-date { font-size: 0.8rem; font-family: monospace; color: var(--secondary-text); }
         
-        /* --- PC 專有樣式：自定義滑鼠、懸停效果 --- */
+        /* --- PC 專有樣式 --- */
         @media (min-width: 769px) {
             body, html, a, button { cursor: none !important; }
 
@@ -210,6 +226,8 @@
                 z-index: 99999;
                 transition: transform 0.1s, width 0.2s, height 0.2s, background-color 0.2s;
                 mix-blend-mode: difference;
+                /* 優化：減少渲染負擔 */
+                backface-visibility: hidden;
             }
             #custom-cursor.hollow {
                 background-color: transparent;
@@ -295,7 +313,6 @@
                 padding: 0 25px;
             }
             
-            /* 優化：手機端不需要複雜的 transform, shadow, border */
             .geo-viewport {
                 position: relative !important;
                 top: auto !important; left: auto !important;
@@ -304,7 +321,7 @@
                 transform: none !important;
                 border: none !important;
                 box-shadow: none !important;
-                overflow: visible; /* 避免內容被裁切 */
+                overflow: visible;
             }
 
             .geo-scroller {
@@ -331,8 +348,7 @@
                 opacity: 0.3;
             }
             
-            /* 優化：手機版僅顯示前3條，使用 :nth-child 性能更好 */
-            .moment-item:nth-child(n+5), /* 標題是第1個子元素，所以從n+5開始 */
+            .moment-item:nth-child(n+5),
             .article-item:nth-child(n+5) {
                 display: none;
             }
@@ -369,10 +385,9 @@
             background-color: var(--bg-color);
             transition: all 0.6s cubic-bezier(0.85, 0, 0.15, 1) !important;
             border: none;
-            /* 重置 margin 和 padding 以確保全螢幕 */
             margin: 0 !important;
-            padding: 25px !important; /* 可以保留一些邊距以匹配目標頁面 */
-            overflow-y: auto; /* 允許在動畫期間滾動 */
+            padding: 25px !important;
+            overflow-y: auto;
         }
         
         .geo-viewport.expanding .geo-scroller {
@@ -395,9 +410,9 @@
 
     <!-- 左側區 -->
     <section class="left-section">
-        <div class="my-name">Joyance</div>
+        <!-- 優化：添加 onclick 事件，點擊跳轉 Profile -->
+        <div class="my-name interactable" onclick="goToProfile(event)">Joyance</div>
         <div class="quote-wrapper" id="quote-area">
-            <!-- 初始內容由JS填充 -->
             <div class="quote-text" id="current-quote"></div>
         </div>
     </section>
@@ -413,7 +428,6 @@
                 </span>
                 
                 <div class="moment-item">
-                    <!-- 優化：添加 decoding="async" -->
                     <img src="/medias/IMG_3719.png" class="moment-img" loading="lazy" decoding="async">
                     <p class="moment-text interactable" onclick="copyText(this)">
                         時光依舊，不過物是人非罷了
@@ -448,9 +462,7 @@
 
     </section>
 
-    <!-- 優化：添加 defer 屬性，讓腳本在文檔解析後執行 -->
     <script defer>
-        // 使用 'DOMContentLoaded' 確保所有元素都已加載
         document.addEventListener('DOMContentLoaded', () => {
 
             const isMobile = window.innerWidth <= 768;
@@ -460,19 +472,46 @@
                 const cursor = document.getElementById('custom-cursor');
                 if (cursor) {
                     document.addEventListener('mousemove', (e) => {
-                        cursor.style.left = e.clientX + 'px';
-                        cursor.style.top = e.clientY + 'px';
+                        // 使用 requestAnimationFrame 優化鼠標移動性能
+                        requestAnimationFrame(() => {
+                            cursor.style.left = e.clientX + 'px';
+                            cursor.style.top = e.clientY + 'px';
+                        });
                     });
 
                     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
                     document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
 
-                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper');
+                    // 更新選擇器，包含 .my-name
+                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper, .my-name');
                     interactables.forEach(el => {
                         el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
                         el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
                     });
                 }
+            } else {
+                // --- 手機端全局右滑跳轉邏輯 ---
+                let globalTouchStartX = 0;
+                let globalTouchStartY = 0;
+                
+                // 綁定到 window 以捕獲屏幕任意處
+                window.addEventListener('touchstart', e => {
+                    globalTouchStartX = e.changedTouches[0].screenX;
+                    globalTouchStartY = e.changedTouches[0].screenY;
+                }, {passive: true});
+                
+                window.addEventListener('touchend', e => {
+                    const globalTouchEndX = e.changedTouches[0].screenX;
+                    const globalTouchEndY = e.changedTouches[0].screenY;
+                    
+                    const diffX = globalTouchEndX - globalTouchStartX;
+                    const diffY = globalTouchEndY - globalTouchStartY;
+
+                    // 邏輯：向右滑動距離 > 60px 且垂直移動 < 50px (防止斜向滾動誤觸)
+                    if (diffX > 60 && Math.abs(diffY) < 50) {
+                        goToProfile();
+                    }
+                }, {passive: true});
             }
 
             // --- 1. 格言系統 ---
@@ -509,18 +548,26 @@
                     }, 300);
                 }
 
-                quoteArea.addEventListener('click', () => updateQuote('next'));
+                quoteArea.addEventListener('click', (e) => {
+                    e.stopPropagation(); // 防止冒泡觸發 body 跳轉
+                    updateQuote('next');
+                });
 
                 let touchStartX = 0;
                 quoteArea.addEventListener('touchstart', e => {
                     touchStartX = e.changedTouches[0].screenX;
-                }, {passive: true}); // 優化：明確 passive
+                    e.stopPropagation(); // 阻止冒泡到全局右滑事件
+                }, {passive: true});
                 
                 quoteArea.addEventListener('touchend', e => {
+                    e.stopPropagation(); // 阻止冒泡
                     let touchEndX = e.changedTouches[0].screenX;
+                    // 如果只是輕微點擊，算作切換
+                    if (Math.abs(touchStartX - touchEndX) < 10) return;
+                    
                     if (touchStartX - touchEndX > 30) updateQuote('next'); 
                     if (touchEndX - touchStartX > 30) updateQuote('prev'); 
-                }, {passive: true}); // 優化：明確 passive
+                }, {passive: true});
             }
 
             // --- 5. PC端 Z-Index 邏輯 (僅PC) ---
@@ -546,7 +593,17 @@
             }
         });
 
-        // --- 2. 複製功能 (全局函數) ---
+        // --- 功能函數 ---
+
+        // 新增：通用頁面淡出跳轉
+        function goToProfile(event) {
+            if(event) event.stopPropagation();
+            document.body.classList.add('page-exit');
+            setTimeout(() => {
+                window.location.href = '/profile';
+            }, 500); // 配合 CSS 動畫時長
+        }
+
         async function copyText(el) {
             if(window.event) window.event.stopPropagation();
             const text = el.innerText.replace('（點擊複製）', '').trim();
@@ -560,7 +617,6 @@
             }
         }
 
-        // --- 3 & 4. 頁面跳轉邏輯 (全局函數) ---
         function handleTransition(boxId, url) {
             const box = document.getElementById(boxId);
             if (!box) return;
