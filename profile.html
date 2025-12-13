@@ -12,21 +12,20 @@
         body {
             font-family: 'Noto Serif TC', serif; background-color: var(--bg-color); color: var(--text-color);
             height: 100vh; overflow: hidden; display: flex; flex-direction: column;
+            /* 禁止整個頁面的彈性滾動，交給內部容器處理 */
+            overscroll-behavior: none; 
         }
 
-        /* 標題動畫：從上一頁的位置過渡到這裡 */
+        /* 標題動畫：從 Home 頁位置過渡 */
         .page-title {
             position: fixed; z-index: 100; font-weight: 700; letter-spacing: 0.1em;
             transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
         }
         
-        /* 1. 初始狀態 (剛加載時，模擬 Home 頁離場位置) */
-        /* PC: 左上角 60px */
+        /* 1. 入場前狀態 (Home 頁位置) */
         .page-title.enter-from-home { top: 60px; left: 60px; font-size: 1.5rem; }
-        
-        /* 2. 最終狀態 (本頁應有的樣式) */
-        .page-title.active { 
-            /* PC 保持在左上角，Mobile 移動到底部 */
+        @media (max-width: 768px) {
+            .page-title.enter-from-home { top: auto; bottom: 40px; left: 50%; transform: translateX(-50%) scale(1.1); font-size: 2.2rem; }
         }
 
         /* PC Layout */
@@ -35,44 +34,72 @@
             .container { display: flex; width: 100%; height: 100%; padding: 100px; gap: 60px; opacity: 0; animation: fadeIn 1s forwards 0.5s; }
             .col { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
             
-            /* 右側滾輪 */
-            .wheel-container { width: 100%; height: 60vh; overflow-y: auto; position: relative; mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent); scrollbar-width: none; }
+            /* 右側滾輪 - PC */
+            .wheel-container { 
+                width: 100%; height: 60vh; overflow-y: auto; position: relative; 
+                /* 模糊遮罩減弱：從 0% 到 5% */
+                mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); 
+                -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); 
+                scrollbar-width: none; 
+            }
             .wheel-container::-webkit-scrollbar { display: none; }
             
-            /* 關閉按鈕 */
             .close-btn { position: fixed; top: 40px; right: 40px; font-size: 2rem; cursor: pointer; opacity: 0.5; transition: 0.3s; z-index: 200; }
             .close-btn:hover { opacity: 1; transform: rotate(90deg); }
         }
 
         /* Mobile Layout */
         @media (max-width: 768px) {
-            /* Mobile Title: 從 Home 頁的底部過渡進來，最終停留在底部 */
-            .page-title { bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 2.2rem; width: 100%; text-align: center; }
+            .page-title { 
+                bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 2.2rem; width: 100%; text-align: center; 
+                pointer-events: none; /* 防止遮擋滑動 */
+            }
             .container { display: flex; flex-direction: column; height: 100%; padding: 20px; padding-bottom: 120px; opacity: 0; animation: fadeIn 1s forwards 0.3s; }
             
-            .col-music { height: auto; margin-bottom: 20px; flex-shrink: 0; }
-            .col-quotes { flex: 1; overflow: hidden; position: relative; } /* 佔滿剩餘空間 */
+            .col-music { height: auto; margin-bottom: 20px; flex-shrink: 0; z-index: 20; }
+            .col-quotes { flex: 1; overflow: hidden; position: relative; } 
             
             /* Mobile 滾輪優化 */
             .wheel-container {
-                width: 100%; height: 100%; overflow-y: auto;
-                scroll-snap-type: y mandatory; /* 磁吸效果 */
-                mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
-                -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+                width: 100%; height: 100%; 
+                overflow-y: auto; overflow-x: hidden; /* 禁止橫向 */
+                scroll-snap-type: y mandatory;
+                touch-action: pan-y; /* 鎖定垂直手勢 */
+                /* 模糊遮罩減弱 */
+                mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+                -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
             }
-            .close-btn { display: none; } /* 手機靠滑動返回 */
+            .close-btn { display: none; }
         }
 
         /* Music Wrapper */
-        .music-wrapper { width: 100%; max-width: 450px; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: #fff; }
+        .music-wrapper { 
+            width: 100%; max-width: 450px; border-radius: 12px; overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); background: #fff; 
+            transition: background-color 0.3s;
+        }
+        @media (prefers-color-scheme: dark) {
+            .music-wrapper { background: #1a1a1a; box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+        }
 
         /* Quotes Styling */
-        .quote-list { list-style: none; padding: 50% 0; }
+        .quote-list { 
+            list-style: none; 
+            /* 關鍵：使用 padding 將第一條內容擠到中間 */
+            /* 50vh 是視窗的一半，減去約 80px 是為了修正 Item 自身的高度一半 */
+            padding-top: calc(50vh - 100px); 
+            padding-bottom: calc(50vh - 100px);
+            width: 100%;
+        }
+        
         .quote-item {
             padding: 40px 20px; text-align: center; transition: all 0.4s ease;
-            opacity: 0.3; transform: scale(0.8); filter: blur(3px);
+            opacity: 0.5; /* 默認透明度提高 */
+            transform: scale(0.9); /* 默認縮放變大 */
+            filter: blur(1px); /* 默認模糊減弱 */
             cursor: pointer;
-            scroll-snap-align: center; /* Mobile snap */
+            scroll-snap-align: center;
+            width: 100%; /* 強制寬度，防止左右搖晃 */
         }
         .quote-item.active { opacity: 1; transform: scale(1.1); filter: blur(0); }
         .quote-text { font-size: 1.2rem; margin-bottom: 15px; font-weight: 500; }
@@ -82,8 +109,11 @@
         
         /* 離場動畫類 */
         body.exit-to-home { opacity: 0; transition: opacity 0.5s; }
-        body.exit-to-home .page-title { opacity: 0; } /* 簡單淡出，因為 Home 頁會重新繪製 */
-        
+        /* 標題離場位置 */
+        body.exit-to-home .page-title {
+             /* PC 去左上 (不變), Mobile 放大並居中 (不變) - 實際上 Home 頁會接管位置 */
+        }
+
         /* Custom Cursor PC */
         #custom-cursor { display: none; position: fixed; width: 12px; height: 12px; background: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 9999; mix-blend-mode: difference; }
         @media (min-width: 769px) { #custom-cursor { display: block; } body { cursor: none; } }
@@ -91,6 +121,7 @@
 </head>
 <body>
     <div id="custom-cursor"></div>
+    <!-- 標題初始帶有 enter-from-home 類，JS加載後移除以觸發動畫 -->
     <div class="page-title enter-from-home" id="profile-title">Joyance</div>
     <div class="close-btn" onclick="goBack()">×</div>
 
@@ -98,7 +129,12 @@
         <!-- 音樂區 -->
         <div class="col col-music">
             <div class="music-wrapper">
-                <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;background:transparent;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD"></iframe>
+                <!-- 
+                   Apple Music Embed:
+                   添加 &theme=dark 參數嘗試觸發暗色模式 (取決於 Apple 策略)
+                   添加 loading="lazy" 優化加載
+                -->
+                <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;background:transparent;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD?theme=dark"></iframe>
             </div>
         </div>
 
@@ -135,10 +171,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             // 1. 標題入場動畫
             const title = document.getElementById('profile-title');
-            // 強制重繪以觸發 transition
             requestAnimationFrame(() => {
                 title.classList.remove('enter-from-home');
-                title.classList.add('active');
             });
 
             // 2. 滾輪邏輯 (Wheel Logic)
@@ -146,18 +180,22 @@
             const items = document.querySelectorAll('.quote-item');
 
             function updateWheel() {
-                const center = wheel.offsetHeight / 2;
+                // 獲取容器中心點
+                const containerRect = wheel.getBoundingClientRect();
+                const center = containerRect.height / 2;
+                
                 items.forEach(item => {
                     const rect = item.getBoundingClientRect();
-                    const containerRect = wheel.getBoundingClientRect();
+                    // 計算 item 中心相對於容器頂部的距離
                     const itemCenter = (rect.top - containerRect.top) + (rect.height / 2);
                     const dist = Math.abs(center - itemCenter);
                     
-                    // 計算縮放和透明度
-                    let scale = 1.1 - (dist / (wheel.offsetHeight * 0.6)) * 0.5;
-                    scale = Math.max(0.8, scale);
+                    // 計算縮放 (中心 1.1，邊緣 0.9) - 差異變小
+                    let scale = 1.1 - (dist / (containerRect.height * 0.8)) * 0.2;
+                    scale = Math.max(0.9, scale); // 最小縮放限制提高
                     
-                    if (dist < 80) { // 中心區域
+                    // 閾值判斷 active
+                    if (dist < 100) { // 擴大激活範圍
                         item.classList.add('active');
                         item.style.transform = `scale(1.1)`;
                         item.style.opacity = 1;
@@ -165,33 +203,58 @@
                     } else {
                         item.classList.remove('active');
                         item.style.transform = `scale(${scale})`;
-                        item.style.opacity = Math.max(0.2, 1 - (dist / 200));
-                        item.style.filter = `blur(${dist / 20}px)`;
+                        // 透明度下限提高到 0.4
+                        item.style.opacity = Math.max(0.4, 1 - (dist / 400));
+                        // 模糊度上限降低到 2px (之前可能很大)
+                        item.style.filter = `blur(${Math.min(2, dist / 100)}px)`;
                     }
                 });
             }
+            
             wheel.addEventListener('scroll', () => requestAnimationFrame(updateWheel));
-            updateWheel(); // Init
+            // 初始化調用，確保第一條在正確樣式
+            updateWheel(); 
 
             // 3. 返回邏輯
+            let isExiting = false;
             window.goBack = function() {
+                if(isExiting) return;
+                isExiting = true;
+                
+                // 標題動畫：如果是手機，標題需要「假裝」回到 Home 頁的位置（放大並居底）
+                // 這裡我們直接讓 body 淡出，Home 頁加載時會有自己的動畫接管
                 document.body.classList.add('exit-to-home');
+                
                 setTimeout(() => window.location.href = './home.html', 500);
             }
 
-            // 4. 鍵盤控制 (新增)
+            // 4. 鍵盤控制
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'ArrowUp') goBack(); // 返回 Home
             });
 
-            // 5. 手機手勢
+            // 5. 手機手勢 (下滑返回)
             if (window.innerWidth <= 768) {
                 let startY = 0;
-                window.addEventListener('touchstart', e => startY = e.changedTouches[0].screenY, {passive: true});
+                let startScrollTop = 0;
+
+                // 監聽 window 確保能捕捉到整個屏幕
+                window.addEventListener('touchstart', e => {
+                    startY = e.changedTouches[0].screenY;
+                    startScrollTop = wheel.scrollTop;
+                }, {passive: true});
+
                 window.addEventListener('touchend', e => {
                     let endY = e.changedTouches[0].screenY;
-                    // 如果在 Quotes 頂部且向下滑動，則返回
-                    if (endY - startY > 50 && wheel.scrollTop <= 5) {
+                    let diff = endY - startY;
+
+                    // 邏輯：
+                    // 1. 向下滑動距離 > 60px
+                    // 2. 並且，滾輪處於頂部 (wheel.scrollTop <= 0)
+                    //    或者 手指不在滾輪區域 (例如在 Music 區域)
+                    const isAtTop = wheel.scrollTop <= 5;
+                    
+                    if (diff > 60 && isAtTop) {
                         goBack();
                     }
                 }, {passive: true});
@@ -201,7 +264,7 @@
             if (window.innerWidth > 768) {
                 const cursor = document.getElementById('custom-cursor');
                 document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
-                document.querySelectorAll('.close-btn, .quote-item, iframe').forEach(el => {
+                document.querySelectorAll('.close-btn, .quote-item').forEach(el => {
                     el.addEventListener('mouseenter', () => cursor.style.transform = 'rotate(45deg) scale(1.5)');
                     el.addEventListener('mouseleave', () => cursor.style.transform = 'rotate(45deg) scale(1)');
                 });
