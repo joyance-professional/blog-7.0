@@ -74,10 +74,12 @@
 <body>
     <div id="exit-overlay" class="exit-overlay"></div>
     <div id="custom-cursor"></div>
-    <!-- 返回箭頭改為返回列表頁 -->
-    <div class="back-arrow interactable" onclick="triggerExit('moment-list.html')">
+    <!-- --- MODIFICATION START --- -->
+    <!-- 移除了 onclick，改由 JS 動態控制 -->
+    <div class="back-arrow interactable">
         <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
     </div>
+    <!-- --- MODIFICATION END --- -->
     <div class="pc-toc-panel" id="pc-toc-list"></div>
     <div class="mobile-wheel" id="mobile-wheel"><div class="wheel-container" id="wheel-container"></div></div>
     <div class="wheel-indicator"></div>
@@ -90,25 +92,47 @@
     // 全局變量
     let momentsData = [];
     let isExiting = false;
+    // --- MODIFICATION START ---
+    // 新增變量，用於存儲返回地址
+    let backUrl = null;
+    // --- MODIFICATION END ---
 
     document.addEventListener('DOMContentLoaded', async () => {
+        // --- MODIFICATION START ---
+        // 檢查來源頁面邏輯
+        const backArrow = document.querySelector('.back-arrow');
+        try {
+            // 檢查 document.referrer 是否存在，且是否與當前頁面同源
+            if (document.referrer && new URL(document.referrer).origin === window.location.origin) {
+                backUrl = document.referrer;
+            }
+        } catch (e) {
+            // 如果 referrer 不是一個有效的 URL，會拋出錯誤，我們忽略它
+            console.warn("Could not parse document.referrer:", document.referrer);
+            backUrl = null;
+        }
+
+        if (backUrl) {
+            // 如果有有效的返回地址，則為返回按鈕綁定點擊事件
+            backArrow.onclick = () => triggerExit(backUrl);
+        } else {
+            // 否則，隱藏返回按鈕
+            backArrow.style.display = 'none';
+        }
+        // --- MODIFICATION END ---
+        
         const urlParams = new URLSearchParams(window.location.search);
-        // 如果沒有 ID，默認為 example
         const momentId = urlParams.get('id') || 'example';
 
         try {
-            // 從 moment/ 文件夾加載 JSON
             const response = await fetch(`./moment/${momentId}.json`);
             if (!response.ok) throw new Error('Not found');
             const json = await response.json();
             
-            // 兼容數據格式：如果 JSON 有 meta 包裹，取 .moments，否則直接使用
             momentsData = json.moments || json;
             
-            // 更新標題
             if(json.meta && json.meta.title) document.title = json.meta.title;
 
-            // 初始化視圖
             initViewer(momentsData);
             
         } catch (error) {
@@ -126,7 +150,6 @@
         const totalSlides = data.length;
         const isPC = window.innerWidth > 768;
 
-        // 生成內容
         data.forEach((moment, index) => {
             const section = document.createElement('section');
             section.className = 'moment-section';
@@ -148,7 +171,6 @@
             section.innerHTML = htmlContent;
             scrollContainer.appendChild(section);
 
-            // 生成 PC 目錄
             const toc = document.createElement('div');
             toc.className = 'pc-toc-item interactable';
             toc.innerText = moment.title;
@@ -156,7 +178,6 @@
             pcTocList.appendChild(toc);
         });
 
-        // PC Interactions
         if (isPC) {
             document.querySelectorAll('.gallery-scroll').forEach(slider => {
                 let isDown = false, startX, scrollLeft;
@@ -166,16 +187,18 @@
                 slider.addEventListener('mousemove', (e) => { if(!isDown) return; e.preventDefault(); const x = e.pageX - slider.offsetLeft; slider.scrollLeft = scrollLeft - (x - startX) * 2; });
             });
 
-            // PC Wheel to Exit
             let exitIntent = 0;
             const hint = document.getElementById('end-hint');
             scrollContainer.addEventListener('wheel', (e) => {
                 const isBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 1;
-                if (isBottom && e.deltaY > 0) {
+                // --- MODIFICATION START ---
+                // 只有在 backUrl 有效時才觸發退出提示
+                if (backUrl && isBottom && e.deltaY > 0) {
                     exitIntent++;
                     hint.classList.add('visible');
                     hint.innerText = "繼續下滾以返回";
-                    if (exitIntent > 5) triggerExit('moment-list.html');
+                    if (exitIntent > 5) triggerExit(backUrl); // 使用動態 URL
+                // --- MODIFICATION END ---
                 } else {
                     exitIntent = 0;
                     hint.classList.remove('visible');
@@ -185,7 +208,6 @@
             bindCursor();
         }
 
-        // Active State Sync
         let currentIdx = 0;
         const updateActiveState = () => {
             const idx = Math.round(scrollContainer.scrollTop / window.innerHeight);
@@ -197,14 +219,12 @@
         scrollContainer.addEventListener('scroll', updateActiveState);
         setTimeout(updateActiveState, 100);
 
-        // Mobile Wheel & Inertia Logic
         const wheelObj = document.getElementById('mobile-wheel');
         const ANGLE_PER_ITEM = 30;
         let currentRotation = 0, velocity = 0, isDragging = false;
         let refAngle = 0, startRotation = 0, lastAngle = 0, lastMoveTime = 0;
         let animationFrame;
 
-        // 生成輪盤項目 (3倍數據以循環)
         const displayData = [...data, ...data, ...data];
         const wheelRadius = 120;
         displayData.forEach((m, i) => {
@@ -219,7 +239,6 @@
             wheelContainer.appendChild(el);
         });
 
-        // 初始定位
         currentRotation = -totalSlides * ANGLE_PER_ITEM;
         wheelContainer.style.transform = `rotate(${currentRotation}deg)`;
 
@@ -277,13 +296,15 @@
 
         wheelObj.addEventListener('touchend', () => { isDragging = false; startInertia(); });
 
-        // Pull to Exit (Mobile)
         let tStartY = 0;
         scrollContainer.addEventListener('touchstart', e => { tStartY = e.touches[0].clientY; }, { passive: true });
         scrollContainer.addEventListener('touchmove', e => {
             if (isPC) return;
             const isBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop <= scrollContainer.clientHeight + 5;
-            if (isBottom && e.touches[0].clientY < tStartY) {
+            // --- MODIFICATION START ---
+            // 只有在 backUrl 有效時才觸發
+            if (backUrl && isBottom && e.touches[0].clientY < tStartY) {
+            // --- MODIFICATION END ---
                 const delta = tStartY - e.touches[0].clientY;
                 document.getElementById('end-hint').classList.add('visible');
                 document.getElementById('end-hint').innerText = delta > 100 ? "鬆開手指確認返回" : "繼續上滑以返回";
@@ -293,26 +314,27 @@
         scrollContainer.addEventListener('touchend', e => {
             if (isPC) return;
             const delta = tStartY - e.changedTouches[0].clientY;
-            if (document.getElementById('end-hint').classList.contains('visible') && delta > 100) {
-                triggerExit('moment-list.html');
+            // --- MODIFICATION START ---
+            // 只有在 backUrl 有效時才觸發
+            if (backUrl && document.getElementById('end-hint').classList.contains('visible') && delta > 100) {
+                triggerExit(backUrl); // 使用動態 URL
+            // --- MODIFICATION END ---
             } else {
                 scrollContainer.style.transform = '';
                 document.getElementById('end-hint').classList.remove('visible');
             }
         });
 
-        // Lazy Load
         const lazyObserver = new IntersectionObserver((e) => e.forEach(i => { if(i.isIntersecting){ const t=i.target; t.src=t.dataset.src; t.onload=()=>t.classList.add('loaded'); lazyObserver.unobserve(t); } }), {rootMargin:"50px"});
         document.querySelectorAll('.lazy-img').forEach(img => lazyObserver.observe(img));
         
-        // Center Poems
         const poemWrappers = document.querySelectorAll('.poem-wrapper');
         const centerObserver = new IntersectionObserver((e) => e.forEach(i => { if(i.isIntersecting){ const t=i.target; t.scrollLeft=(t.scrollWidth - t.clientWidth)/2; centerObserver.unobserve(t); } }), {threshold:0.1});
         poemWrappers.forEach(w => centerObserver.observe(w));
     }
 
     function triggerExit(url) {
-        if (isExiting) return;
+        if (isExiting || !url) return; // 增加 !url 判斷，更安全
         isExiting = true;
         const hint = document.getElementById('end-hint');
         hint.innerText = "正在返回...";
