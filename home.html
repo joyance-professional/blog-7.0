@@ -31,13 +31,13 @@
             }
         }
 
-        /* 重置與游標隱藏：對所有可能的元素強制隱藏 */
+        /* 重置與游標隱藏 */
         *, *::before, *::after {
             margin: 0; 
             padding: 0; 
             box-sizing: border-box; 
             -webkit-tap-highlight-color: transparent; 
-            cursor: none !important; /* 強制無游標 */
+            cursor: none !important; 
         }
 
         html {
@@ -56,8 +56,6 @@
             opacity: 0; 
             will-change: transform, opacity;
             animation: pageFadeIn 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            
-            /* 禁止選取文字 */
             user-select: none;
             -webkit-user-select: none;
         }
@@ -255,7 +253,7 @@
         @media (max-width: 768px) {
             /* 1. 鎖定視口：絕對禁止滑動 */
             html, body {
-                position: fixed; /* 釘死 */
+                position: fixed; 
                 width: 100%;
                 height: 100%;
                 overflow: hidden;
@@ -352,7 +350,10 @@
                 opacity: 0.3;
             }
             
-            .moment-item:nth-child(n+5),
+            /* --- 修改重點：手機版只顯示第一個Moment，其餘隱藏 --- */
+            .moment-item:nth-child(n+2) {
+                display: none;
+            }
             .article-item:nth-child(n+5) {
                 display: none;
             }
@@ -363,17 +364,16 @@
                 padding-bottom: 0;
             }
 
-            /* --- 圖片處理：既然加載不出，就讓它乾淨地留白 --- */
             .moment-img {
                 filter: none;
                 display: block !important;
                 width: 100% !important;
-                height: 180px !important; /* 保留高度，維持版面 */
+                height: 180px !important; 
                 min-height: 180px !important;
                 object-fit: cover; 
                 border-radius: 4px;
                 margin-bottom: 8px;
-                background-color: transparent; /* 去除灰色佔位，留白 */
+                background-color: transparent; 
             }
 
             .article-item {
@@ -429,41 +429,27 @@
         <!-- MOMENTS -->
         <div class="geo-viewport" id="moments-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('moments', event)">
+                <!-- 標題：點擊前往列表頁 /moment-list -->
+                <span class="box-title interactable" onclick="expandSection('moments', event, '/moment-list')">
                     MOMENTS
                 </span>
                 
-                <div class="moment-item">
-                    <!-- 圖片處理：若加載失敗，onerror 會將其隱藏，只留白 -->
-                    <img src="/medias/IMG_3719.png" class="moment-img" alt="moment" onerror="this.style.opacity=0">
-                    <p class="moment-text interactable" onclick="copyText(this)">
-                        時光依舊，不過物是人非罷了
-                    </p>
+                <div id="moments-container">
+                    <!-- Javascript 將在此處插入 moment-item -->
                 </div>
-                
             </div>
         </div>
 
         <!-- ARTICLES -->
         <div class="geo-viewport" id="articles-box">
             <div class="geo-scroller">
-                <span class="box-title interactable" onclick="expandSection('articles', event)">
+                <span class="box-title interactable" onclick="expandSection('articles', event, './articles.html')">
                     ARTICLES
                 </span>
                 
-                <div class="article-item interactable" onclick="openLink('diary-2')">
-                    <span class="article-title">四萬步，與一座城重逢</span>
-                    <span class="article-date">11.02</span>
+                <div id="articles-container">
+                    <!-- Javascript 將在此處插入 article-item -->
                 </div>
-                <div class="article-item interactable" onclick="openLink('diary-1')">
-                    <span class="article-title">《什麼樣的故事啊》日記part-1</span>
-                    <span class="article-date">10.15</span>
-                </div>
-                <div class="article-item interactable" onclick="openLink('the-frigging-life')">
-                    <span class="article-title">麻痺的生活 the frigging life</span>
-                    <span class="article-date">09.28</span>
-                </div>
-                
             </div>
         </div>
 
@@ -471,11 +457,13 @@
 
     <script defer>
         document.addEventListener('DOMContentLoaded', () => {
+            
+            fetchData();
 
             const isMobile = window.innerWidth <= 768;
 
             if (!isMobile) {
-                // PC 端邏輯
+                // PC Cursor Logic
                 const cursor = document.getElementById('custom-cursor');
                 if (cursor) {
                     document.addEventListener('mousemove', (e) => {
@@ -487,22 +475,21 @@
 
                     document.addEventListener('mousedown', () => cursor.classList.add('clicking'));
                     document.addEventListener('mouseup', () => cursor.classList.remove('clicking'));
-
-                    const interactables = document.querySelectorAll('.interactable, .box-title, .article-item, .quote-wrapper, .my-name');
-                    interactables.forEach(el => {
-                        el.addEventListener('mouseenter', () => cursor.classList.add('hollow'));
-                        el.addEventListener('mouseleave', () => cursor.classList.remove('hollow'));
+                    
+                    document.body.addEventListener('mouseover', (e) => {
+                        if (e.target.closest('.interactable, .box-title, .article-item, .quote-wrapper, .my-name')) {
+                            cursor.classList.add('hollow');
+                        } else {
+                            cursor.classList.remove('hollow');
+                        }
                     });
                 }
             } else {
-                // 手機端邏輯：鎖定滑動 + 右滑跳轉
-                
-                // 1. 嚴格禁止任何觸控滑動 (保證絲毫不動)
+                // Mobile Touch Logic
                 document.addEventListener('touchmove', function(e) {
                     e.preventDefault();
                 }, { passive: false });
 
-                // 2. 右滑檢測
                 let globalTouchStartX = 0;
                 let globalTouchStartY = 0;
                 
@@ -514,18 +501,16 @@
                 window.addEventListener('touchend', e => {
                     const globalTouchEndX = e.changedTouches[0].screenX;
                     const globalTouchEndY = e.changedTouches[0].screenY;
-                    
                     const diffX = globalTouchEndX - globalTouchStartX;
                     const diffY = globalTouchEndY - globalTouchStartY;
 
-                    // 邏輯：向右滑動距離 > 60px 且垂直移動 < 50px
                     if (diffX > 60 && Math.abs(diffY) < 50) {
                         goToProfile();
                     }
                 }, {passive: true});
             }
 
-            // --- 格言系統 ---
+            // Quotes
             const quotes = [
                 "困在蹉跎 空轉 不如漂浮在迷茫的美夢裡",
                 "我不會安慰你 在顫抖的楓葉上 寫滿春天的謊言",
@@ -580,7 +565,7 @@
                 }, {passive: true});
             }
 
-            // --- Z-Index 邏輯 (僅PC) ---
+            // Z-Index (PC)
             if (!isMobile) {
                 const boxes = [document.getElementById('moments-box'), document.getElementById('articles-box')];
                 const bringToFront = (activeId) => {
@@ -603,7 +588,72 @@
             }
         });
 
-        // --- 全局函數 ---
+        // --- Data Fetching ---
+        async function fetchData() {
+            try {
+                const articlesRes = await fetch('articles.json');
+                if (articlesRes.ok) {
+                    const articles = await articlesRes.json();
+                    renderArticles(articles);
+                }
+            } catch (err) { console.error('Error fetching articles:', err); }
+
+            try {
+                const momentsRes = await fetch('moment-list.json');
+                if (momentsRes.ok) {
+                    const moments = await momentsRes.json();
+                    renderMoments(moments);
+                }
+            } catch (err) { console.error('Error fetching moments:', err); }
+        }
+
+        function renderArticles(data) {
+            const container = document.getElementById('articles-container');
+            if (!container) return;
+            
+            // Limit rendered items, especially useful for keeping DOM light
+            const items = data.slice(0, 8).map(item => {
+                let displayDate = item.date;
+                if (item.date.includes('.') && item.date.length >= 10) {
+                    displayDate = item.date.substring(5);
+                } else if (item.date.includes('-') && item.date.length >= 10) {
+                    displayDate = item.date.substring(5).replace('-', '.');
+                }
+
+                return `
+                <div class="article-item interactable" onclick="openLink('${item.id}')">
+                    <span class="article-title">${item.title}</span>
+                    <span class="article-date">${displayDate}</span>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML = items;
+        }
+
+        function renderMoments(data) {
+            const container = document.getElementById('moments-container');
+            if (!container || data.length === 0) return;
+
+            // 遍歷所有 moment 數據生成 HTML
+            // 手機端的「只顯示一條」由 CSS (.moment-item:nth-child(n+2)) 控制
+            const html = data.map(item => {
+                const coverImg = item.cover ? item.cover : '';
+                return `
+                    <div class="moment-item">
+                        <img src="${coverImg}" class="moment-img interactable" alt="moment" 
+                             onerror="this.style.opacity=0"
+                             onclick="openMoment('${item.id}')">
+                        <p class="moment-text interactable" onclick="openMoment('${item.id}')">
+                            ${item.description}
+                        </p>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        // --- Navigation Functions ---
 
         function goToProfile(event) {
             if(event) event.stopPropagation();
@@ -611,19 +661,6 @@
             setTimeout(() => {
                 window.location.href = '/profile';
             }, 500);
-        }
-
-        async function copyText(el) {
-            if(window.event) window.event.stopPropagation();
-            const text = el.innerText.replace('（點擊複製）', '').trim();
-            try {
-                await navigator.clipboard.writeText(text);
-                el.style.transition = 'opacity 0.3s';
-                el.style.opacity = '0.5';
-                setTimeout(() => el.style.opacity = '1', 300);
-            } catch (err) { 
-                console.error('Copy failed', err); 
-            }
         }
 
         function handleTransition(boxId, url) {
@@ -638,13 +675,20 @@
             }, 600);
         }
 
-        function expandSection(type, event) {
+        function expandSection(type, event, customUrl) {
             if(event) event.stopPropagation();
-            handleTransition(type + '-box', './' + type + '.html');
+            const targetUrl = customUrl ? customUrl : './' + type + '.html';
+            handleTransition(type + '-box', targetUrl);
         }
 
         function openLink(slug) {
             handleTransition('articles-box', 'reader?id=' + slug);
+        }
+
+        // 新增：處理單個 moment 點擊跳轉
+        function openMoment(slug) {
+            // 這裡假設跳轉頁面為 moment?id=xxx，若有其他命名規則請在此修改
+            handleTransition('moments-box', 'moments?id=' + slug);
         }
 
     </script>
