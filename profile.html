@@ -8,39 +8,62 @@
     <style>
         :root { --bg-color: #ffffff; --text-color: #1a1a1a; --sub-text-color: #555555; }
         @media (prefers-color-scheme: dark) { :root { --bg-color: #000000; --text-color: #e5e5e5; --sub-text-color: #888888; } }
+        
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Noto Serif TC', serif; background-color: var(--bg-color); color: var(--text-color);
             height: 100vh; overflow: hidden; display: flex; flex-direction: column;
-            /* 禁止整個頁面的彈性滾動，交給內部容器處理 */
-            overscroll-behavior: none; 
+            overscroll-behavior: none;
         }
 
-        /* 標題動畫：從 Home 頁位置過渡 */
-        .page-title {
-            position: fixed; z-index: 100; font-weight: 700; letter-spacing: 0.1em;
+        /* --- 標題與按鈕組 --- */
+        .header-group {
+            position: fixed; z-index: 100;
+            display: flex; align-items: baseline; gap: 15px;
+            /* 初始位置由 JS 或 CSS 類控制動畫 */
             transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
         }
-        
-        /* 1. 入場前狀態 (Home 頁位置) */
-        .page-title.enter-from-home { top: 60px; left: 60px; font-size: 1.5rem; }
-        @media (max-width: 768px) {
-            .page-title.enter-from-home { top: auto; bottom: 40px; left: 50%; transform: translateX(-50%) scale(1.1); font-size: 2.2rem; }
+
+        .page-title {
+            font-weight: 700; letter-spacing: 0.1em;
+            transition: font-size 0.8s ease;
         }
+
+        .help-btn {
+            font-size: 1.2rem; font-weight: 500; cursor: pointer;
+            border: 1px solid var(--text-color); border-radius: 50%;
+            width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+            opacity: 0; /* 初始隱藏，等標題就位後顯示 */
+            transition: opacity 0.5s ease 0.8s, background-color 0.3s, color 0.3s;
+        }
+        
+        /* 1. 入場前狀態 (模擬 Home 頁位置) */
+        .header-group.enter-from-home { top: 60px; left: 60px; }
+        .header-group.enter-from-home .page-title { font-size: 1.5rem; } /* Home 頁的大小 */
+        
+        /* 2. 活躍狀態 (本頁樣式) */
+        .header-group.active { top: 60px; left: 60px; }
+        .header-group.active .page-title { font-size: 2.5rem; } /* PC 端放大 */
+        .header-group.active .help-btn { opacity: 0.6; }
+        .help-btn:hover { opacity: 1 !important; background-color: var(--text-color); color: var(--bg-color); }
 
         /* PC Layout */
         @media (min-width: 769px) {
-            .page-title { top: 60px; left: 60px; font-size: 1.5rem; }
+            /* 強制隱藏鼠標，因為使用了自定義鼠標 */
+            body, html, a, .close-btn, .help-btn, .quote-item { cursor: none !important; }
+
             .container { display: flex; width: 100%; height: 100%; padding: 100px; gap: 60px; opacity: 0; animation: fadeIn 1s forwards 0.5s; }
             .col { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
             
             /* 右側滾輪 - PC */
             .wheel-container { 
                 width: 100%; height: 60vh; overflow-y: auto; position: relative; 
-                /* 模糊遮罩減弱：從 0% 到 5% */
                 mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); 
                 -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); 
-                scrollbar-width: none; 
+                scrollbar-width: none;
+                /* 自動定位核心 */
+                scroll-snap-type: y mandatory;
             }
             .wheel-container::-webkit-scrollbar { display: none; }
             
@@ -50,22 +73,22 @@
 
         /* Mobile Layout */
         @media (max-width: 768px) {
-            .page-title { 
-                bottom: 40px; left: 50%; transform: translateX(-50%); font-size: 2.2rem; width: 100%; text-align: center; 
-                pointer-events: none; /* 防止遮擋滑動 */
-            }
+            /* Mobile 標題位置重置 */
+            .header-group.enter-from-home { top: auto; bottom: 40px; left: 50%; transform: translateX(-50%) scale(1.1); }
+            .header-group.active { top: auto; bottom: 40px; left: 50%; transform: translateX(-50%); }
+            .header-group.active .page-title { font-size: 2.2rem; }
+            
             .container { display: flex; flex-direction: column; height: 100%; padding: 20px; padding-bottom: 120px; opacity: 0; animation: fadeIn 1s forwards 0.3s; }
             
             .col-music { height: auto; margin-bottom: 20px; flex-shrink: 0; z-index: 20; }
             .col-quotes { flex: 1; overflow: hidden; position: relative; } 
             
-            /* Mobile 滾輪優化 */
             .wheel-container {
                 width: 100%; height: 100%; 
-                overflow-y: auto; overflow-x: hidden; /* 禁止橫向 */
+                overflow-y: auto; overflow-x: hidden;
+                /* 自動定位核心 */
                 scroll-snap-type: y mandatory;
-                touch-action: pan-y; /* 鎖定垂直手勢 */
-                /* 模糊遮罩減弱 */
+                touch-action: pan-y;
                 mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
                 -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
             }
@@ -85,8 +108,7 @@
         /* Quotes Styling */
         .quote-list { 
             list-style: none; 
-            /* 關鍵：使用 padding 將第一條內容擠到中間 */
-            /* 50vh 是視窗的一半，減去約 80px 是為了修正 Item 自身的高度一半 */
+            /* 使用 padding 將第一條和最後一條擠到中間 */
             padding-top: calc(50vh - 100px); 
             padding-bottom: calc(50vh - 100px);
             width: 100%;
@@ -94,47 +116,41 @@
         
         .quote-item {
             padding: 40px 20px; text-align: center; transition: all 0.4s ease;
-            opacity: 0.5; /* 默認透明度提高 */
-            transform: scale(0.9); /* 默認縮放變大 */
-            filter: blur(1px); /* 默認模糊減弱 */
+            opacity: 0.5; transform: scale(0.9); filter: blur(1px);
             cursor: pointer;
+            /* 定位點 */
             scroll-snap-align: center;
-            width: 100%; /* 強制寬度，防止左右搖晃 */
+            scroll-snap-stop: always; /* 強制每次只滑一格 */
+            width: 100%;
         }
         .quote-item.active { opacity: 1; transform: scale(1.1); filter: blur(0); }
         .quote-text { font-size: 1.2rem; margin-bottom: 15px; font-weight: 500; }
         .quote-comment { font-size: 0.9rem; color: var(--sub-text-color); font-weight: 300; }
 
         @keyframes fadeIn { to { opacity: 1; } }
-        
-        /* 離場動畫類 */
         body.exit-to-home { opacity: 0; transition: opacity 0.5s; }
-        /* 標題離場位置 */
-        body.exit-to-home .page-title {
-             /* PC 去左上 (不變), Mobile 放大並居中 (不變) - 實際上 Home 頁會接管位置 */
-        }
 
         /* Custom Cursor PC */
         #custom-cursor { display: none; position: fixed; width: 12px; height: 12px; background: var(--text-color); transform: rotate(45deg); pointer-events: none; z-index: 9999; mix-blend-mode: difference; }
-        @media (min-width: 769px) { #custom-cursor { display: block; } body { cursor: none; } }
+        @media (min-width: 769px) { #custom-cursor { display: block; } }
     </style>
 </head>
 <body>
     <div id="custom-cursor"></div>
-    <!-- 標題初始帶有 enter-from-home 類，JS加載後移除以觸發動畫 -->
-    <div class="page-title enter-from-home" id="profile-title">Joyance</div>
+    
+    <!-- 標題組 (包含標題和問號) -->
+    <div class="header-group enter-from-home" id="header-group">
+        <div class="page-title">Joyance</div>
+        <div class="help-btn" onclick="goToHelp(event)">?</div>
+    </div>
+    
     <div class="close-btn" onclick="goBack()">×</div>
 
     <div class="container">
         <!-- 音樂區 -->
         <div class="col col-music">
             <div class="music-wrapper">
-                <!-- 
-                   Apple Music Embed:
-                   添加 &theme=dark 參數嘗試觸發暗色模式 (取決於 Apple 策略)
-                   添加 loading="lazy" 優化加載
-                -->
-                <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;background:transparent;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD?theme=dark"></iframe>
+                <iframe id="apple-music-iframe" allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;background:transparent;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src=""></iframe>
             </div>
         </div>
 
@@ -170,32 +186,51 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // 1. 標題入場動畫
-            const title = document.getElementById('profile-title');
+            const header = document.getElementById('header-group');
             requestAnimationFrame(() => {
-                title.classList.remove('enter-from-home');
+                header.classList.remove('enter-from-home');
+                header.classList.add('active');
             });
 
-            // 2. 滾輪邏輯 (Wheel Logic)
+            // 2. Apple Music 主題適配 (動態切換)
+            const iframe = document.getElementById('apple-music-iframe');
+            const playlistUrl = "https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD";
+            
+            function updateMusicTheme() {
+                // 檢測系統是否為深色模式
+                const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const themeParam = isDarkMode ? '&theme=dark' : '&theme=light';
+                // 只有當主題改變時才刷新 iframe，避免閃爍
+                const newSrc = playlistUrl + themeParam;
+                if (iframe.src !== newSrc) {
+                    iframe.src = newSrc;
+                }
+            }
+            
+            // 初始加載
+            updateMusicTheme();
+            // 監聽系統主題變化
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', updateMusicTheme);
+
+            // 3. 滾輪邏輯 (Wheel Logic)
             const wheel = document.getElementById('quotes-wheel');
             const items = document.querySelectorAll('.quote-item');
 
             function updateWheel() {
-                // 獲取容器中心點
                 const containerRect = wheel.getBoundingClientRect();
                 const center = containerRect.height / 2;
                 
                 items.forEach(item => {
                     const rect = item.getBoundingClientRect();
-                    // 計算 item 中心相對於容器頂部的距離
                     const itemCenter = (rect.top - containerRect.top) + (rect.height / 2);
                     const dist = Math.abs(center - itemCenter);
                     
-                    // 計算縮放 (中心 1.1，邊緣 0.9) - 差異變小
+                    // 計算縮放
                     let scale = 1.1 - (dist / (containerRect.height * 0.8)) * 0.2;
-                    scale = Math.max(0.9, scale); // 最小縮放限制提高
+                    scale = Math.max(0.9, scale);
                     
                     // 閾值判斷 active
-                    if (dist < 100) { // 擴大激活範圍
+                    if (dist < 80) { 
                         item.classList.add('active');
                         item.style.transform = `scale(1.1)`;
                         item.style.opacity = 1;
@@ -203,68 +238,57 @@
                     } else {
                         item.classList.remove('active');
                         item.style.transform = `scale(${scale})`;
-                        // 透明度下限提高到 0.4
                         item.style.opacity = Math.max(0.4, 1 - (dist / 400));
-                        // 模糊度上限降低到 2px (之前可能很大)
                         item.style.filter = `blur(${Math.min(2, dist / 100)}px)`;
                     }
                 });
             }
             
             wheel.addEventListener('scroll', () => requestAnimationFrame(updateWheel));
-            // 初始化調用，確保第一條在正確樣式
             updateWheel(); 
 
-            // 3. 返回邏輯
+            // 4. 跳轉與返回
             let isExiting = false;
             window.goBack = function() {
                 if(isExiting) return;
                 isExiting = true;
-                
-                // 標題動畫：如果是手機，標題需要「假裝」回到 Home 頁的位置（放大並居底）
-                // 這裡我們直接讓 body 淡出，Home 頁加載時會有自己的動畫接管
                 document.body.classList.add('exit-to-home');
-                
                 setTimeout(() => window.location.href = './home.html', 500);
             }
+            
+            window.goToHelp = function(e) {
+                if(e) e.stopPropagation();
+                window.location.href = '/reader?id=intro';
+            }
 
-            // 4. 鍵盤控制
+            // 5. 鍵盤控制
             document.addEventListener('keydown', (e) => {
-                if (e.key === 'ArrowUp') goBack(); // 返回 Home
+                if (e.key === 'ArrowUp') goBack();
             });
 
-            // 5. 手機手勢 (下滑返回)
+            // 6. 手機手勢 (下滑返回)
             if (window.innerWidth <= 768) {
                 let startY = 0;
-                let startScrollTop = 0;
-
-                // 監聽 window 確保能捕捉到整個屏幕
                 window.addEventListener('touchstart', e => {
                     startY = e.changedTouches[0].screenY;
-                    startScrollTop = wheel.scrollTop;
                 }, {passive: true});
 
                 window.addEventListener('touchend', e => {
                     let endY = e.changedTouches[0].screenY;
                     let diff = endY - startY;
-
-                    // 邏輯：
-                    // 1. 向下滑動距離 > 60px
-                    // 2. 並且，滾輪處於頂部 (wheel.scrollTop <= 0)
-                    //    或者 手指不在滾輪區域 (例如在 Music 區域)
                     const isAtTop = wheel.scrollTop <= 5;
-                    
+                    // 在頂部下滑超過60px觸發
                     if (diff > 60 && isAtTop) {
                         goBack();
                     }
                 }, {passive: true});
             }
 
-            // 6. PC Cursor
+            // 7. PC Cursor
             if (window.innerWidth > 768) {
                 const cursor = document.getElementById('custom-cursor');
                 document.addEventListener('mousemove', e => { cursor.style.left = e.clientX + 'px'; cursor.style.top = e.clientY + 'px'; });
-                document.querySelectorAll('.close-btn, .quote-item').forEach(el => {
+                document.querySelectorAll('.close-btn, .quote-item, .help-btn').forEach(el => {
                     el.addEventListener('mouseenter', () => cursor.style.transform = 'rotate(45deg) scale(1.5)');
                     el.addEventListener('mouseleave', () => cursor.style.transform = 'rotate(45deg) scale(1)');
                 });
