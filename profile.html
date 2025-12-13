@@ -94,6 +94,9 @@
                 -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent); 
                 scrollbar-width: none;
                 scroll-snap-type: y mandatory; /* 自動吸附 */
+                
+                /* [新增] 阻止邊緣滑動鬼畜 (Overscroll) */
+                overscroll-behavior-y: none;
             }
             .wheel-container::-webkit-scrollbar { display: none; }
         }
@@ -125,6 +128,9 @@
                 touch-action: pan-y;
                 mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
                 -webkit-mask-image: linear-gradient(to bottom, transparent, black 5%, black 95%, transparent);
+
+                /* [新增] 阻止邊緣滑動鬼畜 (Overscroll) */
+                overscroll-behavior-y: none;
             }
         }
 
@@ -224,18 +230,18 @@
                 header.classList.add('active');
             });
 
-            // 2. Apple Music 主題適配 (修復版)
+            // 2. Apple Music 主題適配 (已優化)
             const iframe = document.getElementById('apple-music-iframe');
             const playlistUrl = "https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD";
             
             function updateMusicTheme() {
                 const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-                // 添加隨機參數防止緩存，確保主題強制更新
-                const themeParam = isDarkMode ? '&theme=dark' : '&theme=light';
+                // [修正] URL 本身沒有參數，所以必須使用 '?' 起始，而非 '&'
+                const themeParam = isDarkMode ? '?theme=dark' : '?theme=light';
                 const newSrc = playlistUrl + themeParam;
                 
-                // 檢查是否需要更新 (忽略隨機數比對)
-                if (!iframe.src.includes(themeParam)) {
+                // 檢查是否需要更新，避免重複刷新導致閃爍
+                if (iframe.src !== newSrc) {
                     iframe.src = newSrc;
                 }
             }
