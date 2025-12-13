@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Joyance</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==================== 1. 核心變量與重置 ==================== */
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --sub-text-color: #555555;
+            --accent-color: #000000;
+            --border-color: #e0e0e0;
+            --skew-angle: -15deg;
+            --content-angle: 15deg;
+            --transition-speed: 0.8s;
+            --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #e5e5e5;
+                --sub-text-color: #888888;
+                --accent-color: #ffffff;
+                --border-color: #333333;
+            }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body, html {
+            height: 100%; width: 100%; overflow: hidden;
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.5s;
+        }
+
+        /* 隱藏滾動條但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ==================== 2. 共享元素 (The Title) ==================== */
+        /* 這是實現「不消失動畫」的核心 */
+        .shared-title {
+            position: fixed;
+            z-index: 1000;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            transform-origin: center center;
+            transition: all var(--transition-speed) var(--ease-out-expo);
+            pointer-events: none; /* 默認不阻擋點擊，特定狀態下開啟 */
+            white-space: nowrap;
+        }
+
+        /* 狀態 1: Intro (居中，大字) */
+        body[data-state="intro"] .shared-title {
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+        }
+
+        /* 狀態 2: Home (PC: 左側垂直; Mobile: 頂部水平) */
+        body[data-state="home"] .shared-title {
+            pointer-events: auto; /* 允許點擊進入 Profile */
+            cursor: pointer;
+        }
+
+        /* 狀態 3: Profile (PC: 左上角; Mobile: 底部) */
+        body[data-state="profile"] .shared-title {
+            z-index: 2000; /* 高於遮罩 */
+        }
+
+        /* PC 端標題位置定義 */
+        @media (min-width: 769px) {
+            body[data-state="home"] .shared-title {
+                top: 50%; left: 15%; /* 根據 Left-section padding 調整 */
+                transform: translate(-50%, -50%) rotate(-90deg);
+                font-size: 2.5rem;
+                border-bottom: 2px solid var(--accent-color); /* 視覺上是左邊框 */
+                padding-bottom: 20px;
+            }
+            body[data-state="profile"] .shared-title {
+                top: 60px; left: 60px;
+                transform: translate(0, 0);
+                font-size: 1.5rem;
+                padding-bottom: 0;
+                border: none;
+            }
+        }
+
+        /* Mobile 端標題位置定義 */
+        @media (max-width: 768px) {
+            body[data-state="home"] .shared-title {
+                top: 60px; left: 25px;
+                transform: translate(0, 0);
+                font-size: 2.2rem;
+            }
+            /* 需求：手機版在主頁上滑，名字放大下滑到底部 */
+            body[data-state="profile"] .shared-title {
+                top: auto; bottom: 40px; left: 50%;
+                transform: translate(-50%, 0) scale(1.2);
+                font-size: 2.2rem;
+            }
+        }
+
+        /* ==================== 3. 視圖層容器 (View Layers) ==================== */
+        .view-layer {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            overflow: hidden;
+        }
+
+        /* 狀態激活邏輯 */
+        body[data-state="intro"] #view-intro,
+        body[data-state="home"] #view-home,
+        body[data-state="profile"] #view-profile {
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        body[data-state="profile"] #view-profile {
+            z-index: 100; /* Profile 覆蓋在 Home 之上 */
+        }
+
+        /* ==================== 4. Intro View 樣式 ==================== */
+        #view-intro {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .intro-subtitle {
+            margin-top: 120px; /* 給標題留空間 */
+            font-size: 1rem;
+            font-weight: 300;
+            color: var(--sub-text-color);
+            line-height: 2;
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 0.5s;
+        }
+        .scroll-hint {
+            position: absolute;
+            bottom: 40px;
+            opacity: 0;
+            animation: fadeIn 1.5s ease forwards 1.5s, float 2s infinite ease-in-out 2s;
+        }
+        .scroll-line { width: 1px; height: 40px; background: var(--text-color); margin: 0 auto 10px; display: block; }
+        .scroll-text { font-size: 0.8rem; letter-spacing: 0.1em; font-weight: 300; }
+
+        /* Intro 離場動畫 */
+        body:not([data-state="intro"]) #view-intro {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+
+        /* ==================== 5. Home View 樣式 (復用您原本的佈局) ==================== */
+        #view-home {
+            display: flex;
+        }
+        
+        /* PC 佈局 */
+        .home-left {
+            width: 30%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            padding-left: 80px; /* 為了避開旋轉的標題 */
+        }
+        .home-right {
+            width: 70%; height: 100%; position: relative;
+        }
+        
+        /* 引用顯示區 */
+        .quote-display {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            font-size: 1.1rem;
+            font-weight: 300;
+            height: 60%;
+            transition: opacity 0.5s;
+        }
+
+        /* Mobile 佈局調整 */
+        @media (max-width: 768px) {
+            #view-home {
+                flex-direction: column;
+                overflow-y: auto; /* 允許主頁滾動 */
+                padding-top: 120px; /* 避開標題 */
+            }
+            .home-left { width: 100%; height: auto; padding: 0 25px; margin-bottom: 40px; display: block; }
+            .home-right { width: 100%; height: auto; padding: 0 25px; padding-bottom: 100px; }
+            .quote-display { writing-mode: horizontal-tb; width: 100%; height: auto; color: var(--sub-text-color); }
+        }
+
+        /* 幾何視窗樣式 (復用) */
+        .geo-viewport {
+            position: absolute;
+            background: var(--bg-color);
+            border: 1.5px solid var(--accent-color);
+            transform: skewX(var(--skew-angle));
+            overflow: hidden;
+            transition: transform 0.4s ease, border-color 0.3s, box-shadow 0.4s ease;
+        }
+        .geo-scroller {
+            width: 120%; height: 100%; margin-left: -10%;
+            transform: skewX(var(--content-angle));
+            overflow-y: auto; padding: 40px;
+        }
+        /* PC 位置 */
+        @media (min-width: 769px) {
+            #moments-box { width: 45%; height: 50%; top: 10%; left: 10%; z-index: 10; }
+            #articles-box { width: 55%; height: 60%; bottom: 5%; right: 5%; z-index: 11; }
+            .geo-viewport:hover { z-index: 20; transform: skewX(var(--skew-angle)) scale(1.02); box-shadow: -15px 15px 40px rgba(0,0,0,0.1); }
+        }
+        /* Mobile 樣式重置 */
+        @media (max-width: 768px) {
+            .geo-viewport { position: relative; width: 100% !important; height: auto !important; transform: none !important; border: none; overflow: visible; top: auto !important; left: auto !important; right: auto !important; margin-bottom: 40px; }
+            .geo-scroller { transform: none; width: 100%; margin: 0; padding: 0; overflow: visible; }
+            .box-title { border-bottom: none; display: flex; justify-content: space-between; font-size: 1.2rem; margin-bottom: 20px; opacity: 0.8; }
+            .box-title::after { content: '→'; opacity: 0.5; }
+        }
+
+        /* ==================== 6. Profile View 樣式 (新功能) ==================== */
+        #view-profile {
+            background-color: var(--bg-color);
+            z-index: 200;
+            display: flex;
+            /* PC 端默認樣式 */
+        }
+
+        /* Profile - 關閉按鈕 (PC) */
+        .profile-close {
+            position: absolute; top: 40px; right: 40px;
+            font-size: 2rem; cursor: pointer; z-index: 2001;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        body[data-state="profile"] .profile-close { opacity: 1; pointer-events: auto; }
+
+        /* Profile PC 排版 */
+        @media (min-width: 769px) {
+            #view-profile {
+                background: rgba(255, 255, 255, 0.95); /* 毛玻璃背景 */
+                backdrop-filter: blur(20px);
+            }
+            @media (prefers-color-scheme: dark) {
+                #view-profile { background: rgba(0, 0, 0, 0.9); }
+            }
+
+            .profile-container {
+                display: flex; width: 100%; height: 100%;
+                padding: 100px; gap: 60px;
+            }
+            .profile-col {
+                flex: 1; display: flex; flex-direction: column; 
+                justify-content: center; align-items: center;
+                height: 100%; position: relative;
+            }
+            /* 左側：音樂區 */
+            .music-wrapper {
+                width: 100%; max-width: 400px;
+                box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+                border-radius: 12px; overflow: hidden;
+                transition: transform 0.5s;
+                background: transparent;
+            }
+            .music-wrapper:hover { transform: translateY(-5px); }
+            
+            /* 右側：Quotes 滾輪 */
+            .quotes-wheel-container {
+                width: 100%; height: 60vh;
+                overflow-y: scroll;
+                position: relative;
+                mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+                -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+            }
+        }
+
+        /* Profile Mobile 排版 */
+        @media (max-width: 768px) {
+            #view-profile {
+                flex-direction: column;
+                padding: 20px;
+                padding-bottom: 120px; /* 留給底部名字 */
+                transform: translateY(100%); /* 默認在下方 */
+            }
+            body[data-state="profile"] #view-profile {
+                transform: translateY(0);
+            }
+            
+            .profile-close { display: none; } /* 手機靠滑動返回 */
+
+            .profile-container {
+                width: 100%; height: 100%;
+                display: flex; flex-direction: column; gap: 30px;
+            }
+            
+            /* 上半部分：音樂 */
+            .music-wrapper {
+                width: 100%;
+                /* 讓高度自適應嵌入內容，或設定固定高度 */
+                height: auto; 
+                border-radius: 12px; overflow: hidden;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+                flex-shrink: 0;
+            }
+
+            /* 下半部分：Quotes 滾輪 */
+            .quotes-wheel-container {
+                flex: 1; /* 佔據剩餘空間 */
+                width: 100%;
+                overflow-y: scroll;
+                position: relative;
+                /* 蒙版讓上下邊緣模糊 */
+                mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+                -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            }
+        }
+
+        /* Quotes 滾輪通用樣式 */
+        .quote-list {
+            list-style: none;
+            padding: 50% 0; /* padding 確保第一個和最後一個能居中 */
+        }
+        .quote-item {
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.4s ease;
+            opacity: 0.3;
+            transform: scale(0.8);
+            filter: blur(3px);
+            cursor: pointer;
+        }
+        .quote-item.active {
+            opacity: 1;
+            transform: scale(1.1);
+            filter: blur(0);
+        }
+        .quote-text {
+            font-size: 1.2rem; margin-bottom: 15px; font-weight: 500;
+        }
+        .quote-comment {
+            font-size: 0.9rem; color: var(--sub-text-color); font-weight: 300;
+        }
+
+        /* ==================== 7. 裝飾與動畫 ==================== */
+        @keyframes fadeIn { to { opacity: 1; } }
+        @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+
+        /* 自定義鼠標 (PC) */
+        #custom-cursor {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 12px; height: 12px; background: var(--text-color);
+            transform: rotate(45deg); pointer-events: none; z-index: 9999;
+            mix-blend-mode: difference; transition: transform 0.1s;
+        }
+        @media (min-width: 769px) { #custom-cursor { display: block; } }
+        
+        /* 內容模擬樣式 */
+        .moment-img { width: 100%; height: 180px; object-fit: cover; filter: grayscale(100%); transition: filter 0.3s; }
+        .geo-viewport:hover .moment-img { filter: grayscale(0); }
+        .article-item { display: flex; justify-content: space-between; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+
+    </style>
+</head>
+<body data-state="intro">
+
+    <!-- 自定義鼠標 -->
+    <div id="custom-cursor"></div>
+
+    <!-- 1. 共享標題 (Joyance) - 在所有視圖之上 -->
+    <h1 class="shared-title" id="main-title">Joyance</h1>
+
+    <!-- 2. Profile View (個人介紹頁) -->
+    <section id="view-profile" class="view-layer">
+        <!-- PC 關閉按鈕 -->
+        <div class="profile-close" onclick="goToState('home')">×</div>
+
+        <div class="profile-container">
+            <!-- 音樂模塊：嵌入您的 Apple Music 歌單 -->
+            <div class="profile-col">
+                <div class="music-wrapper">
+                    <iframe allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write" frameborder="0" height="450" style="width:100%;max-width:660px;overflow:hidden;border-radius:10px;background:transparent;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" src="https://embed.music.apple.com/gb/playlist/favorite-songs/pl.u-m6UYdmVPGD"></iframe>
+                </div>
+            </div>
+
+            <!-- Quotes 滾輪模塊 -->
+            <div class="profile-col">
+                <div class="quotes-wheel-container no-scrollbar" id="quotes-wheel">
+                    <ul class="quote-list">
+                        <!-- 內容由 JS 生成或靜態寫入 -->
+                        <li class="quote-item">
+                            <p class="quote-text">"困在蹉跎 空轉<br>不如漂浮在迷茫的美夢裡"</p>
+                            <p class="quote-comment">—— 對於現狀的無力反抗，或許逃避是另一種溫柔。</p>
+                        </li>
+                        <li class="quote-item">
+                            <p class="quote-text">"會逝去的 不是時間<br>而是人"</p>
+                            <p class="quote-comment">—— 時間是恆定的坐標，我們才是匆匆過客。</p>
+                        </li>
+                        <li class="quote-item">
+                            <p class="quote-text">"慾望被這個時代寵壞<br>真相在慢慢離開"</p>
+                            <p class="quote-comment">—— 在喧囂中保持清醒是一種痛苦的天賦。</p>
+                        </li>
+                        <li class="quote-item">
+                            <p class="quote-text">"沒有妳的銀杏樹林<br>澄澈的黃 無法分享"</p>
+                            <p class="quote-comment">—— 風景的美，往往取決於身旁的人。</p>
+                        </li>
+                         <li class="quote-item">
+                            <p class="quote-text">"網"</p>
+                            <p class="quote-comment">—— 我們都被困在無形的連結之中。</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. Home View (主頁) -->
+    <section id="view-home" class="view-layer">
+        <div class="home-left">
+            <!-- 標題已移至共享層，此處保留佈局空間 -->
+            <div class="quote-display" id="home-quote-display">
+                困在蹉跎 空轉 不如漂浮在迷茫的美夢裡
+            </div>
+        </div>
+
+        <div class="home-right">
+            <!-- Moments -->
+            <div class="geo-viewport" id="moments-box">
+                <div class="geo-scroller no-scrollbar">
+                    <div class="box-title">MOMENTS</div>
+                    <div class="moment-item">
+                        <!-- 這裡放您的圖片，暫用文字代替 -->
+                         <div style="background:#ddd; height:150px; width:100%; margin-bottom:10px; display:flex; align-items:center; justify-content:center; color:#999;">IMG_3719</div>
+                        <p style="font-size:0.9rem;">時光依舊，不過物是人非罷了</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Articles -->
+            <div class="geo-viewport" id="articles-box">
+                <div class="geo-scroller no-scrollbar">
+                    <div class="box-title">ARTICLES</div>
+                    <div class="article-item">
+                        <span>四萬步，與一座城重逢</span>
+                        <span style="font-family:monospace; color:var(--sub-text-color)">11.02</span>
+                    </div>
+                    <div class="article-item">
+                        <span>《什麼樣的故事啊》日記part-1</span>
+                        <span style="font-family:monospace; color:var(--sub-text-color)">10.15</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4. Intro View (默認頁) -->
+    <section id="view-intro" class="view-layer">
+        <p class="intro-subtitle">
+            會逝去的 不是時間<br>
+            而是人
+        </p>
+        <div class="scroll-hint">
+            <span class="scroll-text">SCROLL</span>
+            <span class="scroll-line"></span>
+        </div>
+    </section>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const body = document.body;
+            const titleBtn = document.getElementById('main-title');
+            const quotesContainer = document.getElementById('quotes-wheel');
+            const quoteItems = document.querySelectorAll('.quote-item');
+            
+            // --- 1. 狀態管理 (Router) ---
+            let currentState = 'intro';
+            let isAnimating = false;
+
+            window.goToState = function(state) {
+                if (isAnimating || currentState === state) return;
+                isAnimating = true;
+                
+                body.setAttribute('data-state', state);
+                currentState = state;
+
+                // 狀態切換後的邏輯處理
+                setTimeout(() => {
+                    isAnimating = false;
+                    if(state === 'profile') {
+                        updateQuotesWheel(); // 初始化 Profile 的滾輪
+                    }
+                }, 800);
+            };
+
+            // --- 2. 交互觸發 (Trigger) ---
+            
+            // A. Intro -> Home (滾動或觸摸)
+            window.addEventListener('wheel', (e) => {
+                if (currentState === 'intro' && e.deltaY > 0) goToState('home');
+            }, { passive: true });
+
+            // Mobile Touch Logic for Intro & Home
+            let touchStartY = 0;
+            window.addEventListener('touchstart', (e) => {
+                touchStartY = e.changedTouches[0].screenY;
+            }, { passive: true });
+
+            window.addEventListener('touchend', (e) => {
+                let touchEndY = e.changedTouches[0].screenY;
+                const diff = touchStartY - touchEndY;
+
+                // Intro 下滑 -> Home
+                if (currentState === 'intro' && diff > 50) {
+                    goToState('home');
+                }
+                
+                // Home (Mobile) 上滑 -> Profile
+                // 條件：必須在頂部或沒有內部滾動衝突
+                if (currentState === 'home' && window.innerWidth <= 768 && diff > 50) {
+                    // 檢查是否滾動到了底部，繼續上滑進入 Profile
+                    if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50) {
+                       goToState('profile');
+                    }
+                }
+
+                // Profile (Mobile) 下滑 -> Home
+                if (currentState === 'profile' && window.innerWidth <= 768 && diff < -50) {
+                    // 檢查 quote wheel 是否在頂部，防止衝突
+                    if (quotesContainer.scrollTop <= 0) {
+                        goToState('home');
+                    }
+                }
+            }, { passive: true });
+
+            // B. Home -> Profile (點擊標題)
+            titleBtn.addEventListener('click', () => {
+                if (currentState === 'home') goToState('profile');
+            });
+
+
+            // --- 3. Profile Page: Quotes Wheel Logic ---
+            // 核心算法：計算每個 item 距離容器中心的距離，設置 scale 和 opacity
+            function updateQuotesWheel() {
+                const containerCenter = quotesContainer.offsetHeight / 2;
+                
+                quoteItems.forEach(item => {
+                    const itemRect = item.getBoundingClientRect();
+                    const containerRect = quotesContainer.getBoundingClientRect();
+                    
+                    // item 中心相對於 container 的位置
+                    const itemCenter = (itemRect.top - containerRect.top) + (itemRect.height / 2);
+                    
+                    // 距離中心的絕對值
+                    const distance = Math.abs(containerCenter - itemCenter);
+                    const maxDistance = quotesContainer.offsetHeight / 2;
+                    
+                    // 根據距離計算縮放 (中心 1.1，邊緣 0.8)
+                    let scale = 1.1 - (distance / maxDistance) * 0.5;
+                    scale = Math.max(0.6, scale); // 最小值限制
+                    
+                    // 閾值判斷 active
+                    if (distance < 60) {
+                        item.classList.add('active');
+                        item.style.transform = `scale(1.1)`;
+                        item.style.opacity = 1;
+                        item.style.filter = 'blur(0)';
+                    } else {
+                        item.classList.remove('active');
+                        item.style.transform = `scale(${scale})`;
+                        item.style.opacity = Math.max(0.2, 1 - (distance / 150));
+                        item.style.filter = `blur(${distance / 40}px)`;
+                    }
+                });
+            }
+
+            // 監聽滾輪滾動
+            quotesContainer.addEventListener('scroll', () => {
+                window.requestAnimationFrame(updateQuotesWheel);
+            });
+            // 初始調用
+            updateQuotesWheel();
+
+
+            // --- 4. 自定義鼠標 (PC) ---
+            if (window.innerWidth > 768) {
+                const cursor = document.getElementById('custom-cursor');
+                document.addEventListener('mousemove', e => {
+                    cursor.style.left = e.clientX + 'px';
+                    cursor.style.top = e.clientY + 'px';
+                });
+                
+                // 懸停效果
+                const interactables = document.querySelectorAll('a, .box-title, .article-item, .quote-item, .shared-title, .profile-close');
+                interactables.forEach(el => {
+                    el.addEventListener('mouseenter', () => cursor.style.transform = 'rotate(45deg) scale(1.5)');
+                    el.addEventListener('mouseleave', () => cursor.style.transform = 'rotate(45deg) scale(1)');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
