@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moments List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #1a1a1a;
+            --accent-color: #888;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg-color: #000000; --text-color: #e5e5e5; }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Noto Serif TC', serif;
+            padding: 80px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        @keyframes fadeIn { to { opacity: 1; } }
+
+        /* Header */
+        .header { margin-bottom: 60px; text-align: center; }
+        .header h1 { font-weight: 300; letter-spacing: 0.1em; font-size: 2rem; margin-bottom: 10px; }
+        .header p { font-size: 0.9rem; color: var(--accent-color); font-style: italic; }
+
+        /* Timeline Grouping */
+        .year-group { margin-bottom: 50px; }
+        .year-label { font-size: 3rem; font-weight: 700; color: var(--text-color); opacity: 0.05; position: absolute; transform: translate(-20px, -20px); pointer-events: none; }
+        
+        .month-group { margin-bottom: 30px; position: relative; padding-left: 20px; border-left: 1px solid rgba(125,125,125,0.2); }
+        .month-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent-color); margin-bottom: 15px; display: block; }
+
+        /* List Items */
+        .moment-link {
+            display: block;
+            text-decoration: none;
+            color: var(--text-color);
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(125,125,125,0.1);
+            transition: 0.3s;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .moment-link:last-child { border-bottom: none; }
+        .moment-link:hover { padding-left: 10px; opacity: 0.7; border-bottom-color: var(--text-color); }
+        
+        .m-title { font-size: 1.2rem; font-weight: 500; }
+        .m-date { font-size: 0.8rem; color: var(--accent-color); font-feature-settings: "tnum"; }
+        .m-desc { font-size: 0.9rem; color: var(--accent-color); margin-top: 5px; display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 80%; opacity: 0.8; }
+
+        /* Back Button */
+        .home-btn {
+            position: fixed; top: 30px; left: 30px;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0.6; transition: 0.3s; cursor: pointer;
+        }
+        .home-btn:hover { opacity: 1; transform: scale(1.1); }
+        .home-btn svg { width: 24px; height: 24px; fill: var(--text-color); }
+
+        @media (max-width: 600px) {
+            .year-label { position: relative; font-size: 2rem; opacity: 0.1; transform: none; margin-bottom: 10px; }
+            .moment-link { flex-direction: column; gap: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="home.html" class="home-btn" title="Back to Home">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+    </a>
+
+    <div class="header">
+        <h1>Moments</h1>
+        <p>Fragments of Time</p>
+    </div>
+
+    <div id="list-container">
+        <!-- JS 將會填充這裡 -->
+        <div style="text-align:center; margin-top:50px; color:#888;">Loading...</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const container = document.getElementById('list-container');
+            
+            try {
+                // 加載索引文件
+                const response = await fetch('moment-list.json');
+                const data = await response.json();
+                
+                // 按日期降序排序
+                data.sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                container.innerHTML = ''; // 清空 Loading
+
+                let currentYear = '';
+                let currentMonth = '';
+                let yearGroup = null;
+                let monthGroup = null;
+
+                data.forEach(item => {
+                    const dateObj = new Date(item.date);
+                    const y = dateObj.getFullYear().toString();
+                    const m = dateObj.toLocaleString('default', { month: 'long' });
+
+                    // 創建年份組
+                    if (y !== currentYear) {
+                        currentYear = y;
+                        yearGroup = document.createElement('div');
+                        yearGroup.className = 'year-group';
+                        yearGroup.innerHTML = `<div class="year-label">${y}</div>`;
+                        container.appendChild(yearGroup);
+                        currentMonth = ''; // 重置月份
+                    }
+
+                    // 創建月份組
+                    if (m !== currentMonth) {
+                        currentMonth = m;
+                        monthGroup = document.createElement('div');
+                        monthGroup.className = 'month-group';
+                        monthGroup.innerHTML = `<span class="month-label">${m}</span>`;
+                        yearGroup.appendChild(monthGroup);
+                    }
+
+                    // 創建條目
+                    const link = document.createElement('a');
+                    link.className = 'moment-link';
+                    link.href = `moments.html?id=${item.id}`;
+                    link.innerHTML = `
+                        <div>
+                            <div class="m-title">${item.title}</div>
+                            ${item.description ? `<span class="m-desc">${item.description}</span>` : ''}
+                        </div>
+                        <div class="m-date">${item.date.substring(5)}</div>
+                    `;
+                    monthGroup.appendChild(link);
+                });
+
+            } catch (e) {
+                console.error(e);
+                container.innerHTML = '<p style="text-align:center">暫無內容</p>';
+            }
+        });
+    </script>
+</body>
+</html>
